@@ -6,7 +6,7 @@ Python sources, compiled extensions (.pyd), and data files, then
 produces a PEP 427 wheel with correct METADATA, WHEEL tag, and RECORD.
 
 Usage:
-    python build_wheel.py --source-dir E:\\AgentNate\\vllm-source --output-dir dist
+    python build_wheel.py --source-dir vllm-source --output-dir dist-v3
 """
 
 import argparse
@@ -20,7 +20,7 @@ import zipfile
 from base64 import urlsafe_b64encode
 from pathlib import Path
 
-VERSION = "0.14.2+win.cu126"
+VERSION = "0.19.0+cu126"
 PYTHON_TAG = "cp310"
 ABI_TAG = "cp310"
 PLATFORM_TAG = "win_amd64"
@@ -45,11 +45,16 @@ EXCLUDE_DIRS = {"__pycache__", "benchmarks", ".git", ".github"}
 # File patterns to skip
 EXCLUDE_PATTERNS = {".pyc", ".pyo"}
 
-# Minimal Windows-compatible dependencies.
-# Excludes: flashinfer (not available), ray (multiprocess), triton (linux),
-# numba (optional), and other linux-only packages.
+# Windows-compatible runtime dependencies for vLLM 0.19.0.
+# Excludes: flashinfer (no Windows wheel), nvidia-cutlass-dsl (no Windows
+# wheel), quack-kernels (no Windows wheel), ray (multiprocess pain on
+# Windows). Triton-windows is required separately for v0.19.0's
+# triton_kernels target.
 REQUIRES_DIST = [
-    "torch == 2.9.1",
+    "torch == 2.10.0",
+    "torchaudio == 2.10.0",
+    "torchvision == 0.25.0",
+    "triton-windows == 3.6.0.post26",
     "numpy",
     "transformers >= 4.56.0, < 5",
     "tokenizers >= 0.21.1",
@@ -57,16 +62,16 @@ REQUIRES_DIST = [
     "uvicorn",
     "pydantic >= 2.12.0",
     "requests >= 2.26.0",
-    "aiohttp",
+    "aiohttp >= 3.13.3",
     "tqdm",
     "sentencepiece",
-    "protobuf >= 6.30.0",
+    "protobuf >= 5.29.6, !=6.30.*, !=6.31.*, !=6.32.*",
     "regex",
     "pillow",
     "filelock >= 3.16.1",
     "psutil",
     "py-cpuinfo",
-    "openai >= 1.99.1",
+    "openai >= 2.0.0",
     "tiktoken >= 0.6.0",
     "prometheus-client >= 0.18.0",
     "prometheus-fastapi-instrumentator >= 7.0.0",
@@ -77,7 +82,7 @@ REQUIRES_DIST = [
     "pyyaml",
     "cachetools",
     "blake3",
-    "compressed-tensors == 0.13.0",
+    "compressed-tensors == 0.14.0.1",
     "cloudpickle",
     "einops",
     "partial-json-parser",
@@ -85,16 +90,28 @@ REQUIRES_DIST = [
     "outlines_core == 0.2.11",
     "diskcache == 5.6.3",
     "lark == 1.2.2",
-    "mistral_common[image] >= 1.8.8",
+    "mistral_common[image] >= 1.10.0",
     "opencv-python-headless >= 4.13.0",
     "depyf == 0.20.0",
     "setuptools >= 77.0.3, < 81.0.0",
+    "setuptools-scm >= 8.0",
     "pybase64",
     "cbor2",
+    "ijson",
     "openai-harmony >= 0.0.3",
     "llguidance >= 1.3.0, < 1.4.0",
-    "xgrammar == 0.1.29",
+    "xgrammar >= 0.1.32, < 1.0.0",
     "numba == 0.61.2",
+    "anthropic >= 0.71.0",
+    "mcp",
+    "model-hosting-container-standards >= 0.1.13, < 1.0.0",
+    "watchfiles",
+    "python-json-logger",
+    "setproctitle",
+    "opentelemetry-sdk >= 1.27.0",
+    "opentelemetry-api >= 1.27.0",
+    "opentelemetry-exporter-otlp >= 1.27.0",
+    "opentelemetry-semantic-conventions-ai >= 0.4.1",
 ]
 
 
@@ -318,14 +335,14 @@ def main():
     parser.add_argument(
         "--source-dir",
         type=Path,
-        default=Path(r"E:\AgentNate\vllm-source"),
-        help="Root directory containing the vllm/ package (default: E:\\AgentNate\\vllm-source)",
+        default=Path("vllm-source"),
+        help="Root directory containing the vllm/ package (default: vllm-source)",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("dist"),
-        help="Output directory for the wheel (default: dist)",
+        default=Path("dist-v3"),
+        help="Output directory for the wheel (default: dist-v3)",
     )
     args = parser.parse_args()
 
