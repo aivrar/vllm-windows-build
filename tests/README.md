@@ -1,6 +1,6 @@
 # Tests
 
-End-to-end test scripts for the Windows vLLM 0.19.0 build with Multi-TurboQuant.
+End-to-end test scripts for the Windows vLLM 0.19.1 build with Multi-TurboQuant.
 
 ## Setup
 
@@ -27,6 +27,27 @@ couple of short prompts, prints them.
 ```
 
 Should finish in well under 60 seconds for a 14B AWQ-4bit model.
+
+## test_tq_diag.py — per-method hang diagnostic (new in v0.19.1)
+
+Runs a single TQ method with a 90-second `faulthandler` watchdog. If
+`generate()` stalls past the timeout, the watchdog dumps every
+thread's Python stack trace and hard-exits, so you can tell a real
+hang apart from a slow-but-terminating PyTorch-fallback decode.
+
+```bat
+set TQ_METHOD=isoquant3
+%VLLM_PYTHON% tests\test_tq_diag.py
+```
+
+Select a method via `TQ_METHOD`: `isoquant3`, `isoquant4`,
+`planarquant3`, `planarquant4`, `turboquant25`, `turboquant35`. Adjust
+the watchdog with `TQ_HANG_TIMEOUT=120` (seconds) if you need to let a
+slow method terminate.
+
+Expected timings for 5 decoded tokens on an RTX 3090 with Qwen3-14B
+AWQ-4bit: `turboquant25/35` finish in ~5-7s, the iso/planar family in
+~40-55s. Anything past 90s is a real hang.
 
 ## test_tq_real.py — Multi-TurboQuant correctness sweep
 

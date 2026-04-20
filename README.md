@@ -2,13 +2,13 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Platform: Windows](https://img.shields.io/badge/Platform-Windows%2010%2F11-blue)
-![vLLM: v0.19.0](https://img.shields.io/badge/vLLM-v0.19.0-orange)
+![vLLM: v0.19.1](https://img.shields.io/badge/vLLM-v0.19.1-orange)
 ![CUDA: 12.6](https://img.shields.io/badge/CUDA-12.6-76B900)
 ![Python: 3.10](https://img.shields.io/badge/Python-3.10-3776AB)
 ![Triton: 3.6](https://img.shields.io/badge/Triton-3.6-red)
 ![Multi-TurboQuant](https://img.shields.io/badge/Multi--TurboQuant-6%20methods-purple)
 
-**Native Windows build of vLLM 0.19.0 — no WSL, no Docker, no Linux VM.**
+**Native Windows build of vLLM 0.19.1 — no WSL, no Docker, no Linux VM.**
 Now with the full **Multi-TurboQuant** KV cache compression suite (6
 methods, real packed-uint8 storage, **2× cache capacity**) and a custom
 safetensors reader that loads models **29× faster** on Windows.
@@ -16,18 +16,33 @@ safetensors reader that loads models **29× faster** on Windows.
 vLLM is the most popular open-source LLM serving engine, but it
 officially only supports Linux. This repo provides a **pre-built wheel**
 (just download and install) plus a complete patchset for compiling vLLM
-v0.19.0 natively on Windows with full CUDA acceleration, Triton support,
+v0.19.1 natively on Windows with full CUDA acceleration, Triton support,
 and Multi-TurboQuant integration.
 
 ## Releases
 
 | Release | vLLM | PyTorch | Triton | KV compression | Download |
 |---|---|---|---|---|---|
-| **v0.19.0-win (latest)** | 0.19.0 | 2.10.0+cu126 | 3.6.0 | Multi-TurboQuant (6 methods) + fp8 | [Download](https://github.com/rookiemann/vllm-windows-build/releases/tag/v0.19.0-win) |
+| **v0.19.1-win (latest)** | 0.19.1 | 2.10.0+cu126 | 3.6.0 | Multi-TurboQuant (6 methods) + fp8 | [Download](https://github.com/rookiemann/vllm-windows-build/releases/tag/v0.19.1-win) |
+| v0.19.0-win | 0.19.0 | 2.10.0+cu126 | 3.6.0 | Multi-TurboQuant (6 methods) + fp8 | [Download](https://github.com/rookiemann/vllm-windows-build/releases/tag/v0.19.0-win) |
 | v0.17.1-win | 0.17.1 | 2.10.0+cu126 | 3.6.0 | TurboQuant (2 recipes) | [Download](https://github.com/rookiemann/vllm-windows-build/releases/tag/v0.17.1-win) |
 | v0.14.2-win | 0.14.2 | 2.9.1+cu126 | n/a | fp8 only | [Download](https://github.com/rookiemann/vllm-windows-build/releases/tag/v0.14.2-win) |
 
-### What's new in v0.19.0
+### What's new in v0.19.1
+
+- **vLLM v0.19.1 base** — upstream point release (CI fixes, pinned
+  `nixl-cu{12,13}`, Jina ColBERT rotary recomputation for transformers v5).
+- **`uvloop` fallback baked into the wheel** — upstream added an
+  unconditional `import uvloop` in `vllm/v1/utils.py`; the patch now
+  wraps it in `try/except ImportError → asyncio`, so user code no
+  longer needs the `sys.modules.setdefault("uvloop", ...)` stub.
+- **All 6 TQ methods re-verified on RTX 3090** end-to-end. See the
+  [test results](#tested-with) section.
+- **`tests/test_tq_diag.py`** added — faulthandler-guarded diagnostic
+  that distinguishes genuine hangs from slow (but terminating)
+  PyTorch-fallback decodes.
+
+### Carried over from v0.19.0
 
 - **Multi-TurboQuant integration**: 6 KV cache compression methods
   (`isoquant3`, `isoquant4`, `planarquant3`, `planarquant4`,
@@ -37,10 +52,8 @@ and Multi-TurboQuant integration.
   chunked GPU streaming. Loads a 14B model in **6.5 seconds** vs 189
   seconds with the upstream mmap path. Works on systems with the
   Windows pagefile disabled.
-- **vLLM v0.19.0** base — Gemma 4 support, zero-bubble async scheduling,
-  Model Runner V2, online MXFP8, batched chat completions endpoint.
 - **All 140 CUDA targets compile clean** with MSVC 2022 + CUDA 12.6 +
-  Ninja. 33 source files patched.
+  Ninja. 34 source files patched + 1 new file.
 - **Tests included**: end-to-end validation suite that proves each
   TQ method actually compresses (not a placebo) and each one produces
   unique output from FP16.
@@ -63,7 +76,7 @@ Full benchmarks → [docs/benchmarks.md](docs/benchmarks.md)
 ### Option A — Pre-built wheel (no compiler needed)
 
 Download
-**[vllm-0.19.0+cu126-cp310-cp310-win_amd64.whl](https://github.com/rookiemann/vllm-windows-build/releases/tag/v0.19.0-win)**
+**[vllm-0.19.1+cu126-cp310-cp310-win_amd64.whl](https://github.com/rookiemann/vllm-windows-build/releases/tag/v0.19.1-win)**
 from the Releases page, then:
 
 ```batch
@@ -79,7 +92,7 @@ pip install torch==2.10.0 torchaudio==2.10.0 torchvision==0.25.0 ^
 pip install triton-windows==3.6.0.post26
 
 :: Install the pre-built vLLM wheel
-pip install vllm-0.19.0+cu126-cp310-cp310-win_amd64.whl
+pip install vllm-0.19.1+cu126-cp310-cp310-win_amd64.whl
 
 :: Install Multi-TurboQuant for the 6 KV cache compression methods
 pip install git+https://github.com/rookiemann/multi-turboquant.git
@@ -93,8 +106,8 @@ Requires Visual Studio 2022 (Community is fine), CUDA 12.6, ~30-45 min.
 
 ```batch
 git clone https://github.com/vllm-project/vllm.git vllm-source
-cd vllm-source && git checkout v0.19.0 && cd ..
-git apply vllm-windows-v3.patch --directory vllm-source
+cd vllm-source && git checkout v0.19.1 && cd ..
+git apply vllm-windows-v4.patch --directory vllm-source
 build.bat
 ```
 
@@ -114,9 +127,8 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 os.add_dll_directory(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\bin")
 os.add_dll_directory(r"C:\path\to\venv\Lib\site-packages\torch\lib")
 
-# Stub uvloop (not on Windows)
-import sys
-sys.modules.setdefault("uvloop", type(sys)("uvloop"))
+# uvloop stub no longer needed as of v0.19.1 — the patch wraps
+# `import uvloop` in a try/except ImportError with an asyncio fallback.
 
 from vllm import LLM, SamplingParams
 
@@ -144,7 +156,7 @@ For OpenAI-compatible HTTP serving and more usage patterns:
 
 ## Multi-TurboQuant: 6 KV cache compression methods
 
-vLLM v0.19.0 on Windows ships with integrated support for six KV cache
+vLLM v0.19.1 on Windows ships with integrated support for six KV cache
 compression methods from the [Multi-TurboQuant](https://github.com/rookiemann/multi-turboquant)
 library:
 
@@ -172,8 +184,8 @@ offline / long-context / batch workloads. See
 
 ## What's in the patch
 
-`vllm-windows-v3.patch` is a unified diff against `vllm-project/vllm`
-at tag `v0.19.0`. It touches **33 files** + **1 new file**:
+`vllm-windows-v4.patch` is a unified diff against `vllm-project/vllm`
+at tag `v0.19.1`. It touches **34 files** + **1 new file**:
 
 - **Build system** (4): CMakeLists, cmake/utils, setup.py, requirements/cuda.txt
 - **CUDA kernels** (16): MSVC compatibility for keyword operators,
@@ -237,6 +249,32 @@ fail. See [docs/troubleshooting.md → OSError 1455](docs/troubleshooting.md#ose
 - Visual Studio 2022 Community 17.13
 - CUDA Toolkit 12.6
 - Python 3.10.11
+
+### v0.19.1 end-to-end test run (RTX 3090, Qwen3-14B AWQ-4bit)
+
+Smoke test (FlashAttention 2 backend, `kv_cache_dtype=auto`): **933 ms
+for 16 tokens**, ~17 tok/s.
+
+All six TurboQuant methods (Triton attention backend, PyTorch-fallback
+encode/decode on Windows). Timings are for 5 decoded tokens with
+`max_model_len=512`, `gpu_memory_utilization=0.5`:
+
+| Method | Preset | Time (5 tok) | Output tok/s | Status |
+|---|---|---:|---:|---|
+| `isoquant3` | no_calibration_symmetric | 41.5s | 0.12 | PASS |
+| `isoquant4` | no_calibration_quality | 53.0s | 0.09 | PASS |
+| `planarquant3` | k_only_planar | 40.5s | 0.12 | PASS |
+| `planarquant4` | k_only_planar | 53.0s | 0.09 | PASS |
+| `turboquant25` | max_compression | 6.7s | **0.74** | PASS |
+| `turboquant35` | speed | 5.4s | **0.92** | PASS |
+
+`turboquant25/35` are ~8× faster than the iso/planar family on the
+PyTorch-fallback path. Reproduce with:
+
+```bat
+set TQ_METHOD=isoquant3
+%VLLM_PYTHON% tests\test_tq_diag.py
+```
 
 ---
 

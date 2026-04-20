@@ -1,5 +1,70 @@
 # Changelog
 
+## v0.19.1-win — 2026-04-19
+
+Point release. Upstream vLLM bumped to 0.19.1, one new Windows patch,
+all six Multi-TurboQuant methods re-verified on RTX 3090.
+
+### New
+
+- **vLLM v0.19.1 base** — upstream point release (CI fixes, minor
+  bugfixes, pinned `nixl-cu{12,13}` versions, Jina ColBERT rotary
+  recomputation for transformers v5).
+- **`tests/test_tq_diag.py`** — faulthandler-guarded diagnostic that
+  dumps stack traces if `generate()` stalls past 90s. Catches hangs vs
+  genuinely slow runs (PyTorch-fallback decode is slow but terminates).
+
+### Changed
+
+- `vllm-windows-v4.patch` is now the active patch. 34 modified files +
+  1 new file (`vllm/v1/attention/ops/multi_turboquant_kv.py`). 1656
+  lines. The only functional delta vs v3 is a new hunk in
+  `vllm/v1/utils.py` (see Fixed).
+- `build.bat` now applies `vllm-windows-v4.patch` and sets
+  `SETUPTOOLS_SCM_PRETEND_VERSION=0.19.1`.
+- `README.md` version badges, tables, and examples updated to v0.19.1.
+
+### Fixed
+
+- **`vllm/v1/utils.py` unconditional `import uvloop`** — upstream added
+  this import at module load. `uvloop` is Unix-only, so the import fails
+  on Windows before the `Hello world` snippet's `sys.modules` stub gets
+  a chance to run. The patch wraps the import in a `try/except
+  ImportError` that aliases `asyncio` as `uvloop` (same `run()`
+  signature). This means user code no longer needs to stub `uvloop` at
+  all — the fallback is baked into the wheel.
+
+### Verified (RTX 3090, Qwen3-14B-abliterated-AWQ-4bit)
+
+All 6 TQ methods load the model, initialize the KV cache, and generate
+coherent output end-to-end. Timings are for 5 decoded tokens with
+`max_model_len=512`, `gpu_memory_utilization=0.5`:
+
+| Method | Preset | Time (5 tok) | Output tok/s |
+|---|---|---:|---:|
+| `isoquant3` | no_calibration_symmetric | 41.5s | 0.12 |
+| `isoquant4` | no_calibration_quality | 53.0s | 0.09 |
+| `planarquant3` | k_only_planar | 40.5s | 0.12 |
+| `planarquant4` | k_only_planar | 53.0s | 0.09 |
+| `turboquant25` | max_compression | 6.7s | **0.74** |
+| `turboquant35` | speed | 5.4s | **0.92** |
+
+`turboquant25/35` are ~8× faster than the iso/planar methods on
+Windows — their algorithm favours the PyTorch-fallback path. All
+methods still pay the expected ~30-300× throughput cost vs FP16 until
+a fused Triton kernel lands (tracked as a known limitation, not new in
+v0.19.1).
+
+### Known limitations
+
+Unchanged from v0.19.0-win:
+
+- TQ throughput penalty from PyTorch-fallback encode/decode.
+- Single GPU only (NCCL still unavailable on Windows).
+- No FlashAttention 3, no FlashInfer.
+
+---
+
 ## v0.19.0-win — 2026-04-12
 
 Major release. vLLM 0.19.0 base, full Multi-TurboQuant integration with

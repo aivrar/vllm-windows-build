@@ -2,12 +2,12 @@
 setlocal enabledelayedexpansion
 
 :: ============================================================
-:: vLLM v0.19.0 Windows Build Script
+:: vLLM v0.19.1 Windows Build Script
 :: Compiles vLLM from patched source with MSVC + CUDA + Ninja
 :: ============================================================
 
 echo.
-echo  vLLM v0.19.0 Windows Build
+echo  vLLM v0.19.1 Windows Build
 echo  ==========================
 echo.
 
@@ -48,7 +48,7 @@ if not defined TORCH_CUDA_ARCH_LIST set TORCH_CUDA_ARCH_LIST=8.6
 if not defined MAX_JOBS set MAX_JOBS=4
 
 set VLLM_TARGET_DEVICE=cuda
-set SETUPTOOLS_SCM_PRETEND_VERSION=0.19.0
+set SETUPTOOLS_SCM_PRETEND_VERSION=0.19.1
 
 :: -----------------------------------------------------------
 :: 3. Locate vllm source
@@ -63,7 +63,7 @@ if exist "%SCRIPT_DIR%vllm-source\setup.py" (
 ) else (
     echo [ERROR] Cannot find vLLM source. Clone it into vllm-source\ next to this script:
     echo         git clone https://github.com/vllm-project/vllm.git vllm-source
-    echo         cd vllm-source ^&^& git checkout v0.19.0
+    echo         cd vllm-source ^&^& git checkout v0.19.1
     exit /b 1
 )
 
@@ -71,12 +71,12 @@ if exist "%SCRIPT_DIR%vllm-source\setup.py" (
 :: 4. Apply patch and copy multi_turboquant_kv.py if needed
 :: -----------------------------------------------------------
 
-if exist "%SCRIPT_DIR%vllm-windows-v3.patch" (
+if exist "%SCRIPT_DIR%vllm-windows-v4.patch" (
     pushd "%VLLM_SRC%"
     git diff --quiet HEAD 2>nul
     if !ERRORLEVEL! equ 0 (
-        echo Applying vllm-windows-v3.patch...
-        git apply "%SCRIPT_DIR%vllm-windows-v3.patch"
+        echo Applying vllm-windows-v4.patch...
+        git apply "%SCRIPT_DIR%vllm-windows-v4.patch"
         if !ERRORLEVEL! neq 0 (
             echo [WARN] Patch may already be applied or has conflicts. Continuing anyway.
         )
@@ -85,7 +85,7 @@ if exist "%SCRIPT_DIR%vllm-windows-v3.patch" (
     )
     popd
 ) else (
-    echo [WARN] vllm-windows-v3.patch not found next to build.bat
+    echo [WARN] vllm-windows-v4.patch not found next to build.bat
 )
 
 :: -----------------------------------------------------------

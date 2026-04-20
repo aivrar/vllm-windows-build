@@ -23,6 +23,7 @@ python/
 dist/
 dist-v2/
 dist-v3/
+dist-v4/
 *.whl
 
 # Local config
