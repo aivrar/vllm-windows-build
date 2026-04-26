@@ -23,10 +23,10 @@ and Multi-TurboQuant integration.
 
 | Release | vLLM | PyTorch | Triton | KV compression | Download |
 |---|---|---|---|---|---|
-| **v0.19.1-win (latest)** | 0.19.1 | 2.10.0+cu126 | 3.6.0 | Multi-TurboQuant (6 methods) + fp8 | [Download](https://github.com/rookiemann/vllm-windows-build/releases/tag/v0.19.1-win) |
-| v0.19.0-win | 0.19.0 | 2.10.0+cu126 | 3.6.0 | Multi-TurboQuant (6 methods) + fp8 | [Download](https://github.com/rookiemann/vllm-windows-build/releases/tag/v0.19.0-win) |
-| v0.17.1-win | 0.17.1 | 2.10.0+cu126 | 3.6.0 | TurboQuant (2 recipes) | [Download](https://github.com/rookiemann/vllm-windows-build/releases/tag/v0.17.1-win) |
-| v0.14.2-win | 0.14.2 | 2.9.1+cu126 | n/a | fp8 only | [Download](https://github.com/rookiemann/vllm-windows-build/releases/tag/v0.14.2-win) |
+| **v0.19.1-win (latest)** | 0.19.1 | 2.10.0+cu126 | 3.6.0 | Multi-TurboQuant (6 methods) + fp8 | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.19.1-win) |
+| v0.19.0-win | 0.19.0 | 2.10.0+cu126 | 3.6.0 | Multi-TurboQuant (6 methods) + fp8 | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.19.0-win) |
+| v0.17.1-win | 0.17.1 | 2.10.0+cu126 | 3.6.0 | TurboQuant (2 recipes) | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.17.1-win) |
+| v0.14.2-win | 0.14.2 | 2.9.1+cu126 | n/a | fp8 only | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.14.2-win) |
 
 ### What's new in v0.19.1
 
@@ -76,7 +76,7 @@ Full benchmarks → [docs/benchmarks.md](docs/benchmarks.md)
 ### Option A — Pre-built wheel (no compiler needed)
 
 Download
-**[vllm-0.19.1+cu126-cp310-cp310-win_amd64.whl](https://github.com/rookiemann/vllm-windows-build/releases/tag/v0.19.1-win)**
+**[vllm-0.19.1+cu126-cp310-cp310-win_amd64.whl](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.19.1-win)**
 from the Releases page, then:
 
 ```batch
@@ -95,7 +95,7 @@ pip install triton-windows==3.6.0.post26
 pip install vllm-0.19.1+cu126-cp310-cp310-win_amd64.whl
 
 :: Install Multi-TurboQuant for the 6 KV cache compression methods
-pip install git+https://github.com/rookiemann/multi-turboquant.git
+pip install git+https://github.com/aivrar/multi-turboquant.git
 ```
 
 Or run `install.bat` for a fully self-contained portable Python install.
@@ -157,7 +157,7 @@ For OpenAI-compatible HTTP serving and more usage patterns:
 ## Multi-TurboQuant: 6 KV cache compression methods
 
 vLLM v0.19.1 on Windows ships with integrated support for six KV cache
-compression methods from the [Multi-TurboQuant](https://github.com/rookiemann/multi-turboquant)
+compression methods from the [Multi-TurboQuant](https://github.com/aivrar/multi-turboquant)
 library:
 
 | Method | Bits | Family | Calibration | Use case |
@@ -303,7 +303,7 @@ set TQ_METHOD=isoquant3
 | [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit) | NVIDIA |
 | [FlashAttention](https://github.com/Dao-AILab/flash-attention) | FA2 kernels |
 | [triton-windows](https://github.com/triton-lang/triton-windows) | Triton compiler ported to Windows |
-| [Multi-TurboQuant](https://github.com/rookiemann/multi-turboquant) | KV cache compression methods |
+| [Multi-TurboQuant](https://github.com/aivrar/multi-turboquant) | KV cache compression methods |
 | [TurboQuant paper](https://arxiv.org/abs/2501.06725) | Walsh-Hadamard quantization |
 
 Built with the help of [Claude](https://claude.ai).

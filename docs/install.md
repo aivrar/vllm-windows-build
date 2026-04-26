@@ -48,7 +48,7 @@ pip install dist-v3\vllm-0.19.0+cu126-cp310-cp310-win_amd64.whl
 ```
 
 Or download the wheel directly from
-[Releases](https://github.com/rookiemann/vllm-windows-build/releases/latest).
+[Releases](https://github.com/aivrar/vllm-windows-build/releases/latest).
 
 ### Verify
 

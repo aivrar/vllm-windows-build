@@ -156,7 +156,7 @@ if "!WHEEL_FILE!"=="" (
 if "!WHEEL_FILE!"=="" (
     echo          FAILED: No vllm wheel found in dist-v3\, dist-v2\, or dist\
     echo          Download from:
-    echo            https://github.com/rookiemann/vllm-windows-build/releases
+    echo            https://github.com/aivrar/vllm-windows-build/releases
     echo          Or build it yourself: python build_wheel.py
     exit /b 1
 )

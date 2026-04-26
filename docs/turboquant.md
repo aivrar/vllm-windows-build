@@ -2,7 +2,7 @@
 
 vLLM v0.19.0 on Windows ships with integrated support for six KV cache
 compression methods from the
-[Multi-TurboQuant](https://github.com/rookiemann/multi-turboquant)
+[Multi-TurboQuant](https://github.com/aivrar/multi-turboquant)
 library:
 
 | Method | Bits | Family | Calibration | Notes |
@@ -188,4 +188,4 @@ script and what it verifies.
 
 - [benchmarks.md](benchmarks.md) — full performance numbers
 - [architecture.md](architecture.md) — how the cache layout works
-- [Multi-TurboQuant](https://github.com/rookiemann/multi-turboquant) — the upstream library
+- [Multi-TurboQuant](https://github.com/aivrar/multi-turboquant) — the upstream library
