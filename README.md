@@ -2,58 +2,77 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Platform: Windows](https://img.shields.io/badge/Platform-Windows%2010%2F11-blue)
-![vLLM: v0.19.1](https://img.shields.io/badge/vLLM-v0.19.1-orange)
+![vLLM: v0.21.0](https://img.shields.io/badge/vLLM-v0.21.0-orange)
 ![CUDA: 12.6](https://img.shields.io/badge/CUDA-12.6-76B900)
 ![Python: 3.10](https://img.shields.io/badge/Python-3.10-3776AB)
+![PyTorch: 2.11](https://img.shields.io/badge/PyTorch-2.11.0-EE4C2C)
 ![Triton: 3.6](https://img.shields.io/badge/Triton-3.6-red)
 ![Multi-TurboQuant](https://img.shields.io/badge/Multi--TurboQuant-6%20methods-purple)
+![+ Upstream TurboQuant](https://img.shields.io/badge/+%20Upstream%20TurboQuant-4%20variants-purple)
 
-**Native Windows build of vLLM 0.19.1 — no WSL, no Docker, no Linux VM.**
-Now with the full **Multi-TurboQuant** KV cache compression suite (6
-methods, real packed-uint8 storage, **2× cache capacity**) and a custom
-safetensors reader that loads models **29× faster** on Windows.
+**Native Windows build of vLLM 0.21.0 — no WSL, no Docker, no Linux VM.**
+Now ships with **10 KV cache compression methods**: the 6 Multi-TurboQuant
+methods (`isoquant`/`planarquant`/`turboquant25/35`) plus the 4 new
+upstream TurboQuant variants that landed in v0.19.2rc0 (`turboquant_k8v4`,
+`turboquant_4bit_nc`, `turboquant_k3v4_nc`, `turboquant_3bit_nc`).
 
 vLLM is the most popular open-source LLM serving engine, but it
 officially only supports Linux. This repo provides a **pre-built wheel**
 (just download and install) plus a complete patchset for compiling vLLM
-v0.19.1 natively on Windows with full CUDA acceleration, Triton support,
+v0.21.0 natively on Windows with full CUDA acceleration, Triton support,
 and Multi-TurboQuant integration.
 
 ## Releases
 
 | Release | vLLM | PyTorch | Triton | KV compression | Download |
 |---|---|---|---|---|---|
-| **v0.19.1-win (latest)** | 0.19.1 | 2.10.0+cu126 | 3.6.0 | Multi-TurboQuant (6 methods) + fp8 | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.19.1-win) |
+| **v0.21.0-win (latest)** | 0.21.0 | 2.11.0+cu126 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8 | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.21.0-win) |
+| v0.19.1-win | 0.19.1 | 2.10.0+cu126 | 3.6.0 | Multi-TurboQuant (6 methods) + fp8 | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.19.1-win) |
 | v0.19.0-win | 0.19.0 | 2.10.0+cu126 | 3.6.0 | Multi-TurboQuant (6 methods) + fp8 | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.19.0-win) |
 | v0.17.1-win | 0.17.1 | 2.10.0+cu126 | 3.6.0 | TurboQuant (2 recipes) | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.17.1-win) |
 | v0.14.2-win | 0.14.2 | 2.9.1+cu126 | n/a | fp8 only | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.14.2-win) |
 
-### What's new in v0.19.1
+### What's new in v0.21.0
 
-- **vLLM v0.19.1 base** — upstream point release (CI fixes, pinned
-  `nixl-cu{12,13}`, Jina ColBERT rotary recomputation for transformers v5).
-- **`uvloop` fallback baked into the wheel** — upstream added an
-  unconditional `import uvloop` in `vllm/v1/utils.py`; the patch now
-  wraps it in `try/except ImportError → asyncio`, so user code no
-  longer needs the `sys.modules.setdefault("uvloop", ...)` stub.
-- **All 6 TQ methods re-verified on RTX 3090** end-to-end. See the
-  [test results](#tested-with) section.
-- **`tests/test_tq_diag.py`** added — faulthandler-guarded diagnostic
-  that distinguishes genuine hangs from slow (but terminating)
-  PyTorch-fallback decodes.
+- **vLLM v0.21.0 base** — 1,157 upstream commits since v0.19.1, including
+  the new native TurboQuant attention backend (PR #38479), DeepGEMM
+  extension, fastsafetensors prefetch helpers, and v1 engine maturity.
+- **PyTorch 2.11.0 + CUDA 12.6** (was 2.10.0). New compiler flags needed
+  for MSVC: `/Usmall` to dodge the `rpcndr.h` macro that collides with
+  PyTorch's new `bool small` parameter name, and `/Zc:__cplusplus` so
+  CUTLASS's `is_unsigned_v` (C++17) actually sees the standard `__cplusplus`
+  value.
+- **Upstream TurboQuant coexists with Multi-TurboQuant** — the patch
+  registers our 6 method names alongside upstream's 4 in `CacheDType`.
+  Backend dispatch in `vllm/platforms/cuda.py` routes `turboquant_*` to
+  the new `TurboQuantBackend`; ours stay on the existing `TritonAttention`
+  backend with the dispatch hooks from the v4 patch.
+- **CUTLASS 4.4.2 (vendored + vllm-flash-attn submodule) is now patched
+  inline** — two MSVC fixes (`memsetDevice` host/device mismatch, four
+  `static constexpr dim3 get_block_shape()` violations). The patches
+  ship as `cutlass-windows.patch` and `vllm-flash-attn-cutlass-windows.patch`
+  inside `vllm-source/`; `CMakeLists.txt` applies them automatically after
+  `FetchContent_MakeAvailable`, so no manual intervention.
+- **flashinfer is now silently skipped on Windows** — upstream defaults
+  `VLLM_USE_FLASHINFER_SAMPLER=True`, which then unconditionally `import
+  flashinfer` (no Windows wheel). The patch flips the default to `False`
+  on `win32` so the Triton fallback is used transparently.
+- **Smoke-tested end-to-end on RTX 3090, Qwen3-14B-AWQ-4bit** with both
+  `kv_cache_dtype=auto` (9.7 tok/s) and `turboquant35` (0.73 tok/s,
+  consistent with v0.19.x).
 
-### Carried over from v0.19.0
+### Carried over from v0.19.x
 
 - **Multi-TurboQuant integration**: 6 KV cache compression methods
   (`isoquant3`, `isoquant4`, `planarquant3`, `planarquant4`,
   `turboquant25`, `turboquant35`) with real uint8 packed storage —
   **2× more KV cache tokens** at the same `gpu_memory_utilization`.
 - **Custom Windows safetensors reader**: numpy memory-mapping +
-  chunked GPU streaming. Loads a 14B model in **6.5 seconds** vs 189
-  seconds with the upstream mmap path. Works on systems with the
-  Windows pagefile disabled.
+  chunked GPU streaming. Loads a 14B model in seconds and works on
+  systems with the Windows pagefile disabled.
 - **All 140 CUDA targets compile clean** with MSVC 2022 + CUDA 12.6 +
-  Ninja. 34 source files patched + 1 new file.
+  Ninja. 36 source files patched + 3 new files (the TQ dispatch helper
+  and the two CUTLASS patches).
 - **Tests included**: end-to-end validation suite that proves each
   TQ method actually compresses (not a placebo) and each one produces
   unique output from FP16.
@@ -76,7 +95,7 @@ Full benchmarks → [docs/benchmarks.md](docs/benchmarks.md)
 ### Option A — Pre-built wheel (no compiler needed)
 
 Download
-**[vllm-0.19.1+cu126-cp310-cp310-win_amd64.whl](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.19.1-win)**
+**[vllm-0.21.0+cu126-cp310-cp310-win_amd64.whl](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.21.0-win)**
 from the Releases page, then:
 
 ```batch
@@ -84,15 +103,15 @@ from the Releases page, then:
 py -3.10 -m venv venv
 venv\Scripts\activate
 
-:: Install PyTorch 2.10.0 with CUDA 12.6
-pip install torch==2.10.0 torchaudio==2.10.0 torchvision==0.25.0 ^
+:: Install PyTorch 2.11.0 with CUDA 12.6
+pip install torch==2.11.0 torchaudio==2.11.0 torchvision==0.26.0 ^
     --index-url https://download.pytorch.org/whl/cu126
 
 :: Install Triton for Windows
 pip install triton-windows==3.6.0.post26
 
 :: Install the pre-built vLLM wheel
-pip install vllm-0.19.1+cu126-cp310-cp310-win_amd64.whl
+pip install vllm-0.21.0+cu126-cp310-cp310-win_amd64.whl
 
 :: Install Multi-TurboQuant for the 6 KV cache compression methods
 pip install git+https://github.com/aivrar/multi-turboquant.git
@@ -102,14 +121,21 @@ Or run `install.bat` for a fully self-contained portable Python install.
 
 ### Option B — Build from source
 
-Requires Visual Studio 2022 (Community is fine), CUDA 12.6, ~30-45 min.
+Requires Visual Studio 2022 (Community is fine), CUDA 12.6, ~60-90 min on a
+4-core box (the CUDA compile dominates).
 
 ```batch
 git clone https://github.com/vllm-project/vllm.git vllm-source
-cd vllm-source && git checkout v0.19.1 && cd ..
-git apply vllm-windows-v4.patch --directory vllm-source
+cd vllm-source && git checkout v0.21.0 && cd ..
+git apply vllm-windows-v5.patch --directory vllm-source
 build.bat
 ```
+
+The patch also drops `cutlass-windows.patch` and
+`vllm-flash-attn-cutlass-windows.patch` into `vllm-source/`. The build's
+CMakeLists.txt applies them automatically to the FetchContent-managed
+`.deps/cutlass-src/` and `.deps/vllm-flash-attn-src/csrc/cutlass` after
+the first configure, so you don't need a separate step.
 
 Full instructions, including all the env vars and prerequisites:
 **→ [docs/install.md](docs/install.md)**
@@ -127,8 +153,9 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 os.add_dll_directory(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\bin")
 os.add_dll_directory(r"C:\path\to\venv\Lib\site-packages\torch\lib")
 
-# uvloop stub no longer needed as of v0.19.1 — the patch wraps
-# `import uvloop` in a try/except ImportError with an asyncio fallback.
+# Both uvloop and flashinfer fallbacks are baked into the wheel.
+# Multi-GPU host? Don't forget CUDA_DEVICE_ORDER + CUDA_VISIBLE_DEVICES
+# so vLLM lands on the GPU you actually want.
 
 from vllm import LLM, SamplingParams
 
@@ -154,15 +181,21 @@ For OpenAI-compatible HTTP serving and more usage patterns:
 
 ---
 
-## Multi-TurboQuant: 6 KV cache compression methods
+## KV cache compression: 10 methods (6 ours + 4 upstream)
 
-vLLM v0.19.1 on Windows ships with integrated support for six KV cache
-compression methods from the [Multi-TurboQuant](https://github.com/aivrar/multi-turboquant)
-library:
+vLLM v0.21.0 on Windows ships with integrated support for **ten** KV cache
+compression dtypes. The four `turboquant_*` entries are the new upstream
+TurboQuant attention backend (PR #38479, landed in v0.19.2rc0); the six
+others come from our [Multi-TurboQuant](https://github.com/aivrar/multi-turboquant)
+library and run on the patched `TritonAttention` backend.
 
 | Method | Bits | Family | Calibration | Use case |
 |---|---|---|---|---|
-| `isoquant4` | 4.25 | quaternion 4D rotation | none | **Recommended default** |
+| `turboquant_k8v4` | 8.25 / 4.25 | upstream | none | Mixed-precision K/V |
+| `turboquant_4bit_nc` | 4.25 | upstream | none | Upstream default |
+| `turboquant_k3v4_nc` | 3.25 / 4.25 | upstream | none | More aggressive K |
+| `turboquant_3bit_nc` | 3.25 | upstream | none | Most aggressive upstream |
+| `isoquant4` | 4.25 | quaternion 4D rotation | none | **Recommended default (ours)** |
 | `planarquant4` | 4.25 | Givens 2D rotation | none | Same memory, simpler transform |
 | `isoquant3` | 3.25 | quaternion 4D rotation | none | More aggressive |
 | `planarquant3` | 3.25 | Givens 2D rotation | none | More aggressive |
@@ -170,39 +203,54 @@ library:
 | `turboquant25` | 2.25 | WHT + MSE codebook + QJL | runtime | Most compression |
 
 Just pass the method name as `kv_cache_dtype` when constructing an
-`LLM` (or `--kv-cache-dtype` to `vllm serve`). The cache will
-automatically use uint8 packed storage and the attention backend will
-decode active blocks on each forward pass.
+`LLM` (or `--kv-cache-dtype` to `vllm serve`). Upstream `turboquant_*`
+names are routed by `vllm/platforms/cuda.py` to the new
+`TurboQuantBackend` (separate cache layout + Triton encode/decode);
+ours stay on `TritonAttention` with the dispatch hooks from the v4
+patch.
 
-**Trade-off**: throughput drops ~30-300× with TQ enabled because the
-encode/decode currently runs in PyTorch (no fused Triton kernel yet).
+**Trade-off (ours)**: throughput drops ~30-300× with our 6 methods enabled
+because the encode/decode runs in PyTorch (no fused Triton kernel yet).
 Memory savings are real, throughput cost is the price. Best for
-offline / long-context / batch workloads. See
+offline / long-context / batch workloads. The upstream variants use
+fused Triton kernels and don't pay this cost.  See
 **[docs/turboquant.md](docs/turboquant.md)** for the full picture.
 
 ---
 
 ## What's in the patch
 
-`vllm-windows-v4.patch` is a unified diff against `vllm-project/vllm`
-at tag `v0.19.1`. It touches **34 files** + **1 new file**:
+`vllm-windows-v5.patch` is a unified diff against `vllm-project/vllm`
+at tag `v0.21.0`. It touches **36 files** + **3 new files** (the TQ
+dispatch helper plus two CUTLASS-vendor patches):
 
 - **Build system** (4): CMakeLists, cmake/utils, setup.py, requirements/cuda.txt
-- **CUDA kernels** (16): MSVC compatibility for keyword operators,
+  (with `/Usmall` + `/Zc:__cplusplus` for MSVC, `fastsafetensors` and
+  `flashinfer` commented out, auto-apply of cutlass-windows patches)
+- **CUDA kernels** (17): MSVC compatibility for keyword operators,
   designated initializers, `__builtin_clz`, variable templates with
   attributes, nested constexpr lambdas, deeply nested `else if`,
-  `__attribute__((aligned))`, `std::isinf`, `__int128_t`
-- **Runtime Python** (8): `fcntl` → `msvcrt`, ZMQ IPC → TCP, fork →
+  `__attribute__((aligned))`, `std::isinf`, `__int128_t`, the new
+  `persistent_topk.cuh` `__forceinline` swap, `fused_silu_mul_block_quant.cu`
+  `quant_type_max_v<T>()` call-syntax, and the `topk_softplus_sqrt_kernels.cu`
+  preprocessor-in-macro-arg refactor
+- **Runtime Python** (9): `fcntl` → `msvcrt`, ZMQ IPC → TCP, fork →
   spawn, NCCL → FakeProcessGroup, custom safetensors reader for small
-  pagefile systems
+  pagefile systems, `uvloop` fallback, `VLLM_USE_FLASHINFER_SAMPLER`
+  default-False on Windows
 - **Multi-TurboQuant integration** (4 + 1 new): 6 new `CacheDType`
   literals, dtype mapping, attention backend dispatch, plus the new
   `vllm/v1/attention/ops/multi_turboquant_kv.py` (295 lines)
+- **CUTLASS patches** (2 new files): `cutlass-windows.patch` (5 files
+  in CUTLASS 4.4.2: `cuda_host_adapter.hpp` + 4 SM100/SM103 headers
+  with `static constexpr dim3` violations) and
+  `vllm-flash-attn-cutlass-windows.patch` (5 files in the vendored
+  CUTLASS submodule under vllm-flash-attn).
 
-Full per-file breakdown → **[docs/build.md](docs/build.md#whats-in-the-patch)**
+Full per-file breakdown → **[PATCHES.md](PATCHES.md)**
 
 All changes are guarded by `#ifdef _MSC_VER`, `sys.platform == "win32"`,
-or similar conditionals. **Zero impact on Linux builds.**
+`if(MSVC ...)`, or similar conditionals. **Zero impact on Linux builds.**
 
 ---
 
@@ -250,14 +298,23 @@ fail. See [docs/troubleshooting.md → OSError 1455](docs/troubleshooting.md#ose
 - CUDA Toolkit 12.6
 - Python 3.10.11
 
-### v0.19.1 end-to-end test run (RTX 3090, Qwen3-14B AWQ-4bit)
+### v0.21.0 smoke test (RTX 3090, Qwen3-14B-abliterated-AWQ-4bit)
 
-Smoke test (FlashAttention 2 backend, `kv_cache_dtype=auto`): **933 ms
-for 16 tokens**, ~17 tok/s.
+`kv_cache_dtype=auto` (FlashAttention 2): **20 tokens in 2.06 s,
+9.7 tok/s** with `max_model_len=512`, `gpu_memory_utilization=0.92`.
+First model load completes in ~24 s after the safetensors cache warms.
 
-All six TurboQuant methods (Triton attention backend, PyTorch-fallback
-encode/decode on Windows). Timings are for 5 decoded tokens with
-`max_model_len=512`, `gpu_memory_utilization=0.5`:
+`kv_cache_dtype=turboquant35` (Triton attention + Multi-TurboQuant
+PyTorch-fallback encode/decode): **20 tokens in 27.39 s, 0.73 tok/s** —
+in line with the v0.19.x figure (0.92 tok/s for 5 tokens). All other
+Multi-TurboQuant methods (`isoquant3/4`, `planarquant3/4`,
+`turboquant25`) should behave the same as in v0.19.x; rerun
+`tests/test_tq_real.py` for a full sweep.
+
+### v0.19.1 historical reference
+
+Older Multi-TurboQuant timings on the same hardware (5 decoded tokens,
+`gpu_memory_utilization=0.5`):
 
 | Method | Preset | Time (5 tok) | Output tok/s | Status |
 |---|---|---:|---:|---|
@@ -283,12 +340,23 @@ set TQ_METHOD=isoquant3
 - **Single GPU only.** NCCL doesn't ship with PyTorch on Windows; the
   patch wires up `FakeProcessGroup` for single-rank operation. Multi-GPU
   needs separate vLLM instances + external load balancing.
-- **No FlashInfer.** No Windows wheel.
-- **No FlashAttention 3.** FA3 has MSVC-incompatible PTX macros.
-  FlashAttention 2 works fine.
-- **TQ throughput is unoptimized.** Encode/decode runs in
-  PyTorch-vectorised mode. Memory savings are real, throughput cost is
-  the trade-off until a fused Triton kernel lands.
+- **No FlashInfer.** No Windows wheel. The patch defaults
+  `VLLM_USE_FLASHINFER_SAMPLER=False` on `win32` so vLLM falls back to
+  the Triton sampler transparently.
+- **No FlashAttention 3, no FlashAttention 4 (CuteDSL).** FA3 has
+  MSVC-incompatible PTX macros, FA4 needs `nvidia-cutlass-dsl` (no
+  Windows wheel). FlashAttention 2 works fine.
+- **No fastsafetensors.** Linux-only (`io_uring`). The patched
+  `weight_utils.py` keeps the in-tree numpy-mmap + chunked-GPU-stream
+  reader from v0.19.x for the safetensors path.
+- **No DeepGEMM, no Quack, no Tilelang, no TokenSpeed-MLA, no NIXL.**
+  None ship Windows wheels; CMake skips DeepGEMM automatically when the
+  target arch is below SM 9.0+.
+- **Our 6 Multi-TurboQuant methods are still on the PyTorch-fallback
+  encode/decode.** Memory savings real, throughput cost real
+  (`turboquant35` ≈ 0.73 tok/s on Qwen3-14B). The upstream
+  `turboquant_*` variants don't pay this cost — they use the fused
+  Triton store/decode kernels that landed in PR #38479.
 - **Triton JIT cold-start latency.** First inference with Triton kernels
   (e.g. Qwen3.5 GDN layers) takes ~1-2 minutes for compilation.
 
@@ -303,7 +371,9 @@ set TQ_METHOD=isoquant3
 | [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit) | NVIDIA |
 | [FlashAttention](https://github.com/Dao-AILab/flash-attention) | FA2 kernels |
 | [triton-windows](https://github.com/triton-lang/triton-windows) | Triton compiler ported to Windows |
-| [Multi-TurboQuant](https://github.com/aivrar/multi-turboquant) | KV cache compression methods |
+| [Multi-TurboQuant](https://github.com/aivrar/multi-turboquant) | KV cache compression methods (ours) |
+| [Upstream TurboQuant](https://github.com/vllm-project/vllm/pull/38479) | TurboQuant attention backend (vLLM PR #38479) |
+| [CUTLASS](https://github.com/NVIDIA/cutlass) | GEMM kernels (CUTLASS 4.4.2 with MSVC patches) |
 | [TurboQuant paper](https://arxiv.org/abs/2501.06725) | Walsh-Hadamard quantization |
 
 Built with the help of [Claude](https://claude.ai).

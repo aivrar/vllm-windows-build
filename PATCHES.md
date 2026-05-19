@@ -1,9 +1,8 @@
 # Patch Reference
 
-Detailed breakdown of every change in `vllm-windows-v3.patch`,
-organized by category. This is the v0.19.0 patchset; the older
-v0.17.1 patch (`vllm-windows-v2.patch`) and v0.14.x patch
-(`vllm-windows.patch`) are kept in the repo for legacy installs.
+Detailed breakdown of every change in `vllm-windows-v5.patch` (active),
+organized by category. Older patches against earlier vLLM versions are
+kept in the repo for legacy installs.
 
 For build internals (phases, iterating on the patch, regenerating it),
 see [docs/build.md](docs/build.md).
@@ -12,30 +11,36 @@ see [docs/build.md](docs/build.md).
 
 | | |
 |---|---|
-| Base | vLLM v0.19.0 (commit `2a69949bd`) |
+| Base | vLLM v0.21.0 (commit `ad7125a43`) |
 | Compiler | MSVC 19.43.34810 (Visual Studio 2022 Community 17.13) |
 | CUDA | 12.6 |
 | Python | 3.10.11 |
-| PyTorch | 2.10.0+cu126 |
+| PyTorch | 2.11.0+cu126 |
 | Triton | triton-windows 3.6.0.post26 |
+| CUTLASS | 4.4.2 (FetchContent + 5-file Windows patch applied automatically) |
+| vllm-flash-attn | f5bc33cfc (with vendored CUTLASS submodule patched) |
 | Generator | Ninja |
 | GPU | RTX 3090 (sm_86) — patches built and tested for SM 8.0+ |
 
 ## Diff stats
 
 ```
-33 files changed, 491 insertions(+), 135 deletions(-)
-+ 1 new file: vllm/v1/attention/ops/multi_turboquant_kv.py (295 lines)
+36 files changed, ~997 insertions(+), ~131 deletions(-)
++ 3 new files: vllm/v1/attention/ops/multi_turboquant_kv.py (295 lines),
+  cutlass-windows.patch (69 lines),
+  vllm-flash-attn-cutlass-windows.patch (69 lines)
+Total patch size: 1918 lines unified diff.
 ```
 
 ## Files modified
 
 | Category | File | Hunks | Purpose |
 |---|---|---|---|
-| Build system | `CMakeLists.txt` | 5 | Force CUDA toolkit, MSVC flags, link `CUDA::cublas` |
+| Build system | `CMakeLists.txt` | 8 | Force CUDA toolkit; MSVC flags incl. `/Usmall`, `/Zc:__cplusplus`, `WIN32_LEAN_AND_MEAN`; auto-apply `cutlass-windows.patch`; link `CUDA::cublas` |
 | Build system | `cmake/utils.cmake` | 1 | Quote paths in `file(REAL_PATH)` |
+| Build system | `cmake/external_projects/vllm_flash_attn.cmake` | 1 | Auto-apply `vllm-flash-attn-cutlass-windows.patch` after FetchContent |
 | Build system | `setup.py` | 5 | Allow Win CUDA, path conversion, find Ninja in venv |
-| Build system | `requirements/cuda.txt` | 1 | Comment out flashinfer / cutlass-dsl / quack-kernels |
+| Build system | `requirements/cuda.txt` | 1 | Comment out flashinfer / cutlass-dsl / quack-kernels / tilelang / fastsafetensors / tokenspeed-mla |
 | CUDA kernel | `csrc/attention/merge_attn_states.cu` | 3 | `uint` typedef, `std::isinf` → `isinf` |
 | CUDA kernel | `csrc/core/math.hpp` | 1 | `__builtin_clz` → portable bit-twiddle |
 | CUDA kernel | `csrc/cumem_allocator.cpp` | 1 | `<BaseTsd.h>`, `SSIZE_T`/`ssize_t` |
@@ -43,55 +48,103 @@ see [docs/build.md](docs/build.md).
 | CUDA kernel | `csrc/mamba/mamba_ssm/selective_scan_fwd.cu` | 3 | Replace nested `BOOL_SWITCH` lambdas with explicit dispatch |
 | CUDA kernel | `csrc/moe/grouped_topk_kernels.cu` | 4 | `__attribute((aligned))` → `__align__` |
 | CUDA kernel | `csrc/moe/marlin_moe_wna16/generate_kernels.py` | 2 | Flat `if` chain (avoid C1061), `os.remove` |
-| CUDA kernel | `csrc/quantization/activation_kernels.cu` | 8 | designated init, `int4` for `__int128_t`, `int64_t` |
+| CUDA kernel | `csrc/moe/topk_softplus_sqrt_kernels.cu` | 1 | **NEW** Hoist `#ifndef USE_ROCM` out of `DISPATCH_HASH(...)` macro arg |
+| CUDA kernel | `csrc/persistent_topk.cuh` | 1 | **NEW** Guard `__attribute__((always_inline))` with `_MSC_VER` |
+| CUDA kernel | `csrc/quantization/activation_kernels.cu` | 8 | Designated init, `int4` for `__int128_t`, `int64_t` |
 | CUDA kernel | `csrc/quantization/awq/gemm_kernels.cu` | 2 | `__asm__ __volatile__` → `asm volatile` |
 | CUDA kernel | `csrc/quantization/fused_kernels/fused_layernorm_dynamic_per_token_quant.cu` | 1 | `and` → `&&` |
+| CUDA kernel | `csrc/quantization/fused_kernels/fused_silu_mul_block_quant.cu` | 1 | **NEW** Add `()` to `quant_type_max_v<scalar_out_t>` call |
 | CUDA kernel | `csrc/quantization/fused_kernels/layernorm_utils.cuh` | 1 | `quant_type_max_v<T>` → `quant_type_max_v<T>()` |
-| CUDA kernel | `csrc/quantization/fused_kernels/quant_conversions.cuh` | 1 | same |
+| CUDA kernel | `csrc/quantization/fused_kernels/quant_conversions.cuh` | 1 | Same |
 | CUDA kernel | `csrc/quantization/gptq_allspark/allspark_qgemm_w8a16.cu` | 1 | `or` → `\|\|` |
 | CUDA kernel | `csrc/quantization/marlin/generate_kernels.py` | 1 | Flat `if` chain, `os.remove` |
 | CUDA kernel | `csrc/quantization/utils.cuh` | 2 | Variable template → function template |
 | CUDA kernel | `csrc/quantization/w8a8/fp8/common.cu` | 1 | `quant_type_max_v` call site fix |
-| CUDA kernel | `csrc/quantization/w8a8/fp8/common.cuh` | 1 | same |
-| CUDA kernel | `csrc/topk.cu` | 3 | designated initializer → positional |
+| CUDA kernel | `csrc/quantization/w8a8/fp8/common.cuh` | 1 | Same |
 | Runtime Python | `vllm/distributed/parallel_state.py` | 2 | `FakeProcessGroup` + `FileStore` instead of Gloo |
 | Runtime Python | `vllm/entrypoints/openai/api_server.py` | 1 | Guard `SO_REUSEPORT` |
-| Runtime Python | `vllm/model_executor/layers/fused_moe/routed_experts_capturer.py` | 2 | `fcntl.flock` → `msvcrt.locking` |
+| Runtime Python | `vllm/envs.py` | 1 | **NEW** Default `VLLM_USE_FLASHINFER_SAMPLER=False` on `win32` |
 | Runtime Python | `vllm/model_executor/model_loader/weight_utils.py` | 8 | Custom safetensors reader (numpy mmap + chunked GPU stream) |
 | Runtime Python | `vllm/utils/network_utils.py` | 1 | ZMQ IPC → `tcp://127.0.0.1` |
 | Runtime Python | `vllm/utils/system_utils.py` | 1 | Force `spawn` multiprocessing |
 | Runtime Python | `vllm/v1/engine/core_client.py` | 1 | Force `InprocClient` |
-| TQ integration | `vllm/config/cache.py` | 1 | Add 6 TQ entries to `CacheDType` literal |
-| TQ integration | `vllm/utils/torch_utils.py` | 2 | Map TQ dtypes to `torch.uint8` |
-| TQ integration | `vllm/v1/attention/backends/triton_attn.py` | 4 | Hook `do_kv_cache_update` and `forward` |
-| TQ integration | `vllm/v1/attention/ops/triton_reshape_and_cache_flash.py` | 1 | (compatible passthrough) |
-| **TQ integration (NEW)** | `vllm/v1/attention/ops/multi_turboquant_kv.py` | new | 295-line dispatch helper |
+| Runtime Python | `vllm/v1/utils.py` | 1 | `import uvloop` → try/except with asyncio fallback |
+| TQ integration | `vllm/config/cache.py` | 1 | Add 6 TQ entries to `CacheDType` literal (alongside upstream's 4 `turboquant_*`) |
+| TQ integration | `vllm/utils/torch_utils.py` | 1 | Map our 6 TQ dtypes to `torch.uint8` |
+| TQ integration | `vllm/v1/attention/backends/triton_attn.py` | 4 | Add our 6 to `supported_kv_cache_dtypes`; hook `forward()` decode + `do_kv_cache_update` encode for our dispatch |
+| **NEW file** | `vllm/v1/attention/ops/multi_turboquant_kv.py` | new | 295-line dispatch helper |
+| **NEW file** | `cutlass-windows.patch` | new | 5-file CUTLASS 4.4.2 patch applied automatically by CMakeLists.txt |
+| **NEW file** | `vllm-flash-attn-cutlass-windows.patch` | new | 5-file vendored CUTLASS patch applied automatically by `vllm_flash_attn.cmake` |
+
+## Dropped from v4 (now obsolete upstream)
+
+| Old patch hunk | Status |
+|---|---|
+| `csrc/topk.cu` — designated initializer fix in `get_params()` | Upstream removed `FastTopKParams` entirely; the replacement `persistent_topk` uses explicit member assignment, our patch is no longer needed |
+| `vllm/model_executor/layers/fused_moe/routed_experts_capturer.py` — `fcntl.flock` → `msvcrt.locking` | Upstream rewrote the file; the new implementation uses ABC + contextlib and no longer touches `fcntl` |
+| `vllm/v1/attention/ops/triton_reshape_and_cache_flash.py` — `kv_cache_dtype.startswith("fp8")` assert | Upstream now uses `is_quantized_kv_cache(kv_cache_dtype)`, a strictly more general check |
 
 ---
 
 ## Categorized notes
 
-### CMakeLists.txt — CUDA toolkit forcing
+### CMakeLists.txt — MSVC compiler flags (new in v5)
 
-When multiple CUDA toolkits are installed, CMake (or VS MSBuild
-integration) can pick up the wrong one. Patch forces
-`CUDA_TOOLKIT_ROOT_DIR`, `CUDAToolkit_ROOT`, and `CUDA_BIN_PATH` from
-`$ENV{CUDA_HOME}` before `find_package(Torch)`.
+PyTorch 2.11.0 and CUTLASS 4.4.2 surfaced two new MSVC-specific issues
+that didn't exist in earlier toolchains. The patch adds these flags
+inside the existing `if(MSVC)` block:
 
-Also adds an MSVC-specific block:
-- `_CRT_DECLARE_NONSTDC_NAMES=1` for POSIX compatibility
-- `USE_CUDA` define (activates a CCCL workaround in PyTorch's
-  `compiled_autograd.h`)
-- `/Zc:preprocessor` for correct variadic macro handling — required by
-  the nested `BOOL_SWITCH` macros that survived the kernel patch
+```cmake
+add_compile_definitions(WIN32_LEAN_AND_MEAN)
+set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} /Usmall")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler=/Usmall")
+set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} /Zc:__cplusplus")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler=/Zc:__cplusplus")
+```
 
-### setup.py — find Ninja, allow CUDA on Windows
+- **`/Usmall` + `WIN32_LEAN_AND_MEAN`**: Windows SDK's `rpcndr.h`
+  defines `small` as a macro (`typedef char small`). PyTorch 2.11.0's
+  `c10/cuda/CUDACachingAllocator.h` line 105 uses `small` as a
+  parameter name (`StreamSegmentSize(cudaStream_t s, bool small, size_t sz)`).
+  Without these flags, the preprocessor turns that into `bool char,
+  size_t sz` and nvcc rejects it as a syntax error.
+- **`/Zc:__cplusplus`**: MSVC defaults to reporting `__cplusplus=199711L`
+  even when you pass `-std=c++20`. CUTLASS 4.4.2's `platform.h` gates
+  `is_unsigned_v` / `is_integral_v` / etc. behind
+  `__cplusplus >= 201703L`, so without this flag those aliases are
+  invisible and `exmy_base.h` errors with "is_unsigned_v: is not a
+  member of cutlass::platform".
 
-Default is to set `VLLM_TARGET_DEVICE=empty` on non-Linux. Patch adds
-an explicit override path: if `os.getenv("VLLM_TARGET_DEVICE") ==
-"cuda"`, allow the build. Also fixes `is_ninja_available()` to look in
-the venv `Scripts\` directory (not just `PATH`) so the build picks up
-`pip install ninja` automatically.
+### CMakeLists.txt — auto-apply CUTLASS patches
+
+After `FetchContent_MakeAvailable(cutlass)` we add an `execute_process`
+block guarded by `if(MSVC AND EXISTS ...)` that runs `git apply` on
+`cutlass-windows.patch` inside the just-fetched `${cutlass_SOURCE_DIR}`.
+The `--check` pass ensures we don't error if the patch has already been
+applied (e.g. on rebuild). The same pattern is mirrored in
+`cmake/external_projects/vllm_flash_attn.cmake` for the vendored
+CUTLASS submodule inside `vllm-flash-attn`.
+
+### envs.py — flashinfer sampler default (new in v5)
+
+Upstream defaults `VLLM_USE_FLASHINFER_SAMPLER=True`. That triggers an
+unconditional `from vllm.v1.attention.backends.flashinfer import
+FlashInferBackend` in `vllm/v1/sample/ops/topk_topp_sampler.py:40`,
+which in turn does `import flashinfer` at module load. The flashinfer
+package has no Windows wheel, so the import raises
+`ModuleNotFoundError` and `LLM()` construction fails before any kernel
+ever runs.
+
+The patch flips the lambda so the default on `win32` is `False`,
+making the Triton sampler the default path on Windows:
+
+```python
+"VLLM_USE_FLASHINFER_SAMPLER": lambda: (
+    bool(int(os.environ["VLLM_USE_FLASHINFER_SAMPLER"]))
+    if "VLLM_USE_FLASHINFER_SAMPLER" in os.environ
+    else (False if sys.platform == "win32" else True)
+),
+```
 
 ### MSVC keyword operators (`and`, `or`, `not`)
 
@@ -119,7 +172,9 @@ return v + 1;
 `quant_type_max_v<T>` annotated with `MAYBE_HOST_DEVICE`. MSVC's nvcc
 can't apply `__host__`/`__device__` attributes to variable templates.
 The patch converts it to a function template with the same signature
-(`quant_type_max_v<T>()` at call sites).
+(`quant_type_max_v<T>()` at call sites). In v0.21.0 the upstream added
+a new call site in `fused_silu_mul_block_quant.cu` that needed the
+extra `()` too.
 
 ### MSVC nested constexpr lambdas
 
@@ -157,6 +212,22 @@ Patch converts to positional initialization `__nv_bfloat16_raw{17376}`.
 `csrc/quantization/activation_kernels.cu`. `__int64_t` is replaced
 with the standard `int64_t`.
 
+### MSVC `__attribute__((always_inline))` (new in v5)
+
+`csrc/persistent_topk.cuh` (added in v0.21.0) defines
+`FLASHINFER_INLINE` as `inline __attribute__((always_inline)) __device__`.
+MSVC's nvcc rejects `__attribute__`. The patch wraps the macro in
+`#ifdef _MSC_VER` with `__forceinline __device__` as the MSVC variant.
+
+### MSVC preprocessor-in-macro-arg (new in v5)
+
+`csrc/moe/topk_softplus_sqrt_kernels.cu` calls
+`DISPATCH_HASH(use_hash, USE_HASH, { ... })` and embeds
+`#ifndef USE_ROCM ... #endif` *inside* the trailing braced argument.
+Preprocessor directives inside macro arguments are ill-formed C++ even
+with `/Zc:preprocessor`. The patch hoists the `#ifndef USE_ROCM` out
+to wrap the entire `DISPATCH_HASH(...)` call instead.
+
 ### Distributed: FakeProcessGroup + FileStore
 
 PyTorch Windows builds have `GLOO_HAVE_TRANSPORT_TCP=false` and
@@ -189,37 +260,47 @@ The patch adds `_windows_safetensors_iterator` which:
 3. For smaller tensors, return a zero-copy `torch.from_numpy` view
    over the mmap
 
-Result: model loading **29× faster** (6.5s vs 189s on Qwen3-14B) and
-works without a pagefile.
+Works without a pagefile.
 
 ### TritonAttention Multi-TurboQuant dispatch
 
 Two hooks added to `vllm/v1/attention/backends/triton_attn.py`:
 
-1. **`do_kv_cache_update`**: if `kv_cache_dtype` is one of the 6 TQ
+1. **`do_kv_cache_update`**: if `kv_cache_dtype` is one of our 6 TQ
    methods, call `tq_write_kv_cache` (encode + scatter packed bytes
    to the uint8 cache). Otherwise fall through to standard
-   `triton_reshape_and_cache_flash`.
+   `triton_reshape_and_cache_flash` / per-token-head path.
 2. **`forward`**: same check; if TQ, call `tq_decode_active_blocks`
    to gather and decode the active blocks into a compact fp16 cache,
    remap `block_table` to compact indices, then run the standard
    `unified_attention` Triton kernel on the compact cache.
 
 The dispatch helper lives in
-`vllm/v1/attention/ops/multi_turboquant_kv.py` (new file, 295 lines).
-It imports from the `multi_turboquant` package at function-call time
-to keep import overhead zero for non-TQ runs.
+`vllm/v1/attention/ops/multi_turboquant_kv.py`. It imports from the
+`multi_turboquant` package at function-call time to keep import
+overhead zero for non-TQ runs.
+
+The upstream `turboquant_*` variants are handled by the new
+`TurboQuantBackend` in `vllm/v1/attention/backends/turboquant_attn.py`
+(unmodified by this patchset). Backend selection happens in
+`vllm/platforms/cuda.py`: `supports_kv_cache_dtype` on
+`TurboQuantBackend` matches any string starting with `turboquant_`, so
+our `turboquant25`/`turboquant35` (no underscore after `turboquant`)
+keep landing on the TritonAttention path with our hooks.
 
 ---
 
 ## What's NOT patched (known limitations)
 
 - **NCCL** — No Windows support upstream. No multi-GPU tensor parallelism.
-- **FlashInfer** — No Windows wheel.
+- **FlashInfer** — No Windows wheel; the sampler defaults to Triton.
 - **FlashAttention 3** — Has MSVC-incompatible PTX macros. FA2 works fine.
+- **FlashAttention 4 (CuteDSL)** — Needs `nvidia-cutlass-dsl`, no Windows wheel.
 - **`nvidia-cutlass-dsl`** — No Windows wheel. Used by FA4 / QuACK; FA2 path is fine.
+- **DeepGEMM** — CMake skips automatically when target arch < SM 9.0.
+- **fastsafetensors** — Linux-only (`io_uring`); our custom Windows safetensors reader replaces it.
 - **Gloo distributed** — Worked around with `FakeProcessGroup`.
-- **TQ throughput** — Encode/decode runs in PyTorch (no fused Triton kernel). Memory savings real, throughput cost is the trade-off.
+- **Our 6 Multi-TurboQuant methods' throughput** — Encode/decode runs in PyTorch (no fused Triton kernel). Memory savings real, throughput cost is the trade-off. Upstream `turboquant_*` variants don't pay this cost.
 
 ---
 
@@ -230,6 +311,10 @@ installs:
 
 | Patch file | Base vLLM | Status |
 |---|---|---|
-| `vllm-windows-v3.patch` | v0.19.0 | **current** |
-| `vllm-windows-v2.patch` | v0.17.1 | stale; still works for v0.17.1 builds |
+| `vllm-windows-v5.patch` | v0.21.0 | **current** |
+| `vllm-windows-v4.patch` | v0.19.1 | stale; still works for v0.19.1 builds |
+| `vllm-windows-v3.patch` | v0.19.0 | stale; for v0.19.0 builds |
+| `vllm-windows-v2.patch` | v0.17.1 | stale; for v0.17.1 builds |
 | `vllm-windows.patch` | v0.14.1 | stale; for v0.14.2 legacy install |
+| `cutlass-windows-v0.21.0.patch` | CUTLASS v4.4.2 | bundled inside `vllm-source/` by v5 |
+| `vllm-flash-attn-cutlass-windows-v0.21.0.patch` | vllm-flash-attn `f5bc33cfc` submodule | bundled inside `vllm-source/` by v5 |

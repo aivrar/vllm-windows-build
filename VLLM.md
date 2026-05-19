@@ -1,4 +1,4 @@
-# vLLM v0.19.0 Windows — Quick Reference
+# vLLM v0.21.0 Windows — Quick Reference
 
 A condensed page for getting a model running fast. For full
 documentation see [docs/](docs/).
@@ -9,8 +9,8 @@ documentation see [docs/](docs/).
 install.bat
 ```
 
-This downloads embedded Python 3.10.11, installs PyTorch 2.10.0+cu126,
-triton-windows, and the v0.19.0 wheel. Self-contained — nothing touches
+This downloads embedded Python 3.10.11, installs PyTorch 2.11.0+cu126,
+triton-windows, and the v0.21.0 wheel. Self-contained — nothing touches
 your system Python.
 
 ## One-line run
@@ -28,8 +28,6 @@ import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 os.add_dll_directory(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\bin")
 os.add_dll_directory(r"C:\path\to\venv\Lib\site-packages\torch\lib")
-import sys; sys.modules.setdefault("uvloop", type(sys)("uvloop"))
-
 from vllm import LLM, SamplingParams
 
 llm = LLM(
@@ -52,18 +50,25 @@ print(llm.generate(
 
 Pass any of these as `kv_cache_dtype`:
 
-| dtype | Bits | Memory | Quality | Notes |
-|---|---|---|---|---|
-| `auto` | 16 | 1× | best | FP16 baseline |
-| `isoquant4` | 4.25 | **0.5×** | near-FP16 | **recommended TQ default** |
-| `planarquant4` | 4.25 | 0.5× | near-FP16 | simpler transform |
-| `isoquant3` | 3.25 | 0.5× | visible loss | aggressive |
-| `planarquant3` | 3.25 | 0.5× | visible loss | aggressive |
-| `turboquant35` | 3.25 | 0.5× | visible loss | calibrated outliers |
-| `turboquant25` | 2.25 | 0.5× | most loss | most compression |
-| `fp8` | 8 | 0.5× | minimal loss | requires `fp8_e4m3` GPU support |
+| dtype | Bits | Memory | Quality | Backend | Notes |
+|---|---|---|---|---|---|
+| `auto` | 16 | 1× | best | Triton/FA2 | FP16 baseline |
+| `fp8` | 8 | 0.5× | minimal loss | Triton/FA2 | requires `fp8_e4m3` GPU support |
+| `turboquant_k8v4` | 8.25/4.25 | ~0.4× | minimal loss | TurboQuant (upstream) | mixed K/V, no calibration |
+| `turboquant_4bit_nc` | 4.25 | 0.25× | minor loss | TurboQuant (upstream) | upstream default |
+| `turboquant_k3v4_nc` | 3.25/4.25 | ~0.22× | visible loss | TurboQuant (upstream) | aggressive K |
+| `turboquant_3bit_nc` | 3.25 | ~0.2× | visible loss | TurboQuant (upstream) | most aggressive upstream |
+| `isoquant4` | 4.25 | **0.5×** | near-FP16 | TritonAttention (ours) | **recommended TQ default** |
+| `planarquant4` | 4.25 | 0.5× | near-FP16 | TritonAttention (ours) | simpler transform |
+| `isoquant3` | 3.25 | 0.5× | visible loss | TritonAttention (ours) | aggressive |
+| `planarquant3` | 3.25 | 0.5× | visible loss | TritonAttention (ours) | aggressive |
+| `turboquant35` | 3.25 | 0.5× | visible loss | TritonAttention (ours) | calibrated outliers |
+| `turboquant25` | 2.25 | 0.5× | most loss | TritonAttention (ours) | most compression |
 
-All TQ methods double KV cache capacity. See [docs/turboquant.md](docs/turboquant.md)
+The 4 upstream `turboquant_*` variants use fused Triton kernels and
+run at full speed. Our 6 methods use a PyTorch-fallback encode/decode
+(slower, but memory savings are real and quality across the iso/planar
+family is closer to FP16). See [docs/turboquant.md](docs/turboquant.md)
 for details and [docs/benchmarks.md](docs/benchmarks.md) for measured numbers.
 
 ## Required env vars on Windows
@@ -111,8 +116,8 @@ Full troubleshooting → [docs/troubleshooting.md](docs/troubleshooting.md)
 
 ## Environment
 
-- vLLM 0.19.0+cu126
-- PyTorch 2.10.0+cu126
+- vLLM 0.21.0+cu126
+- PyTorch 2.11.0+cu126
 - Triton 3.6.0 (triton-windows)
 - Python 3.10.11
 - CUDA 12.6

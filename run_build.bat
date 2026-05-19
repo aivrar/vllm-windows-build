@@ -1,6 +1,6 @@
 @echo off
 :: =====================================================================
-:: vLLM v0.19.0 Windows automated build runner
+:: vLLM v0.21.0 Windows automated build runner
 :: Sets up VS 2022 + venv + env vars, then calls build.bat.
 :: Edit the paths below to match your install.
 :: =====================================================================
@@ -38,7 +38,7 @@ if exist "%VENV_PATH%\Scripts\activate.bat" (
 )
 
 set "VLLM_TARGET_DEVICE=cuda"
-set "SETUPTOOLS_SCM_PRETEND_VERSION=0.19.0"
+set "SETUPTOOLS_SCM_PRETEND_VERSION=0.21.0"
 
 call "%~dp0build.bat"
 

@@ -4,8 +4,8 @@ cd /d "%~dp0"
 
 echo.
 echo  ============================================================
-echo          vLLM v0.19.0 Windows Installer
-echo     Portable Python 3.10.11 + PyTorch 2.10.0 + vLLM 0.19.0
+echo          vLLM v0.21.0 Windows Installer
+echo     Portable Python 3.10.11 + PyTorch 2.11.0 + vLLM 0.21.0
 echo  ============================================================
 echo.
 
@@ -24,8 +24,8 @@ set "STAGES_TOTAL=5"
 echo  Components to install:
 echo    - Python %PYTHON_VERSION% (embedded distribution)
 echo    - pip (package manager)
-echo    - PyTorch 2.10.0+cu126 + triton-windows (CUDA GPU acceleration)
-echo    - vLLM 0.19.0 wheel (pre-built Windows binary)
+echo    - PyTorch 2.11.0+cu126 + triton-windows (CUDA GPU acceleration)
+echo    - vLLM 0.21.0 wheel (pre-built Windows binary)
 echo    - Verification
 echo.
 
@@ -119,8 +119,8 @@ if exist "%~dp0python\.torch-installed" (
     echo          SKIP - already installed ^(delete python\.torch-installed to force^)
     goto :stage4
 )
-echo          Installing PyTorch 2.10.0 from pytorch.org...
-"%~dp0python\python.exe" -m pip install torch==2.10.0 torchaudio==2.10.0 torchvision==0.25.0 --index-url %TORCH_INDEX% --no-warn-script-location
+echo          Installing PyTorch 2.11.0 from pytorch.org...
+"%~dp0python\python.exe" -m pip install torch==2.11.0 torchaudio==2.11.0 torchvision==0.26.0 --index-url %TORCH_INDEX% --no-warn-script-location
 if !ERRORLEVEL! NEQ 0 (
     echo          FAILED: PyTorch installation error - check output above
     exit /b 1
@@ -144,9 +144,15 @@ if exist "%~dp0python\.vllm-installed" (
     goto :stage5
 )
 
-REM Find the v0.19.0 wheel first, then fall back to older releases
+REM Find the v0.21.0 wheel first, then fall back to older releases
 set "WHEEL_FILE="
-for %%f in ("%~dp0dist-v3\vllm-0.19.0*.whl") do set "WHEEL_FILE=%%f"
+for %%f in ("%~dp0dist-v5\vllm-0.21.0*.whl") do set "WHEEL_FILE=%%f"
+if "!WHEEL_FILE!"=="" (
+    for %%f in ("%~dp0dist-v4\vllm-0.19.1*.whl") do set "WHEEL_FILE=%%f"
+)
+if "!WHEEL_FILE!"=="" (
+    for %%f in ("%~dp0dist-v3\vllm-0.19.0*.whl") do set "WHEEL_FILE=%%f"
+)
 if "!WHEEL_FILE!"=="" (
     for %%f in ("%~dp0dist-v2\vllm-*.whl") do set "WHEEL_FILE=%%f"
 )
@@ -154,7 +160,7 @@ if "!WHEEL_FILE!"=="" (
     for %%f in ("%~dp0dist\vllm-*.whl") do set "WHEEL_FILE=%%f"
 )
 if "!WHEEL_FILE!"=="" (
-    echo          FAILED: No vllm wheel found in dist-v3\, dist-v2\, or dist\
+    echo          FAILED: No vllm wheel found in dist-v5\, dist-v4\, dist-v3\, dist-v2\, or dist\
     echo          Download from:
     echo            https://github.com/aivrar/vllm-windows-build/releases
     echo          Or build it yourself: python build_wheel.py

@@ -1,5 +1,107 @@
 # Changelog
 
+## v0.21.0-win — 2026-05-19
+
+Major upstream bump. 1,157 commits from v0.19.1 → v0.21.0. PyTorch
+2.10.0 → 2.11.0. CUTLASS 4.2.1 → 4.4.2. New native TurboQuant attention
+backend in mainline (PR #38479) coexists with our Multi-TurboQuant 6.
+
+### New
+
+- **vLLM v0.21.0 base** — covers the v0.19.2 / v0.20.0 / v0.20.1 /
+  v0.20.2 / v0.21.0 release train, including v1 engine maturity,
+  zero-bubble DP scheduling, batched chat completions, DeepGEMM
+  extension, async-scheduling hardening, and the new
+  `TurboQuantBackend` (PR #38479) with four `turboquant_*` KV cache
+  variants (`turboquant_k8v4`, `turboquant_4bit_nc`, `turboquant_k3v4_nc`,
+  `turboquant_3bit_nc`).
+- **10 KV cache compression dtypes in one wheel** — our 6
+  Multi-TurboQuant methods *and* the 4 upstream variants both live in
+  `CacheDType`. The platform dispatcher in `vllm/platforms/cuda.py`
+  routes the upstream names to `TurboQuantBackend` and ours to the
+  patched `TritonAttention` backend.
+- **PyTorch 2.11.0 + CUDA 12.6** wheels for cp310 win_amd64.
+- **`cutlass-windows.patch` and `vllm-flash-attn-cutlass-windows.patch`**
+  ship inside the v5 vllm-source patch. `CMakeLists.txt` /
+  `vllm_flash_attn.cmake` apply them automatically after FetchContent
+  lands the upstream source, so end users don't need to know.
+- **Auto-default `VLLM_USE_FLASHINFER_SAMPLER=False` on Windows** —
+  upstream defaults this to True, which triggers an unconditional
+  `import flashinfer` in the sampler. The patch flips the default on
+  `sys.platform == "win32"` so the Triton sampler is used silently.
+
+### Changed
+
+- `vllm-windows-v5.patch` replaces `vllm-windows-v4.patch`. 36 modified
+  files + 3 new files (`vllm/v1/attention/ops/multi_turboquant_kv.py`,
+  `cutlass-windows.patch`, `vllm-flash-attn-cutlass-windows.patch`).
+  ~1918 lines total. Three v4 hunks dropped because they're now obsolete
+  upstream: `csrc/topk.cu` designated-initializer fix landed upstream,
+  `routed_experts_capturer.py` got a major rewrite that no longer needs
+  `fcntl`/`msvcrt` locking, and `triton_reshape_and_cache_flash.py` now
+  uses `is_quantized_kv_cache` already.
+- `build.bat` now applies `vllm-windows-v5.patch` and sets
+  `SETUPTOOLS_SCM_PRETEND_VERSION=0.21.0`.
+- README badges, releases table, hello-world snippet, and "What's in
+  the patch" section updated to v0.21.0 / PyTorch 2.11.0 numbers.
+
+### Fixed
+
+- **PyTorch 2.11.0's `c10::cuda::CUDACachingAllocator` uses `small` as
+  a parameter name** — Windows SDK's `rpcndr.h` defines `small` as a
+  macro (`typedef char small`). `bool small` gets preprocessor-replaced
+  to `bool char` and nvcc errors out. Patch adds `/Usmall` and
+  `WIN32_LEAN_AND_MEAN` to CXX + CUDA flags.
+- **MSVC reports `__cplusplus=199711L` by default** — CUTLASS 4.4.2's
+  `platform.h` gates `is_unsigned_v` / `is_integral_v` aliases behind
+  `__cplusplus >= 201703L`, so `exmy_base.h` fails. Patch adds
+  `/Zc:__cplusplus` to CXX + CUDA flags.
+- **CUTLASS 4.4.2 `cuda_host_adapter.hpp::memsetDevice` is marked
+  `CUTLASS_HOST_DEVICE` but calls a `__host__`-only virtual
+  `memsetDeviceImpl`** — nvcc rejects the cross-execution-space call.
+  `cutlass-windows.patch` weakens the wrapper to `CUTLASS_HOST`.
+- **CUTLASS 4.4.2 SM100/SM103 kernel headers declare `static constexpr
+  dim3 get_block_shape()`** — `dim3` is a non-literal type for MSVC
+  even with CUDA 12.6's constexpr constructors, so nvcc rejects the
+  return type. `cutlass-windows.patch` drops the `constexpr` on the
+  four offenders.
+- **`csrc/persistent_topk.cuh` (new file in v0.21.0) uses
+  `__attribute__((always_inline))`** — GCC-only. Patch wraps the
+  `FLASHINFER_INLINE` macro in `#ifdef _MSC_VER` with `__forceinline`
+  fallback.
+- **`csrc/quantization/fused_kernels/fused_silu_mul_block_quant.cu`
+  uses `quant_type_max_v<scalar_out_t>` without `()`** — that's a
+  variable-template reference, but the v4 patch already converted
+  `quant_type_max_v` to a function template. Patch adds the call parens.
+- **`csrc/moe/topk_softplus_sqrt_kernels.cu` `DISPATCH_HASH(...)`
+  argument contained `#ifndef USE_ROCM`** — preprocessor directives
+  inside macro arguments are ill-formed; even `/Zc:preprocessor`
+  doesn't allow it. Patch hoists the `#ifndef` outside the macro call.
+- **`requirements/cuda.txt` `fastsafetensors >= 0.2.2` is Linux-only
+  (`io_uring`)** — was inherited unchanged from upstream; pip tried to
+  build it from source and required `pybind11`. Commented out — the
+  Windows safetensors path uses our existing numpy-mmap reader.
+
+### Verified (RTX 3090, Qwen3-14B-abliterated-AWQ-4bit)
+
+| KV dtype | Output tok/s | Notes |
+|---|---:|---|
+| `auto` (fp16, FA2 backend) | 9.7 | 20 tok in 2.06 s |
+| `turboquant35` (ours, PyTorch-fallback) | 0.73 | 20 tok in 27.4 s |
+
+### Known limitations
+
+Unchanged from v0.19.x:
+
+- TQ throughput penalty on our 6 methods (PyTorch-fallback encode/decode).
+  Upstream `turboquant_*` variants use fused Triton kernels and don't
+  pay this cost.
+- Single GPU only (NCCL still unavailable on Windows).
+- No FlashAttention 3 or 4, no FlashInfer.
+- No DeepGEMM, no Quack, no Tilelang, no TokenSpeed-MLA, no NIXL.
+
+---
+
 ## v0.19.1-win — 2026-04-19
 
 Point release. Upstream vLLM bumped to 0.19.1, one new Windows patch,
