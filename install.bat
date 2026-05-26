@@ -5,26 +5,26 @@ cd /d "%~dp0"
 echo.
 echo  ============================================================
 echo          vLLM v0.21.0 Windows Installer
-echo     Portable Python 3.10.11 + PyTorch 2.11.0 + vLLM 0.21.0
+echo     Portable Python 3.13.11 + PyTorch 2.11.0 (cu128) + vLLM 0.21.0
 echo  ============================================================
 echo.
 
 REM ============================================================
 REM  Version Configuration
 REM ============================================================
-set "PYTHON_VERSION=3.10.11"
-set "PYTHON_URL=https://www.python.org/ftp/python/3.10.11/python-3.10.11-embed-amd64.zip"
-set "PYTHON_PTH_FILE=python310._pth"
-set "PYTHON_PTH_ZIP=python310.zip"
+set "PYTHON_VERSION=3.13.11"
+set "PYTHON_URL=https://www.python.org/ftp/python/3.13.11/python-3.13.11-embed-amd64.zip"
+set "PYTHON_PTH_FILE=python313._pth"
+set "PYTHON_PTH_ZIP=python313.zip"
 set "GETPIP_URL=https://bootstrap.pypa.io/get-pip.py"
-set "TORCH_INDEX=https://download.pytorch.org/whl/cu126"
+set "TORCH_INDEX=https://download.pytorch.org/whl/cu128"
 
 set "STAGES_TOTAL=5"
 
 echo  Components to install:
 echo    - Python %PYTHON_VERSION% (embedded distribution)
 echo    - pip (package manager)
-echo    - PyTorch 2.11.0+cu126 + triton-windows (CUDA GPU acceleration)
+echo    - PyTorch 2.11.0+cu128 + triton-windows (CUDA GPU acceleration)
 echo    - vLLM 0.21.0 wheel (pre-built Windows binary)
 echo    - Verification
 echo.
@@ -112,9 +112,9 @@ echo          OK
 
 :stage3
 REM ============================================================
-REM  STAGE 3: Install PyTorch 2.10.0+cu126 + triton-windows
+REM  STAGE 3: Install PyTorch 2.11.0+cu128 + triton-windows
 REM ============================================================
-echo [3/%STAGES_TOTAL%] PyTorch 2.10.0+cu126 + triton-windows (~2.5 GB download)...
+echo [3/%STAGES_TOTAL%] PyTorch 2.11.0+cu128 + triton-windows (~2.5 GB download)...
 if exist "%~dp0python\.torch-installed" (
     echo          SKIP - already installed ^(delete python\.torch-installed to force^)
     goto :stage4
@@ -172,6 +172,15 @@ echo          Installing vLLM and dependencies...
 if !ERRORLEVEL! NEQ 0 (
     echo          FAILED: vLLM installation error - check output above
     exit /b 1
+)
+REM llguidance and xgrammar (structured-output backends) are gated in vLLM's
+REM requirements on platform_machine=="x86_64", but Windows reports "AMD64",
+REM so pip silently skips them and vLLM then fails to import. Install them
+REM explicitly here.
+echo          Installing structured-output backends (llguidance, xgrammar)...
+"%~dp0python\python.exe" -m pip install "llguidance>=1.3.0,<1.4.0" "xgrammar>=0.2.0,<1.0.0" --no-warn-script-location
+if !ERRORLEVEL! NEQ 0 (
+    echo          WARNING: llguidance/xgrammar install failed - guided decoding may be unavailable
 )
 echo %DATE% %TIME% > "%~dp0python\.vllm-installed"
 echo          OK

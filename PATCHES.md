@@ -13,24 +13,44 @@ see [docs/build.md](docs/build.md).
 |---|---|
 | Base | vLLM v0.21.0 (commit `ad7125a43`) |
 | Compiler | MSVC 19.43.34810 (Visual Studio 2022 Community 17.13) |
-| CUDA | 12.6 |
-| Python | 3.10.11 |
-| PyTorch | 2.11.0+cu126 |
+| CUDA | 12.8 (first toolkit with Blackwell sm_120; was 12.6) |
+| Python | 3.13.11 (was 3.10.11) |
+| PyTorch | 2.11.0+cu128 (was +cu126) |
 | Triton | triton-windows 3.6.0.post26 |
+| Arch list | `8.6;8.9;12.0` (sm_86 / sm_89 / sm_120) |
 | CUTLASS | 4.4.2 (FetchContent + 5-file Windows patch applied automatically) |
 | vllm-flash-attn | f5bc33cfc (with vendored CUTLASS submodule patched) |
-| Generator | Ninja |
-| GPU | RTX 3090 (sm_86) — patches built and tested for SM 8.0+ |
+| Generator | Ninja (`MAX_JOBS=2`, no sccache — see build notes) |
+| GPU | built for sm_86/89/120; tested on RTX 3090 (sm_86) |
 
 ## Diff stats
 
 ```
-36 files changed, ~997 insertions(+), ~131 deletions(-)
+46 files changed, ~1115 insertions(+), ~146 deletions(-)
 + 3 new files: vllm/v1/attention/ops/multi_turboquant_kv.py (295 lines),
   cutlass-windows.patch (69 lines),
   vllm-flash-attn-cutlass-windows.patch (69 lines)
-Total patch size: 1918 lines unified diff.
+Total patch size: ~2160 lines unified diff.
 ```
+
+## cu128 / Python 3.13 / Blackwell additions
+
+These hunks were added on top of the original cu126 patch for the
+`v0.21.0-win-cu128` build:
+
+| Category | File(s) | Purpose |
+|---|---|---|
+| API server (Windows) | `entrypoints/openai/api_server.py`, `cli/serve.py`, `cli/launch.py`, `grpc_server.py`, `benchmarks/throughput.py` | Fall back `import uvloop` → `import asyncio as uvloop` (uvloop is Unix-only); set `WindowsSelectorEventLoopPolicy` so pyzmq's `add_reader` works on the Proactor-less loop |
+| API server (Windows) | `vllm/v1/engine/utils.py` | `wait_for_engine_startup()`: don't register process sentinels (HANDLEs) with `zmq.Poller` on win32 (`not a socket`); detect dead procs via exit codes |
+| API server (Windows) | `vllm/entrypoints/launcher.py` | `add_signal_handler` → `signal.signal` fallback (Unix-only on asyncio) |
+| Blackwell build | `CMakeLists.txt` | Skip `minimax_reduce_rms_kernel.cu` on WIN32 (cudafe++ crash; multi-GPU only); marlin host `/Od`; quote CUDA-13 cccl include (gated CUDA≥13) |
+| Blackwell build | `csrc/torch_bindings.cpp` | `#ifndef _WIN32` around the minimax op registration |
+| Blackwell build | `cmake/external_projects/qutlass.cmake` (include guard in `CMakeLists.txt`) | Skip QuTLASS (NVFP4/MXFP4) on WIN32 — GCC inline-PTX, not MSVC-portable |
+
+> **Note:** the file is still named `vllm-windows-v5.patch` — it's the same
+> v0.21.0 Windows patch, now extended. The MiniMax/QuTLASS exclusions and the
+> structured-output dep gap (`llguidance`/`xgrammar`, see install.bat) only
+> surface once sm_120 is enabled.
 
 ## Files modified
 

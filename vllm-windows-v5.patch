@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 38af64851..8d6a7b7db 100644
+index 38af64851..e3e2b1c2f 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -68,7 +68,7 @@ set(TORCH_SUPPORTED_VERSION_ROCM "2.11.0")
@@ -28,7 +28,7 @@ index 38af64851..8d6a7b7db 100644
  #
  # Import torch cmake configuration.
  # Torch also imports CUDA (and partially HIP) languages with some customizations,
-@@ -205,7 +215,33 @@ endif()
+@@ -205,9 +215,56 @@ endif()
  # Set CUDA include flags for CXX compiler.
  #
  if(VLLM_GPU_LANG STREQUAL "CUDA")
@@ -61,9 +61,52 @@ index 38af64851..8d6a7b7db 100644
 +    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I${CUDA_TOOLKIT_ROOT_DIR}/include")
 +  endif()
    if(CUDA_VERSION VERSION_GREATER_EQUAL 13.0)
-     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I${CUDA_TOOLKIT_ROOT_DIR}/include/cccl")
+-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I${CUDA_TOOLKIT_ROOT_DIR}/include/cccl")
++    # CUDA 13 moved CCCL (CUB/Thrust/libcudacxx) into include/cccl. Add it via
++    # include_directories() rather than CMAKE_CXX_FLAGS: the toolkit path
++    # contains spaces ("Program Files", "NVIDIA GPU Computing Toolkit"), and
++    # CMake strips embedded quotes from CMAKE_CXX_FLAGS, so an -I flag there
++    # gets split on the spaces by ninja/cl (which then treats "Files/NVIDIA",
++    # "GPU", ... as source files). include_directories() is quoted correctly
++    # by the generator.
++    include_directories("${CUDA_TOOLKIT_ROOT_DIR}/include/cccl")
++  endif()
++  if(MSVC AND CUDA_VERSION VERSION_GREATER_EQUAL 13.0)
++    # MSVC 14.43's optimizer ICEs (cl.exe dies with 0xC000001D,
++    # ILLEGAL_INSTRUCTION) on multiple CUDA TUs (topk.cu,
++    # vertical_slash_index.cu, ...) when compiling against CUDA 13's CCCL /
++    # libcudacxx headers under /O2. Disable host optimization for all CUDA
++    # sources: -Xcompiler=/Od affects only *host* codegen (kernel-launch glue),
++    # while device kernels are optimized by ptxas regardless, so the runtime
++    # cost is negligible. add_compile_options() with a CUDA generator
++    # expression places /Od in each target's COMPILE_OPTIONS, which the
++    # generator emits AFTER the per-config -O2, so /Od wins. (Appending to
++    # CMAKE_CUDA_FLAGS_RELWITHDEBINFO does not work: the generator reads that
++    # flag from the cache and a normal set() here doesn't override it.)
++    add_compile_options("$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/Od>")
    endif()
-@@ -350,6 +386,32 @@ if(VLLM_GPU_LANG STREQUAL "CUDA")
+ endif()
+ 
+@@ -315,8 +372,16 @@ set(VLLM_EXT_SRC
+   "csrc/fused_deepseek_v4_qnorm_rope_kv_insert_kernel.cu")
+ 
+ if(VLLM_GPU_LANG STREQUAL "CUDA")
+-  list(APPEND VLLM_EXT_SRC
+-    "csrc/minimax_reduce_rms_kernel.cu")
++  # Windows: skip minimax_reduce_rms_kernel.cu. Its cooperative-groups
++  # Lamport all-reduce fusion is multi-GPU only and can't run under the
++  # Windows FakeProcessGroup, and nvcc 12.8's cudafe++ crashes
++  # (0xC000001D ILLEGAL_INSTRUCTION) compiling it. The op registration is
++  # correspondingly guarded with #ifndef _WIN32 in torch_bindings.cpp, and
++  # the Python callers guard on hasattr(torch.ops._C, "minimax_allreduce_*").
++  if(NOT WIN32)
++    list(APPEND VLLM_EXT_SRC
++      "csrc/minimax_reduce_rms_kernel.cu")
++  endif()
+ 
+   SET(CUTLASS_ENABLE_HEADERS_ONLY ON CACHE BOOL "Enable only the header library")
+ 
+@@ -350,6 +415,32 @@ if(VLLM_GPU_LANG STREQUAL "CUDA")
    endif()
    FetchContent_MakeAvailable(cutlass)
  
@@ -96,7 +139,7 @@ index 38af64851..8d6a7b7db 100644
    list(APPEND VLLM_EXT_SRC
      "csrc/quantization/awq/gemm_kernels.cu"
      "csrc/cutlass_extensions/common.cpp")
-@@ -671,6 +733,7 @@ define_extension_target(
+@@ -671,6 +762,7 @@ define_extension_target(
    ARCHITECTURES ${VLLM_GPU_ARCHES}
    INCLUDE_DIRECTORIES ${CUTLASS_INCLUDE_DIR}
    INCLUDE_DIRECTORIES ${CUTLASS_TOOLS_UTIL_INCLUDE_DIR}
@@ -104,7 +147,7 @@ index 38af64851..8d6a7b7db 100644
    USE_SABI 3
    WITH_SOABI)
  
-@@ -1025,6 +1088,7 @@ if(VLLM_GPU_LANG STREQUAL "CUDA")
+@@ -1025,6 +1117,7 @@ if(VLLM_GPU_LANG STREQUAL "CUDA")
      COMPILE_FLAGS ${VLLM_GPU_FLAGS}
      ARCHITECTURES ${VLLM_GPU_ARCHES}
      INCLUDE_DIRECTORIES ${CUTLASS_INCLUDE_DIR} ${CUTLASS_TOOLS_UTIL_INCLUDE_DIR}
@@ -112,7 +155,7 @@ index 38af64851..8d6a7b7db 100644
      USE_SABI 3
      WITH_SOABI)
  
-@@ -1219,6 +1283,7 @@ define_extension_target(
+@@ -1219,6 +1312,7 @@ define_extension_target(
    ARCHITECTURES ${VLLM_GPU_ARCHES}
    INCLUDE_DIRECTORIES ${CUTLASS_INCLUDE_DIR}
    INCLUDE_DIRECTORIES ${CUTLASS_TOOLS_UTIL_INCLUDE_DIR}
@@ -834,6 +877,31 @@ index 7576f7179..3f4e9c21b 100644
  #ifndef USE_ROCM
    // Use hardware cvt instruction for fp8 on nvidia
    // Currently only support fp8_type = c10::Float8_e4m3fn
+diff --git a/csrc/torch_bindings.cpp b/csrc/torch_bindings.cpp
+index 7562d90c0..0b5ce97af 100644
+--- a/csrc/torch_bindings.cpp
++++ b/csrc/torch_bindings.cpp
+@@ -516,6 +516,12 @@ TORCH_LIBRARY_EXPAND(TORCH_EXTENSION_NAME, ops) {
+       "SymInt n, SymInt group_size, SymInt sm_count, SymInt sm_version, SymInt "
+       "CUBLAS_M_THRESHOLD, bool has_zp, bool n32k16_reorder) -> Tensor");
+ 
++  // Windows: minimax_reduce_rms_kernel.cu is excluded from the build (its
++  // cooperative-groups all-reduce fusion is multi-GPU only and can't run under
++  // the Windows FakeProcessGroup, and nvcc 12.8's cudafe++ crashes on it). The
++  // Python callers in vllm guard on hasattr(torch.ops._C, "minimax_allreduce_*"),
++  // so skipping the registration degrades gracefully.
++#ifndef _WIN32
+   ops.def(
+       "minimax_allreduce_rms("
+       "Tensor input,"
+@@ -537,6 +543,7 @@ TORCH_LIBRARY_EXPAND(TORCH_EXTENSION_NAME, ops) {
+       "int nranks,"
+       "float eps) -> (Tensor, Tensor)");
+   ops.impl("minimax_allreduce_rms_qk", torch::kCUDA, &minimax_allreduce_rms_qk);
++#endif
+ 
+   //  conditionally compiled so impl in source file
+ #endif
 diff --git a/cutlass-windows.patch b/cutlass-windows.patch
 new file mode 100644
 index 000000000..f29e2c19f
@@ -1121,6 +1189,22 @@ index 000000000..b721e0939
 +   dim3
 +   get_block_shape() {
 +     return dim3(MaxThreadsPerBlock, 1, 1);
+diff --git a/vllm/benchmarks/throughput.py b/vllm/benchmarks/throughput.py
+index 1c3b728fd..a7712c19e 100644
+--- a/vllm/benchmarks/throughput.py
++++ b/vllm/benchmarks/throughput.py
+@@ -11,7 +11,10 @@ import warnings
+ from typing import Any
+ 
+ import torch
+-import uvloop
++try:
++    import uvloop
++except ImportError:  # Windows: uvloop is Unix-only; asyncio.run has same signature
++    import asyncio as uvloop
+ from tqdm import tqdm
+ from transformers import AutoModelForCausalLM, PreTrainedTokenizerBase
+ 
 diff --git a/vllm/config/cache.py b/vllm/config/cache.py
 index ae5023f1e..1e4b9b4ff 100644
 --- a/vllm/config/cache.py
@@ -1230,11 +1314,119 @@ index 58c49c09d..b1f48b4b0 100644
              )
              if _node_count(tp_pp_cpu_group) > 1:
                  # NOTE(yongji): StatelessGroupCoordinator uses data_parallel_master_ip
+diff --git a/vllm/entrypoints/cli/launch.py b/vllm/entrypoints/cli/launch.py
+index 9871a27da..d7f14dfce 100644
+--- a/vllm/entrypoints/cli/launch.py
++++ b/vllm/entrypoints/cli/launch.py
+@@ -3,7 +3,15 @@
+ 
+ import argparse
+ 
+-import uvloop
++try:
++    import uvloop
++except ImportError:  # Windows: uvloop is Unix-only; asyncio.run has same signature
++    import asyncio as uvloop
++
++    # pyzmq's async sockets require loop.add_reader, absent from the Windows
++    # Proactor loop; the Selector loop implements it (no tornado needed).
++    if hasattr(uvloop, "WindowsSelectorEventLoopPolicy"):
++        uvloop.set_event_loop_policy(uvloop.WindowsSelectorEventLoopPolicy())
+ 
+ from vllm import envs
+ from vllm.config import VllmConfig
+diff --git a/vllm/entrypoints/cli/serve.py b/vllm/entrypoints/cli/serve.py
+index 8213184ad..9779cbf93 100644
+--- a/vllm/entrypoints/cli/serve.py
++++ b/vllm/entrypoints/cli/serve.py
+@@ -5,7 +5,15 @@ import argparse
+ import signal
+ import time
+ 
+-import uvloop
++try:
++    import uvloop
++except ImportError:  # Windows: uvloop is Unix-only; asyncio.run has same signature
++    import asyncio as uvloop
++
++    # pyzmq's async sockets require loop.add_reader, absent from the Windows
++    # Proactor loop; the Selector loop implements it (no tornado needed).
++    if hasattr(uvloop, "WindowsSelectorEventLoopPolicy"):
++        uvloop.set_event_loop_policy(uvloop.WindowsSelectorEventLoopPolicy())
+ 
+ import vllm
+ import vllm.envs as envs
+diff --git a/vllm/entrypoints/grpc_server.py b/vllm/entrypoints/grpc_server.py
+index b9173b302..7f98d1a53 100644
+--- a/vllm/entrypoints/grpc_server.py
++++ b/vllm/entrypoints/grpc_server.py
+@@ -39,7 +39,15 @@ except ImportError as e:
+         "version mismatch — see the chained exception above for details."
+     ) from e
+ 
+-import uvloop
++try:
++    import uvloop
++except ImportError:  # Windows: uvloop is Unix-only; asyncio.run has same signature
++    import asyncio as uvloop
++
++    # pyzmq's async sockets require loop.add_reader, absent from the Windows
++    # Proactor loop; the Selector loop implements it (no tornado needed).
++    if hasattr(uvloop, "WindowsSelectorEventLoopPolicy"):
++        uvloop.set_event_loop_policy(uvloop.WindowsSelectorEventLoopPolicy())
+ 
+ from vllm import envs
+ from vllm.engine.arg_utils import AsyncEngineArgs
+diff --git a/vllm/entrypoints/launcher.py b/vllm/entrypoints/launcher.py
+index 8caeb8083..63a70137f 100644
+--- a/vllm/entrypoints/launcher.py
++++ b/vllm/entrypoints/launcher.py
+@@ -100,8 +100,20 @@ async def serve_http(
+     async def dummy_shutdown() -> None:
+         pass
+ 
+-    loop.add_signal_handler(signal.SIGINT, signal_handler)
+-    loop.add_signal_handler(signal.SIGTERM, signal_handler)
++    try:
++        loop.add_signal_handler(signal.SIGINT, signal_handler)
++        loop.add_signal_handler(signal.SIGTERM, signal_handler)
++    except NotImplementedError:
++        # Windows: asyncio event loops don't implement add_signal_handler.
++        # Fall back to signal.signal, scheduling the handler on the loop.
++        def _win_signal_handler(signum, frame) -> None:
++            loop.call_soon_threadsafe(signal_handler)
++
++        signal.signal(signal.SIGINT, _win_signal_handler)
++        try:
++            signal.signal(signal.SIGTERM, _win_signal_handler)
++        except (ValueError, OSError, AttributeError):
++            pass  # SIGTERM may not be settable on Windows
+ 
+     async def handle_shutdown() -> None:
+         await shutdown_event.wait()
 diff --git a/vllm/entrypoints/openai/api_server.py b/vllm/entrypoints/openai/api_server.py
-index da2ec1028..699693589 100644
+index da2ec1028..16a424842 100644
 --- a/vllm/entrypoints/openai/api_server.py
 +++ b/vllm/entrypoints/openai/api_server.py
-@@ -515,7 +515,8 @@ def create_server_socket(addr: tuple[str, int]) -> socket.socket:
+@@ -15,7 +15,16 @@ from collections.abc import AsyncIterator
+ from contextlib import asynccontextmanager
+ from typing import Any
+ 
+-import uvloop
++try:
++    import uvloop
++except ImportError:  # Windows: uvloop is Unix-only; asyncio.run has same signature
++    import asyncio as uvloop
++
++    # pyzmq's async sockets require loop.add_reader, which the default Windows
++    # Proactor loop lacks. The Selector loop implements it, so asyncio.run
++    # (aliased here as uvloop.run) gets a zmq-compatible loop without tornado.
++    if hasattr(uvloop, "WindowsSelectorEventLoopPolicy"):
++        uvloop.set_event_loop_policy(uvloop.WindowsSelectorEventLoopPolicy())
+ from fastapi import FastAPI, HTTPException
+ from fastapi.exceptions import RequestValidationError
+ from fastapi.middleware.cors import CORSMiddleware
+@@ -515,7 +524,8 @@ def create_server_socket(addr: tuple[str, int]) -> socket.socket:
  
      sock = socket.socket(family=family, type=socket.SOCK_STREAM)
      sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -1900,6 +2092,56 @@ index 2f2c15d24..2ae246ff6 100644
              return SyncMPClient(vllm_config, executor_class, log_stats)
  
          return InprocClient(vllm_config, executor_class, log_stats)
+diff --git a/vllm/v1/engine/utils.py b/vllm/v1/engine/utils.py
+index a28c1366d..7716171e0 100644
+--- a/vllm/v1/engine/utils.py
++++ b/vllm/v1/engine/utils.py
+@@ -3,6 +3,7 @@
+ 
+ import contextlib
+ import os
++import sys
+ import threading
+ import weakref
+ from collections.abc import Callable, Iterator
+@@ -1160,14 +1161,32 @@ def wait_for_engine_startup(
+         and not parallel_config.data_parallel_external_lb
+     )
+ 
+-    if proc_manager is not None:
+-        for sentinel in proc_manager.sentinels():
+-            poller.register(sentinel, zmq.POLLIN)
+-    if coord_process is not None:
+-        poller.register(coord_process.sentinel, zmq.POLLIN)
++    # On Windows a process sentinel is an OS process HANDLE, not a pollable
++    # file descriptor, so registering it with a zmq.Poller raises
++    # "not a socket". Skip registration there and detect dead processes via
++    # exit-code polling in the timeout branch below instead.
++    poll_sentinels = sys.platform != "win32"
++    if poll_sentinels:
++        if proc_manager is not None:
++            for sentinel in proc_manager.sentinels():
++                poller.register(sentinel, zmq.POLLIN)
++        if coord_process is not None:
++            poller.register(coord_process.sentinel, zmq.POLLIN)
+     while any(conn_pending) or any(start_pending):
+         events = poller.poll(STARTUP_POLL_PERIOD_MS)
+         if not events:
++            if not poll_sentinels:
++                # Windows: sentinels aren't registered with the poller, so
++                # check for dead engine/coordinator processes here instead.
++                finished = proc_manager.finished_procs() if proc_manager else {}
++                if coord_process is not None and coord_process.exitcode is not None:
++                    finished[coord_process.name] = coord_process.exitcode
++                if finished:
++                    raise RuntimeError(
++                        "Engine core initialization failed. "
++                        "See root cause above. "
++                        f"Failed core proc(s): {finished}"
++                    )
+             if any(conn_pending):
+                 logger.debug(
+                     "Waiting for %d local, %d remote core engine proc(s) to connect.",
 diff --git a/vllm/v1/utils.py b/vllm/v1/utils.py
 index eb81a3c88..3762dfa78 100644
 --- a/vllm/v1/utils.py

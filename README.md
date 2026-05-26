@@ -3,15 +3,24 @@
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Platform: Windows](https://img.shields.io/badge/Platform-Windows%2010%2F11-blue)
 ![vLLM: v0.21.0](https://img.shields.io/badge/vLLM-v0.21.0-orange)
-![CUDA: 12.6](https://img.shields.io/badge/CUDA-12.6-76B900)
-![Python: 3.10](https://img.shields.io/badge/Python-3.10-3776AB)
+![CUDA: 12.8](https://img.shields.io/badge/CUDA-12.8-76B900)
+![Python: 3.13](https://img.shields.io/badge/Python-3.13-3776AB)
 ![PyTorch: 2.11](https://img.shields.io/badge/PyTorch-2.11.0-EE4C2C)
 ![Triton: 3.6](https://img.shields.io/badge/Triton-3.6-red)
+![GPU: Blackwell sm_120](https://img.shields.io/badge/GPU-Ampere%20%E2%86%92%20Blackwell-76B900)
 ![Multi-TurboQuant](https://img.shields.io/badge/Multi--TurboQuant-6%20methods-purple)
 ![+ Upstream TurboQuant](https://img.shields.io/badge/+%20Upstream%20TurboQuant-4%20variants-purple)
 
 **Native Windows build of vLLM 0.21.0 — no WSL, no Docker, no Linux VM.**
-Now ships with **10 KV cache compression methods**: the 6 Multi-TurboQuant
+
+> **Latest build (cu128 / Python 3.13 / Blackwell):** now built for
+> **RTX 50-series (Blackwell, sm_120)** in addition to 30-/40-series —
+> `TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0`, Python 3.13, PyTorch 2.11.0+cu128,
+> CUDA 12.8. This release also **fixes the OpenAI API server on Windows**
+> (`vllm serve` now starts — previously only the in-process `LLM()` API
+> worked). See [What's new](#whats-new-cu128--python-313--blackwell).
+
+Ships with **10 KV cache compression methods**: the 6 Multi-TurboQuant
 methods (`isoquant`/`planarquant`/`turboquant25/35`) plus the 4 new
 upstream TurboQuant variants that landed in v0.19.2rc0 (`turboquant_k8v4`,
 `turboquant_4bit_nc`, `turboquant_k3v4_nc`, `turboquant_3bit_nc`).
@@ -26,11 +35,48 @@ and Multi-TurboQuant integration.
 
 | Release | vLLM | PyTorch | Triton | KV compression | Download |
 |---|---|---|---|---|---|
-| **v0.21.0-win (latest)** | 0.21.0 | 2.11.0+cu126 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8 | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.21.0-win) |
+| **v0.21.0-win-cu128 (latest)** | 0.21.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8 — **Python 3.13, Blackwell sm_120** | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.21.0-win-cu128) |
+| v0.21.0-win | 0.21.0 | 2.11.0+cu126 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8 (Python 3.10) | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.21.0-win) |
 | v0.19.1-win | 0.19.1 | 2.10.0+cu126 | 3.6.0 | Multi-TurboQuant (6 methods) + fp8 | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.19.1-win) |
 | v0.19.0-win | 0.19.0 | 2.10.0+cu126 | 3.6.0 | Multi-TurboQuant (6 methods) + fp8 | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.19.0-win) |
 | v0.17.1-win | 0.17.1 | 2.10.0+cu126 | 3.6.0 | TurboQuant (2 recipes) | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.17.1-win) |
 | v0.14.2-win | 0.14.2 | 2.9.1+cu126 | n/a | fp8 only | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.14.2-win) |
+
+### What's new (cu128 / Python 3.13 / Blackwell)
+
+This is a rebuild of the same vLLM 0.21.0 source for **RTX 50-series
+(Blackwell)** plus a set of Windows API-server fixes. Thanks to
+[@Dhrhciebcy](https://github.com/aivrar/vllm-windows-build/issues/4) for
+the report that surfaced both the Blackwell gap and the API-server bug.
+
+- **Blackwell (sm_120) support** — built with `TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0`
+  on **CUDA 12.8 + PyTorch 2.11.0+cu128 + Python 3.13**, so the wheel carries
+  sm_86 / sm_89 / **sm_120** kernels (verified with `cuobjdump`). The older
+  `v0.21.0-win` wheel (cu126, sm_86 only) fails on a 5090 with
+  `no kernel image is available for execution on the device` — that's a
+  compute-capability gap, not a Python-version problem.
+- **The OpenAI API server now works on Windows.** Previously only the
+  in-process `LLM()` path worked; `vllm serve` / `api_server` crashed. Four
+  Windows-only bugs fixed: (1) bare `import uvloop` (Unix-only) in five
+  entrypoints → falls back to `asyncio`; (2) `wait_for_engine_startup()`
+  registered process *sentinels* (Windows HANDLEs, not sockets) with a
+  `zmq.Poller` → `not a socket`, now skipped on win32 with exit-code
+  liveness checks; (3) pyzmq needs `loop.add_reader`, absent from the
+  Windows Proactor loop → set `WindowsSelectorEventLoopPolicy` (no tornado);
+  (4) `loop.add_signal_handler` is `NotImplementedError` on Windows → falls
+  back to `signal.signal`. **winloop is no longer needed.**
+- **Two Blackwell-only kernels are skipped on Windows** (they don't compile
+  under MSVC and aren't usable here anyway): **QuTLASS** (NVFP4/MXFP4
+  microscaling quant — uses GCC inline-PTX `asm`) and the **MiniMax**
+  multi-GPU all-reduce RMS fusion (needs real multi-GPU comm; Windows uses
+  `FakeProcessGroup`). Their vLLM callers are `hasattr`-guarded, so FP4 and
+  MiniMax just degrade gracefully. Everything mainstream — FP16/BF16, AWQ,
+  GPTQ/Marlin, FP8, and all 10 KV-cache compression methods — is unaffected.
+- **Dependency note:** vLLM gates `llguidance` and `xgrammar` on
+  `platform_machine == "x86_64"`, but Windows reports `AMD64`, so pip
+  silently skips them and vLLM then fails to import. `install.bat` installs
+  them explicitly; if installing manually, run
+  `pip install "llguidance>=1.3.0,<1.4.0" "xgrammar>=0.2.0,<1.0.0"`.
 
 ### What's new in v0.21.0
 
@@ -95,23 +141,27 @@ Full benchmarks → [docs/benchmarks.md](docs/benchmarks.md)
 ### Option A — Pre-built wheel (no compiler needed)
 
 Download
-**[vllm-0.21.0+cu126-cp310-cp310-win_amd64.whl](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.21.0-win)**
+**[vllm-0.21.0+cu128-cp313-cp313-win_amd64.whl](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.21.0-win-cu128)**
 from the Releases page, then:
 
 ```batch
-:: Create a Python 3.10 venv
-py -3.10 -m venv venv
+:: Create a Python 3.13 venv
+py -3.13 -m venv venv
 venv\Scripts\activate
 
-:: Install PyTorch 2.11.0 with CUDA 12.6
-pip install torch==2.11.0 torchaudio==2.11.0 torchvision==0.26.0 ^
-    --index-url https://download.pytorch.org/whl/cu126
+:: Install PyTorch 2.11.0 with CUDA 12.8 (cu128 = Blackwell support)
+pip install torch==2.11.0 ^
+    --index-url https://download.pytorch.org/whl/cu128
 
 :: Install Triton for Windows
 pip install triton-windows==3.6.0.post26
 
 :: Install the pre-built vLLM wheel
-pip install vllm-0.21.0+cu126-cp310-cp310-win_amd64.whl
+pip install vllm-0.21.0+cu128-cp313-cp313-win_amd64.whl
+
+:: Structured-output backends vLLM gates on x86_64 (Windows = AMD64, so pip
+:: skips them and vLLM won't import without these)
+pip install "llguidance>=1.3.0,<1.4.0" "xgrammar>=0.2.0,<1.0.0"
 
 :: Install Multi-TurboQuant for the 6 KV cache compression methods
 pip install git+https://github.com/aivrar/multi-turboquant.git
@@ -121,8 +171,11 @@ Or run `install.bat` for a fully self-contained portable Python install.
 
 ### Option B — Build from source
 
-Requires Visual Studio 2022 (Community is fine), CUDA 12.6, ~60-90 min on a
-4-core box (the CUDA compile dominates).
+Requires Visual Studio 2022 (Community is fine), CUDA 12.8, and a Python 3.13
+venv. Building all three arches (8.6;8.9;12.0) takes ~3-4 h at `MAX_JOBS=2`
+(the CUDA compile dominates; see notes below). Use `MAX_JOBS=2` and **do not
+enable sccache** — both cause intermittent MSVC `cl.exe` crashes (0xC000001D)
+on the heavy multi-arch CUDA kernels.
 
 ```batch
 git clone https://github.com/vllm-project/vllm.git vllm-source
@@ -150,7 +203,7 @@ import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 # CUDA + torch DLL search paths
-os.add_dll_directory(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\bin")
+os.add_dll_directory(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\bin")
 os.add_dll_directory(r"C:\path\to\venv\Lib\site-packages\torch\lib")
 
 # Both uvloop and flashinfer fallbacks are baked into the wheel.
@@ -277,10 +330,10 @@ All changes are guarded by `#ifdef _MSC_VER`, `sys.platform == "win32"`,
 | GPU | NVIDIA SM 8.0+ (RTX 30/40/50, A100, H100) | RTX 3090 / 4090 / A6000 |
 | VRAM | 12 GB | 24 GB |
 | RAM | 16 GB | 32+ GB |
-| CUDA driver | R545+ | latest |
-| Python | 3.10.x | 3.10.11 |
+| CUDA driver | R570+ (Blackwell needs R570+) | latest |
+| Python | 3.13.x | 3.13.11 |
 | Compiler (build only) | VS 2022 Community + Win 10 SDK | Same |
-| CUDA Toolkit (build only) | 12.6 | 12.6 |
+| CUDA Toolkit (build only) | 12.8 (first toolkit with sm_120) | 12.8 |
 
 For build-from-source, you also need a **Windows pagefile** (system
 managed is fine). Without it, large allocations during compilation can
@@ -290,13 +343,14 @@ fail. See [docs/troubleshooting.md → OSError 1455](docs/troubleshooting.md#ose
 
 ## Tested with
 
-- RTX 3090 (24 GB, SM 8.6, driver 591.86)
-- Qwen3-14B-abliterated-AWQ-4bit
+- RTX 3090 (24 GB, SM 8.6, driver 596.36) — build + smoke test (generation + api_server)
+- Qwen2.5-0.5B-Instruct (smoke test), Qwen3-14B-abliterated-AWQ-4bit
 - Qwen3.5-9B-abliterated-GPTQ-4bit (text-only)
 - Windows 10 Pro 22H2
-- Visual Studio 2022 Community 17.13
-- CUDA Toolkit 12.6
-- Python 3.10.11
+- Visual Studio 2022 Community 17.13 (MSVC 14.43)
+- CUDA Toolkit 12.8
+- Python 3.13.11
+- RTX 50-series (Blackwell sm_120): kernels compiled & verified via `cuobjdump`; runtime confirmation pending community hardware
 
 ### v0.21.0 smoke test (RTX 3090, Qwen3-14B-abliterated-AWQ-4bit)
 

@@ -10,11 +10,15 @@ setlocal enabledelayedexpansion
 :: ----- Edit me ---------------------------------------------------------
 set "VS_VCVARS=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
 set "VENV_PATH=%~dp0venv"
-set "CUDA_HOME=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6"
+:: CUDA 12.8 is the first toolkit with Blackwell (sm_120) support. 12.6 cannot
+:: target sm_120; CUDA 13.x compiles but crashes MSVC -- do not use it.
+set "CUDA_HOME=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8"
 :: Compute capability for your GPU: RTX 30xx=8.6, RTX 40xx=8.9, RTX 50xx=12.0
-set "TORCH_CUDA_ARCH_LIST=8.6"
-:: Parallel compile jobs (4 is safe with 32 GB RAM, 8 with 64 GB)
-set "MAX_JOBS=4"
+:: Multi-arch covers all three (drop arches you don't need for a faster build).
+set "TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0"
+:: Use 2, not more: the heavy 3-arch CUDA TUs intermittently crash cl.exe
+:: (0xC000001D) under higher parallelism. Also do NOT enable sccache (same).
+set "MAX_JOBS=2"
 :: ----------------------------------------------------------------------
 
 if not exist "%VS_VCVARS%" (
@@ -38,6 +42,8 @@ if exist "%VENV_PATH%\Scripts\activate.bat" (
 )
 
 set "VLLM_TARGET_DEVICE=cuda"
+set "CMAKE_BUILD_TYPE=Release"
+set "VLLM_DISABLE_SCCACHE=1"
 set "SETUPTOOLS_SCM_PRETEND_VERSION=0.21.0"
 
 call "%~dp0build.bat"

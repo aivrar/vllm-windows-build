@@ -25,13 +25,14 @@ if %ERRORLEVEL% neq 0 (
 
 if not defined CUDA_HOME (
     echo [ERROR] CUDA_HOME is not set. Point it at your CUDA toolkit, e.g.:
-    echo         set CUDA_HOME=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6
+    echo         set CUDA_HOME=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8
     exit /b 1
 )
 
 if not exist "%CUDA_HOME%\bin\nvcc.exe" (
     echo [ERROR] nvcc.exe not found at %CUDA_HOME%\bin\nvcc.exe
-    echo         Make sure CUDA_HOME points to a CUDA 12.6 install.
+    echo         Make sure CUDA_HOME points to a CUDA 12.8 install (12.8 is the
+    echo         first toolkit with Blackwell sm_120; CUDA 13.x crashes MSVC).
     exit /b 1
 )
 
@@ -39,13 +40,13 @@ if not exist "%CUDA_HOME%\bin\nvcc.exe" (
 :: 2. Configuration (edit these for your system)
 :: -----------------------------------------------------------
 
-:: Compute capability — change to match your GPU:
+:: Compute capability — multi-arch covers all (drop ones you don't need):
 ::   RTX 30xx = 8.6, RTX 40xx = 8.9, RTX 50xx = 12.0
-if not defined TORCH_CUDA_ARCH_LIST set TORCH_CUDA_ARCH_LIST=8.6
+if not defined TORCH_CUDA_ARCH_LIST set TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0
 
-:: Parallel compile jobs (lower this if you run out of RAM)
-:: 4 is safe on machines with 32 GB RAM. Bump to 8 with more.
-if not defined MAX_JOBS set MAX_JOBS=4
+:: Parallel compile jobs. Keep at 2: higher parallelism intermittently crashes
+:: MSVC cl.exe (0xC000001D) on the heavy 3-arch CUDA TUs. Do not enable sccache.
+if not defined MAX_JOBS set MAX_JOBS=2
 
 set VLLM_TARGET_DEVICE=cuda
 set SETUPTOOLS_SCM_PRETEND_VERSION=0.21.0

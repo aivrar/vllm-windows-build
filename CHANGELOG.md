@@ -1,5 +1,52 @@
 # Changelog
 
+## v0.21.0-win-cu128 — 2026-05-25
+
+Rebuild of the same vLLM 0.21.0 source for **RTX 50-series (Blackwell,
+sm_120)** on **Python 3.13 / CUDA 12.8 / PyTorch 2.11.0+cu128**, plus four
+fixes that make the **OpenAI API server start on Windows**. Prompted by
+issue #4 (RTX 5090: `no kernel image is available` + `zmq: not a socket`).
+
+### New
+
+- **Blackwell (sm_120) wheel** — `vllm-0.21.0+cu128-cp313-cp313-win_amd64.whl`,
+  built with `TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0` so it carries sm_86 / sm_89 /
+  sm_120 kernels (verified with `cuobjdump`: 33 sm_120 cubins in `_C.pyd`, 16
+  in `_C_stable_libtorch.pyd`). The cu126 wheel was sm_86-only and fails on a
+  5090 — a compute-capability gap, not a Python issue.
+- **OpenAI API server now works on Windows** — `vllm serve` / `api_server`
+  previously crashed; only the in-process `LLM()` path worked. Four Windows
+  bugs fixed (see PATCHES.md): uvloop fallback, ZMQ sentinel poller,
+  Proactor `add_reader` (`WindowsSelectorEventLoopPolicy`), and
+  `add_signal_handler`. **winloop no longer required.**
+
+### Changed
+
+- `install.bat` now provisions **Python 3.13.11 + torch cu128**, and
+  explicitly installs `llguidance` + `xgrammar` (vLLM gates them on
+  `platform_machine=="x86_64"`, but Windows reports `AMD64`, so pip skips
+  them and vLLM fails to import).
+- `vllm-windows-v5.patch` regenerated — 46 files, ~2160 lines (adds the
+  API-server fixes and the Windows kernel exclusions below).
+
+### Excluded on Windows (skipped, gracefully)
+
+- **QuTLASS** (NVFP4/MXFP4 microscaling quant) — uses GCC inline-PTX `asm`
+  in host-reachable code; never ported to MSVC. Only pulled in once sm_120
+  is enabled. Its `_qutlass_C` ops are `hasattr`-guarded in vLLM.
+- **MiniMax all-reduce RMS fusion** (`minimax_reduce_rms_kernel.cu`) — a
+  multi-GPU collective (unusable under Windows `FakeProcessGroup`) that also
+  crashes nvcc 12.8's `cudafe++`. Callers are `hasattr`-guarded.
+- Mainstream paths unaffected: FP16/BF16, AWQ, GPTQ/Marlin, FP8, and all 10
+  KV-cache compression methods.
+
+### Build notes
+
+- **CUDA 12.8** is required for sm_120 (12.6 can't target Blackwell). CUDA
+  13.x was tried and abandoned — it repeatedly crashes MSVC's compiler.
+- Build with **`MAX_JOBS=2`** and **without sccache** — both trigger
+  intermittent `cl.exe` ICEs (0xC000001D) on the heavy 3-arch CUDA TUs.
+
 ## v0.21.0-win — 2026-05-19
 
 Major upstream bump. 1,157 commits from v0.19.1 → v0.21.0. PyTorch
