@@ -167,7 +167,10 @@ pip install "llguidance>=1.3.0,<1.4.0" "xgrammar>=0.2.0,<1.0.0"
 pip install git+https://github.com/aivrar/multi-turboquant.git
 ```
 
-Or run `install.bat` for a fully self-contained portable Python install.
+Or run `install.bat` for a fully self-contained portable Python install. The
+wheel isn't bundled in the repo, so first **create a `dist-v5\` folder next to
+`install.bat` and drop the downloaded `.whl` into it** — that's where the script
+looks for it (`dist-v5\vllm-0.21.0+cu128-cp313-cp313-win_amd64.whl`).
 
 ### Option B — Build from source
 

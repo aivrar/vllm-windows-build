@@ -161,6 +161,12 @@ if "!WHEEL_FILE!"=="" (
 )
 if "!WHEEL_FILE!"=="" (
     echo          FAILED: No vllm wheel found in dist-v5\, dist-v4\, dist-v3\, dist-v2\, or dist\
+    echo.
+    echo          The .whl is NOT in this repo - download it from Releases, then
+    echo          create a "dist-v5" folder next to install.bat and put the .whl inside:
+    echo.
+    echo            %~dp0dist-v5\vllm-0.21.0+cu128-cp313-cp313-win_amd64.whl
+    echo.
     echo          Download from:
     echo            https://github.com/aivrar/vllm-windows-build/releases
     echo          Or build it yourself: python build_wheel.py
