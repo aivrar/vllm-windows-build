@@ -19,6 +19,10 @@ set "PYTHON_PTH_ZIP=python313.zip"
 set "GETPIP_URL=https://bootstrap.pypa.io/get-pip.py"
 set "TORCH_INDEX=https://download.pytorch.org/whl/cu128"
 
+REM Pre-built vLLM wheel (auto-downloaded into dist-v5\ if not present locally)
+set "WHEEL_NAME=vllm-0.21.0+cu128-cp313-cp313-win_amd64.whl"
+set "WHEEL_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.21.0-win-cu128/vllm-0.21.0+cu128-cp313-cp313-win_amd64.whl"
+
 set "STAGES_TOTAL=5"
 
 echo  Components to install:
@@ -159,18 +163,32 @@ if "!WHEEL_FILE!"=="" (
 if "!WHEEL_FILE!"=="" (
     for %%f in ("%~dp0dist\vllm-*.whl") do set "WHEEL_FILE=%%f"
 )
+REM No local wheel found - auto-download the latest (cu128) from GitHub Releases
 if "!WHEEL_FILE!"=="" (
-    echo          FAILED: No vllm wheel found in dist-v5\, dist-v4\, dist-v3\, dist-v2\, or dist\
-    echo.
-    echo          The .whl is NOT in this repo - download it from Releases, then
-    echo          create a "dist-v5" folder next to install.bat and put the .whl inside:
-    echo.
-    echo            %~dp0dist-v5\vllm-0.21.0+cu128-cp313-cp313-win_amd64.whl
-    echo.
-    echo          Download from:
-    echo            https://github.com/aivrar/vllm-windows-build/releases
-    echo          Or build it yourself: python build_wheel.py
-    exit /b 1
+    echo          No local wheel found - downloading from GitHub Releases ^(~290 MB^)...
+    if not exist "%~dp0dist-v5" mkdir "%~dp0dist-v5"
+    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+        "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;" ^
+        "$ProgressPreference = 'SilentlyContinue';" ^
+        "Invoke-WebRequest -Uri '%WHEEL_URL%' -OutFile '%~dp0dist-v5\%WHEEL_NAME%'"
+    if !ERRORLEVEL! NEQ 0 (
+        echo          FAILED: Could not download the vLLM wheel.
+        echo          URL: %WHEEL_URL%
+        echo          Download it manually and place it in: %~dp0dist-v5\
+        exit /b 1
+    )
+    REM Sanity check: the real wheel is ~290 MB; reject a truncated/HTML error page
+    for %%f in ("%~dp0dist-v5\%WHEEL_NAME%") do set "WHEEL_SIZE=%%~zf"
+    if !WHEEL_SIZE! LSS 100000000 (
+        echo          FAILED: Downloaded wheel is only !WHEEL_SIZE! bytes ^(expected ~290 MB^).
+        echo          The download was likely incomplete or blocked. Delete it and retry,
+        echo          or download manually from:
+        echo            https://github.com/aivrar/vllm-windows-build/releases
+        del "%~dp0dist-v5\%WHEEL_NAME%" 2>nul
+        exit /b 1
+    )
+    set "WHEEL_FILE=%~dp0dist-v5\%WHEEL_NAME%"
+    echo          Downloaded OK ^(!WHEEL_SIZE! bytes^)
 )
 echo          Found wheel: !WHEEL_FILE!
 echo          Installing vLLM and dependencies...
