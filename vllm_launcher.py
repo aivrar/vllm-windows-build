@@ -726,9 +726,21 @@ def main():
                         help="Additional directory to scan for models")
     parser.add_argument("--port", type=int, default=8100)
     parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--max-model-len", type=int, default=None)
-    parser.add_argument("--gpu-memory-utilization", type=float, default=0.6)
-    parser.add_argument("--max-num-seqs", type=int, default=64)
+    parser.add_argument("--max-model-len", type=int, default=8192,
+                        help="Max context length (default: 8192). This caps the KV-cache "
+                             "size: vLLM pre-allocates a paged KV cache sized to "
+                             "max_model_len, so a model advertising 128K context would "
+                             "otherwise reserve many GB of VRAM up front. Raise for "
+                             "long-context use, lower to save VRAM. Pass 0 to use the "
+                             "model's full advertised length.")
+    parser.add_argument("--gpu-memory-utilization", type=float, default=0.6,
+                        help="Fraction of GPU memory vLLM reserves up front for weights + "
+                             "KV cache (default: 0.6). vLLM pre-allocates this regardless of "
+                             "model size, so a small model can still 'use' a lot of VRAM. "
+                             "Lower it to leave more free VRAM.")
+    parser.add_argument("--max-num-seqs", type=int, default=64,
+                        help="Max concurrent sequences (default: 64). Lower it to reduce "
+                             "the reserved KV-cache footprint.")
     parser.add_argument("--enforce-eager", action="store_true",
                         help="Disable CUDA graphs (hurts throughput — only use for debugging)")
     parser.add_argument("--tensor-parallel-size", type=int, default=1)
@@ -759,6 +771,13 @@ def main():
         logger.info(f"Pinned to GPU {args.gpu_id}")
 
     logger.info(f"Loading model: {args.model}")
+    ctx_desc = "model default (full)" if not args.max_model_len else str(args.max_model_len)
+    logger.info(
+        f"Memory settings: gpu_memory_utilization={args.gpu_memory_utilization}, "
+        f"max_model_len={ctx_desc}, max_num_seqs={args.max_num_seqs}. "
+        f"vLLM pre-allocates a KV cache from these — if VRAM use seems high for a small "
+        f"model, lower --gpu-memory-utilization / --max-model-len / --max-num-seqs."
+    )
     start = time.time()
 
     llm_kwargs = {
