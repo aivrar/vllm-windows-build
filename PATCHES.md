@@ -1,6 +1,6 @@
 # Patch Reference
 
-Detailed breakdown of every change in `vllm-windows-v5.patch` (active),
+Detailed breakdown of every change in `vllm-windows-v6.patch` (active),
 organized by category. Older patches against earlier vLLM versions are
 kept in the repo for legacy installs.
 
@@ -11,27 +11,39 @@ see [docs/build.md](docs/build.md).
 
 | | |
 |---|---|
-| Base | vLLM v0.21.0 (commit `ad7125a43`) |
+| Base | vLLM v0.23.0 (tag `v0.23.0`, commit `0fc695fc6`) |
 | Compiler | MSVC 19.43.34810 (Visual Studio 2022 Community 17.13) |
 | CUDA | 12.8 (first toolkit with Blackwell sm_120; was 12.6) |
 | Python | 3.13.11 (was 3.10.11) |
 | PyTorch | 2.11.0+cu128 (was +cu126) |
 | Triton | triton-windows 3.6.0.post26 |
 | Arch list | `8.6;8.9;12.0` (sm_86 / sm_89 / sm_120) |
-| CUTLASS | 4.4.2 (FetchContent + 5-file Windows patch applied automatically) |
-| vllm-flash-attn | f5bc33cfc (with vendored CUTLASS submodule patched) |
+| CUTLASS | FetchContent + Windows patch applied automatically |
+| vllm-flash-attn | FetchContent + vendored CUTLASS submodule patched |
 | Generator | Ninja (`MAX_JOBS=2`, no sccache — see build notes) |
 | GPU | built for sm_86/89/120; tested on RTX 3090 (sm_86) |
 
 ## Diff stats
 
 ```
-46 files changed, ~1115 insertions(+), ~146 deletions(-)
+v6 patch size: ~114 KB unified diff against upstream v0.23.0.
 + 3 new files: vllm/v1/attention/ops/multi_turboquant_kv.py (295 lines),
   cutlass-windows.patch (69 lines),
   vllm-flash-attn-cutlass-windows.patch (69 lines)
-Total patch size: ~2160 lines unified diff.
 ```
+
+## v0.23.0 additions
+
+These hunks were added on top of the v0.21.0 Windows/cu128 work:
+
+| Category | File(s) | Purpose |
+|---|---|---|
+| Rust frontend | `rust/src/managed-engine/src/process.rs` | Keep Unix process groups/signals on Unix; use Windows process creation flags and `taskkill` for managed Python process-tree shutdown |
+| Rust frontend | `rust/src/server/src/listener.rs` | Gate Unix-domain listener and inherited-fd support to Unix; keep TCP listener support on Windows |
+| Rust frontend | `rust/src/cmd/src/main.rs` | Use Windows-compatible Ctrl+C shutdown path; disable mimalloc global allocator on Windows to avoid MSVC CRT mismatch with `esaxx-rs` |
+| Rust frontend | `vllm/envs.py` | Resolve `VLLM_RUST_FRONTEND_PATH=auto` to `vllm-rs.exe` on Windows |
+| Build tooling | build env / docs | `protoc` is required for the Rust frontend; `build.bat`/`run_build.bat` now surface `PROTOC` |
+| Wheel packaging | `assemble_wheel_cu128_v0.23.0.py` | Assembles the already-built tree into a cp313/cu128 wheel and writes `RECORD` with `csv.writer` so comma-containing config filenames install under `uv` |
 
 ## cu128 / Python 3.13 / Blackwell additions
 
@@ -47,10 +59,9 @@ These hunks were added on top of the original cu126 patch for the
 | Blackwell build | `csrc/torch_bindings.cpp` | `#ifndef _WIN32` around the minimax op registration |
 | Blackwell build | `cmake/external_projects/qutlass.cmake` (include guard in `CMakeLists.txt`) | Skip QuTLASS (NVFP4/MXFP4) on WIN32 — GCC inline-PTX, not MSVC-portable |
 
-> **Note:** the file is still named `vllm-windows-v5.patch` — it's the same
-> v0.21.0 Windows patch, now extended. The MiniMax/QuTLASS exclusions and the
-> structured-output dep gap (`llguidance`/`xgrammar`, see install.bat) only
-> surface once sm_120 is enabled.
+> **Note:** v0.21.0 cu128 context:
+> These v0.21.0 cu128 fixes are carried forward in `vllm-windows-v6.patch`
+> for v0.23.0.
 
 ## Files modified
 
@@ -331,10 +342,11 @@ installs:
 
 | Patch file | Base vLLM | Status |
 |---|---|---|
-| `vllm-windows-v5.patch` | v0.21.0 | **current** |
+| `vllm-windows-v6.patch` | v0.23.0 | **current** |
+| `vllm-windows-v5.patch` | v0.21.0 | stale; still works for v0.21.0 builds |
 | `vllm-windows-v4.patch` | v0.19.1 | stale; still works for v0.19.1 builds |
 | `vllm-windows-v3.patch` | v0.19.0 | stale; for v0.19.0 builds |
 | `vllm-windows-v2.patch` | v0.17.1 | stale; for v0.17.1 builds |
 | `vllm-windows.patch` | v0.14.1 | stale; for v0.14.2 legacy install |
-| `cutlass-windows-v0.21.0.patch` | CUTLASS v4.4.2 | bundled inside `vllm-source/` by v5 |
-| `vllm-flash-attn-cutlass-windows-v0.21.0.patch` | vllm-flash-attn `f5bc33cfc` submodule | bundled inside `vllm-source/` by v5 |
+| `cutlass-windows-v0.21.0.patch` | CUTLASS v4.4.2 | legacy standalone copy; bundled into v5/v6 patchsets |
+| `vllm-flash-attn-cutlass-windows-v0.21.0.patch` | vllm-flash-attn `f5bc33cfc` submodule | legacy standalone copy; bundled into v5/v6 patchsets |

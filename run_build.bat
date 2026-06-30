@@ -1,6 +1,6 @@
 @echo off
 :: =====================================================================
-:: vLLM v0.21.0 Windows automated build runner
+:: vLLM v0.23.0 Windows automated build runner
 :: Sets up VS 2022 + venv + env vars, then calls build.bat.
 :: Edit the paths below to match your install.
 :: =====================================================================
@@ -19,6 +19,9 @@ set "TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0"
 :: Use 2, not more: the heavy 3-arch CUDA TUs intermittently crash cl.exe
 :: (0xC000001D) under higher parallelism. Also do NOT enable sccache (same).
 set "MAX_JOBS=2"
+:: vLLM 0.23.0's optional Rust frontend needs protoc. Download protoc for
+:: Windows and either edit this path or set PROTOC before running.
+if not defined PROTOC set "PROTOC=%~dp0tools\protoc\bin\protoc.exe"
 :: ----------------------------------------------------------------------
 
 if not exist "%VS_VCVARS%" (
@@ -44,7 +47,13 @@ if exist "%VENV_PATH%\Scripts\activate.bat" (
 set "VLLM_TARGET_DEVICE=cuda"
 set "CMAKE_BUILD_TYPE=Release"
 set "VLLM_DISABLE_SCCACHE=1"
-set "SETUPTOOLS_SCM_PRETEND_VERSION=0.21.0"
+set "SETUPTOOLS_SCM_PRETEND_VERSION=0.23.0"
+
+if defined PROTOC if not exist "%PROTOC%" (
+    echo [WARN] PROTOC not found at %PROTOC%
+    echo        Rust frontend build will be skipped unless PROTOC points to protoc.exe.
+    set "PROTOC="
+)
 
 call "%~dp0build.bat"
 

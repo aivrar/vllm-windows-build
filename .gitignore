@@ -25,6 +25,8 @@ dist-v2/
 dist-v3/
 dist-v4/
 dist-v5/
+dist-v6/
+dist-v0.23.0/
 *.whl
 
 # Local config

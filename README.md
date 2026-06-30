@@ -2,7 +2,7 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Platform: Windows](https://img.shields.io/badge/Platform-Windows%2010%2F11-blue)
-![vLLM: v0.21.0](https://img.shields.io/badge/vLLM-v0.21.0-orange)
+![vLLM: v0.23.0](https://img.shields.io/badge/vLLM-v0.23.0-orange)
 ![CUDA: 12.8](https://img.shields.io/badge/CUDA-12.8-76B900)
 ![Python: 3.13](https://img.shields.io/badge/Python-3.13-3776AB)
 ![PyTorch: 2.11](https://img.shields.io/badge/PyTorch-2.11.0-EE4C2C)
@@ -11,14 +11,14 @@
 ![Multi-TurboQuant](https://img.shields.io/badge/Multi--TurboQuant-6%20methods-purple)
 ![+ Upstream TurboQuant](https://img.shields.io/badge/+%20Upstream%20TurboQuant-4%20variants-purple)
 
-**Native Windows build of vLLM 0.21.0 — no WSL, no Docker, no Linux VM.**
+**Native Windows build of vLLM 0.23.0 - no WSL, no Docker, no Linux VM.**
 
-> **Latest build (cu128 / Python 3.13 / Blackwell):** now built for
-> **RTX 50-series (Blackwell, sm_120)** in addition to 30-/40-series —
-> `TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0`, Python 3.13, PyTorch 2.11.0+cu128,
-> CUDA 12.8. This release also **fixes the OpenAI API server on Windows**
-> (`vllm serve` now starts — previously only the in-process `LLM()` API
-> worked). See [What's new](#whats-new-cu128--python-313--blackwell).
+> **Latest build (cu128 / Python 3.13 / Blackwell):** updated to
+> **vLLM 0.23.0** with RTX 30-/40-/50-series kernels
+> (`TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0`), PyTorch 2.11.0+cu128, CUDA 12.8,
+> the Windows OpenAI API-server fixes carried forward, and the new v0.23
+> Rust frontend binary (`vllm-rs.exe`) building and resolving on Windows.
+> See [What's new in v0.23.0](#whats-new-in-v0230).
 
 Ships with **10 KV cache compression methods**: the 6 Multi-TurboQuant
 methods (`isoquant`/`planarquant`/`turboquant25/35`) plus the 4 new
@@ -28,19 +28,36 @@ upstream TurboQuant variants that landed in v0.19.2rc0 (`turboquant_k8v4`,
 vLLM is the most popular open-source LLM serving engine, but it
 officially only supports Linux. This repo provides a **pre-built wheel**
 (just download and install) plus a complete patchset for compiling vLLM
-v0.21.0 natively on Windows with full CUDA acceleration, Triton support,
+v0.23.0 natively on Windows with full CUDA acceleration, Triton support,
 and Multi-TurboQuant integration.
 
 ## Releases
 
 | Release | vLLM | PyTorch | Triton | KV compression | Download |
 |---|---|---|---|---|---|
-| **v0.21.0-win-cu128 (latest)** | 0.21.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8 — **Python 3.13, Blackwell sm_120** | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.21.0-win-cu128) |
+| **v0.23.0-win-cu128 (latest)** | 0.23.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8 - **Python 3.13, Blackwell sm_120, Rust frontend included** | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.23.0-win-cu128) |
+| v0.21.0-win-cu128 | 0.21.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8 — **Python 3.13, Blackwell sm_120** | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.21.0-win-cu128) |
 | v0.21.0-win | 0.21.0 | 2.11.0+cu126 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8 (Python 3.10) | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.21.0-win) |
 | v0.19.1-win | 0.19.1 | 2.10.0+cu126 | 3.6.0 | Multi-TurboQuant (6 methods) + fp8 | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.19.1-win) |
 | v0.19.0-win | 0.19.0 | 2.10.0+cu126 | 3.6.0 | Multi-TurboQuant (6 methods) + fp8 | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.19.0-win) |
 | v0.17.1-win | 0.17.1 | 2.10.0+cu126 | 3.6.0 | TurboQuant (2 recipes) | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.17.1-win) |
 | v0.14.2-win | 0.14.2 | 2.9.1+cu126 | n/a | fp8 only | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.14.2-win) |
+
+### What's new in v0.23.0
+
+- **vLLM v0.23.0 base** - carries forward the Windows CUDA/MSVC fixes from
+  v0.21.0 and adds the upstream v0.22/v0.23 bug fixes and frontend work.
+- **Rust frontend builds on Windows** - added `protoc` support to the build
+  flow, made the Rust managed-engine process handling platform-aware, gated
+  Unix-only listener/signal paths, disabled mimalloc on Windows to avoid an
+  MSVC CRT link mismatch, and fixed `VLLM_RUST_FRONTEND_PATH=auto` to resolve
+  `vllm-rs.exe`.
+- **Wheel packaging fixed for `uv`** - the v0.23.0 wheel is assembled with
+  proper CSV `RECORD` generation, so comma-containing fused-MoE config
+  filenames install correctly with `uv`.
+- **Smoke tested** - installed with `uv`, imported `vllm`, `_C`,
+  `_C_stable_libtorch`, `_moe_C`, `spinloop`, `cumem_allocator`, FA2, and
+  verified `VLLM_USE_RUST_FRONTEND=1` resolves the packaged `vllm-rs.exe`.
 
 ### What's new (cu128 / Python 3.13 / Blackwell)
 
@@ -76,7 +93,7 @@ the report that surfaced both the Blackwell gap and the API-server bug.
   `platform_machine == "x86_64"`, but Windows reports `AMD64`, so pip
   silently skips them and vLLM then fails to import. `install.bat` installs
   them explicitly; if installing manually, run
-  `pip install "llguidance>=1.3.0,<1.4.0" "xgrammar>=0.2.0,<1.0.0"`.
+  `pip install "llguidance>=1.7.0,<1.8.0" "xgrammar>=0.2.0,<1.0.0"`.
 
 ### What's new in v0.21.0
 
@@ -141,7 +158,7 @@ Full benchmarks → [docs/benchmarks.md](docs/benchmarks.md)
 ### Option A — Pre-built wheel (no compiler needed)
 
 Download
-**[vllm-0.21.0+cu128-cp313-cp313-win_amd64.whl](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.21.0-win-cu128)**
+**[vllm-0.23.0+cu128-cp313-cp313-win_amd64.whl](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.23.0-win-cu128)**
 from the Releases page, then:
 
 ```batch
@@ -157,11 +174,11 @@ pip install torch==2.11.0 ^
 pip install triton-windows==3.6.0.post26
 
 :: Install the pre-built vLLM wheel
-pip install vllm-0.21.0+cu128-cp313-cp313-win_amd64.whl
+pip install vllm-0.23.0+cu128-cp313-cp313-win_amd64.whl
 
 :: Structured-output backends vLLM gates on x86_64 (Windows = AMD64, so pip
 :: skips them and vLLM won't import without these)
-pip install "llguidance>=1.3.0,<1.4.0" "xgrammar>=0.2.0,<1.0.0"
+pip install "llguidance>=1.7.0,<1.8.0" "xgrammar>=0.2.0,<1.0.0"
 
 :: Install Multi-TurboQuant for the 6 KV cache compression methods
 pip install git+https://github.com/aivrar/multi-turboquant.git
@@ -170,7 +187,7 @@ pip install git+https://github.com/aivrar/multi-turboquant.git
 Or just run **`install.bat`** for a fully self-contained, one-click portable
 Python install — it downloads Python 3.13, PyTorch cu128, and the vLLM wheel
 itself (no manual download or folder creation needed). If you already have the
-`.whl` locally, drop it in `dist-v5\` next to `install.bat` and the script uses
+`.whl` locally, drop it in `dist-v6\` next to `install.bat` and the script uses
 that instead of downloading.
 
 ### Option B — Build from source
@@ -183,8 +200,8 @@ on the heavy multi-arch CUDA kernels.
 
 ```batch
 git clone https://github.com/vllm-project/vllm.git vllm-source
-cd vllm-source && git checkout v0.21.0 && cd ..
-git apply vllm-windows-v5.patch --directory vllm-source
+cd vllm-source && git checkout v0.23.0 && cd ..
+git apply vllm-windows-v6.patch --directory vllm-source
 build.bat
 ```
 
@@ -193,6 +210,10 @@ The patch also drops `cutlass-windows.patch` and
 CMakeLists.txt applies them automatically to the FetchContent-managed
 `.deps/cutlass-src/` and `.deps/vllm-flash-attn-src/csrc/cutlass` after
 the first configure, so you don't need a separate step.
+
+For the v0.23 Rust frontend, install `protoc` and set
+`PROTOC=C:\path\to\protoc.exe` before running the build if it is not already
+on PATH.
 
 Full instructions, including all the env vars and prerequisites:
 **→ [docs/install.md](docs/install.md)**
@@ -277,8 +298,9 @@ fused Triton kernels and don't pay this cost.  See
 
 ## What's in the patch
 
-`vllm-windows-v5.patch` is a unified diff against `vllm-project/vllm`
-at tag `v0.21.0`. It touches **36 files** + **3 new files** (the TQ
+`vllm-windows-v6.patch` is a unified diff against `vllm-project/vllm`
+at tag `v0.23.0`. It touches the Windows build/runtime/Rust frontend
+surface plus **3 new files** (the TQ
 dispatch helper plus two CUTLASS-vendor patches):
 
 - **Build system** (4): CMakeLists, cmake/utils, setup.py, requirements/cuda.txt

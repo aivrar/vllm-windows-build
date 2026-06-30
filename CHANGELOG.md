@@ -1,5 +1,40 @@
 # Changelog
 
+## v0.23.0-win-cu128 - 2026-06-30
+
+Upstream bump from vLLM 0.21.0 to **vLLM 0.23.0**, still targeting
+Python 3.13, CUDA 12.8, PyTorch 2.11.0+cu128, and
+`TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0`.
+
+### New
+
+- **`vllm-windows-v6.patch`** generated against upstream tag `v0.23.0` and
+  validated with `git apply --check` on a fresh checkout.
+- **Rust frontend support on Windows**: `vllm-rs.exe` now builds, packages,
+  and resolves via `VLLM_USE_RUST_FRONTEND=1`.
+- **`assemble_wheel_cu128_v0.23.0.py`** packages the already-built tree into
+  `vllm-0.23.0+cu128-cp313-cp313-win_amd64.whl` without another CUDA compile.
+
+### Fixed
+
+- Added Windows Rust fixes for process shutdown, TCP-only listener support,
+  Ctrl+C shutdown handling, and the mimalloc/MSVC CRT link mismatch.
+- Added `vllm-rs.exe` lookup in `vllm/envs.py`; upstream only checked
+  `vllm-rs`, which fails on Windows wheels.
+- Carried forward the `uv` wheel `RECORD` fix by writing `RECORD` with
+  `csv.writer`, so comma-containing fused-MoE config filenames install cleanly.
+
+### Verified
+
+- Native CUDA build completed for all six extension modules:
+  `_C`, `_C_stable_libtorch`, `_moe_C`, `cumem_allocator`, `spinloop`, FA2.
+- `setup.py build_rust --inplace` completed and copied `vllm\vllm-rs.exe`.
+- Final wheel installed with `uv pip install --reinstall --no-deps`.
+- Smoke test imported `vllm 0.23.0+cu128`, all native extensions above, and
+  resolved `VLLM_RUST_FRONTEND_PATH` to the packaged `vllm-rs.exe`.
+- Wheel SHA256:
+  `AC1CCCA81710A4F4CD0A5BFBAFB3F28971526FA24CCA022A394050014542818E`.
+
 ## v0.21.0-win-cu128 — 2026-05-25
 
 Rebuild of the same vLLM 0.21.0 source for **RTX 50-series (Blackwell,
