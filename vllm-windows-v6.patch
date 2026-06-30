@@ -1952,6 +1952,29 @@ index c4ed8a5ee..b320ccec0 100644
      sock.bind(addr)
  
      return sock
+diff --git a/vllm/entrypoints/openai/dp_supervisor.py b/vllm/entrypoints/openai/dp_supervisor.py
+index 13444015e..8906bc8da 100644
+--- a/vllm/entrypoints/openai/dp_supervisor.py
++++ b/vllm/entrypoints/openai/dp_supervisor.py
+@@ -19,9 +19,17 @@ from multiprocessing.process import BaseProcess
+ import aiohttp
+ import psutil
+ import uvicorn
+-import uvloop
++try:
++    import uvloop
++except ImportError:  # Windows: uvloop is Unix-only; asyncio.run has same signature
++    import asyncio as uvloop
+ from fastapi import FastAPI, Response
+ 
++if os.name == "nt":
++    # pyzmq relies on add_reader; ProactorEventLoop does not implement it.
++    if hasattr(uvloop, "WindowsSelectorEventLoopPolicy"):
++        uvloop.set_event_loop_policy(uvloop.WindowsSelectorEventLoopPolicy())
++
+ from vllm.logger import init_logger
+ from vllm.platforms import current_platform
+ from vllm.utils.system_utils import (
 diff --git a/vllm/envs.py b/vllm/envs.py
 index 8f4e18d22..28bcb8671 100755
 --- a/vllm/envs.py

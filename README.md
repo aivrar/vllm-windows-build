@@ -56,8 +56,10 @@ and Multi-TurboQuant integration.
   proper CSV `RECORD` generation, so comma-containing fused-MoE config
   filenames install correctly with `uv`.
 - **Smoke tested** - installed with `uv`, imported `vllm`, `_C`,
-  `_C_stable_libtorch`, `_moe_C`, `spinloop`, `cumem_allocator`, FA2, and
-  verified `VLLM_USE_RUST_FRONTEND=1` resolves the packaged `vllm-rs.exe`.
+  `_C_stable_libtorch`, `_moe_C`, `spinloop`, `cumem_allocator`, FA2, the
+  OpenAI API server / DP supervisor import surface, `vllm --help`, and
+  `vllm serve --help`; also verified `VLLM_USE_RUST_FRONTEND=1` resolves the
+  packaged `vllm-rs.exe`.
 
 ### What's new (cu128 / Python 3.13 / Blackwell)
 
@@ -74,8 +76,8 @@ the report that surfaced both the Blackwell gap and the API-server bug.
   compute-capability gap, not a Python-version problem.
 - **The OpenAI API server now works on Windows.** Previously only the
   in-process `LLM()` path worked; `vllm serve` / `api_server` crashed. Four
-  Windows-only bugs fixed: (1) bare `import uvloop` (Unix-only) in five
-  entrypoints → falls back to `asyncio`; (2) `wait_for_engine_startup()`
+  Windows-only bugs fixed: (1) bare `import uvloop` (Unix-only) in six
+  server/entrypoint modules → falls back to `asyncio`; (2) `wait_for_engine_startup()`
   registered process *sentinels* (Windows HANDLEs, not sockets) with a
   `zmq.Poller` → `not a socket`, now skipped on win32 with exit-code
   liveness checks; (3) pyzmq needs `loop.add_reader`, absent from the
@@ -313,7 +315,7 @@ dispatch helper plus two CUTLASS-vendor patches):
   `persistent_topk.cuh` `__forceinline` swap, `fused_silu_mul_block_quant.cu`
   `quant_type_max_v<T>()` call-syntax, and the `topk_softplus_sqrt_kernels.cu`
   preprocessor-in-macro-arg refactor
-- **Runtime Python** (9): `fcntl` → `msvcrt`, ZMQ IPC → TCP, fork →
+- **Runtime Python** (10): `fcntl` → `msvcrt`, ZMQ IPC → TCP, fork →
   spawn, NCCL → FakeProcessGroup, custom safetensors reader for small
   pagefile systems, `uvloop` fallback, `VLLM_USE_FLASHINFER_SAMPLER`
   default-False on Windows

@@ -26,7 +26,7 @@ see [docs/build.md](docs/build.md).
 ## Diff stats
 
 ```
-v6 patch size: ~114 KB unified diff against upstream v0.23.0.
+v6 patch size: ~115 KB unified diff against upstream v0.23.0.
 + 3 new files: vllm/v1/attention/ops/multi_turboquant_kv.py (295 lines),
   cutlass-windows.patch (69 lines),
   vllm-flash-attn-cutlass-windows.patch (69 lines)
@@ -52,7 +52,7 @@ These hunks were added on top of the original cu126 patch for the
 
 | Category | File(s) | Purpose |
 |---|---|---|
-| API server (Windows) | `entrypoints/openai/api_server.py`, `cli/serve.py`, `cli/launch.py`, `grpc_server.py`, `benchmarks/throughput.py` | Fall back `import uvloop` → `import asyncio as uvloop` (uvloop is Unix-only); set `WindowsSelectorEventLoopPolicy` so pyzmq's `add_reader` works on the Proactor-less loop |
+| API server (Windows) | `entrypoints/openai/api_server.py`, `entrypoints/openai/dp_supervisor.py`, `cli/serve.py`, `cli/launch.py`, `grpc_server.py`, `benchmarks/throughput.py` | Fall back `import uvloop` → `import asyncio as uvloop` (uvloop is Unix-only); set `WindowsSelectorEventLoopPolicy` so pyzmq's `add_reader` works on the Proactor-less loop |
 | API server (Windows) | `vllm/v1/engine/utils.py` | `wait_for_engine_startup()`: don't register process sentinels (HANDLEs) with `zmq.Poller` on win32 (`not a socket`); detect dead procs via exit codes |
 | API server (Windows) | `vllm/entrypoints/launcher.py` | `add_signal_handler` → `signal.signal` fallback (Unix-only on asyncio) |
 | Blackwell build | `CMakeLists.txt` | Skip `minimax_reduce_rms_kernel.cu` on WIN32 (cudafe++ crash; multi-GPU only); marlin host `/Od`; quote CUDA-13 cccl include (gated CUDA≥13) |
@@ -94,6 +94,7 @@ These hunks were added on top of the original cu126 patch for the
 | CUDA kernel | `csrc/quantization/w8a8/fp8/common.cuh` | 1 | Same |
 | Runtime Python | `vllm/distributed/parallel_state.py` | 2 | `FakeProcessGroup` + `FileStore` instead of Gloo |
 | Runtime Python | `vllm/entrypoints/openai/api_server.py` | 1 | Guard `SO_REUSEPORT` |
+| Runtime Python | `vllm/entrypoints/openai/dp_supervisor.py` | 1 | **NEW** `import uvloop` fallback to `asyncio`; selector event-loop policy on Windows |
 | Runtime Python | `vllm/envs.py` | 1 | **NEW** Default `VLLM_USE_FLASHINFER_SAMPLER=False` on `win32` |
 | Runtime Python | `vllm/model_executor/model_loader/weight_utils.py` | 8 | Custom safetensors reader (numpy mmap + chunked GPU stream) |
 | Runtime Python | `vllm/utils/network_utils.py` | 1 | ZMQ IPC → `tcp://127.0.0.1` |

@@ -21,6 +21,8 @@ Python 3.13, CUDA 12.8, PyTorch 2.11.0+cu128, and
   Ctrl+C shutdown handling, and the mimalloc/MSVC CRT link mismatch.
 - Added `vllm-rs.exe` lookup in `vllm/envs.py`; upstream only checked
   `vllm-rs`, which fails on Windows wheels.
+- Added the v0.23 DP supervisor `uvloop` fallback; this module was new after
+  the earlier Windows API-server fixes and was caught by CLI import testing.
 - Carried forward the `uv` wheel `RECORD` fix by writing `RECORD` with
   `csv.writer`, so comma-containing fused-MoE config filenames install cleanly.
 
@@ -30,10 +32,12 @@ Python 3.13, CUDA 12.8, PyTorch 2.11.0+cu128, and
   `_C`, `_C_stable_libtorch`, `_moe_C`, `cumem_allocator`, `spinloop`, FA2.
 - `setup.py build_rust --inplace` completed and copied `vllm\vllm-rs.exe`.
 - Final wheel installed with `uv pip install --reinstall --no-deps`.
+- `vllm --help` and `vllm serve --help` exit cleanly.
 - Smoke test imported `vllm 0.23.0+cu128`, all native extensions above, and
-  resolved `VLLM_RUST_FRONTEND_PATH` to the packaged `vllm-rs.exe`.
+  the OpenAI API server / DP supervisor import surface, then resolved
+  `VLLM_RUST_FRONTEND_PATH` to the packaged `vllm-rs.exe`.
 - Wheel SHA256:
-  `AC1CCCA81710A4F4CD0A5BFBAFB3F28971526FA24CCA022A394050014542818E`.
+  `53BC2360AC636804DD37FD2FBD8098FCE3C350AEF55B257F0EF0DDF6B24FADB1`.
 
 ## v0.21.0-win-cu128 — 2026-05-25
 
