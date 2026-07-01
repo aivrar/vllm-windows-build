@@ -33,7 +33,7 @@ Python 3.13, CUDA 12.8, PyTorch 2.11.0+cu128, and
 - Native CUDA build completed for `_C_stable_libtorch`,
   `_moe_C_stable_libtorch`, `cumem_allocator`, `spinloop`, FA2,
   `vllm-rs.exe`, and `_rust_tool_parser.pyd`.
-- Final wheel installed with `pip install --force-reinstall --no-deps`.
+- Final wheel installed with `uv pip install --reinstall --no-deps`.
 - Smoke test imported `vllm 0.24.0+cu128`, all native extensions above,
   OpenAI API server / DP supervisor import surface, `vllm --help`, and
   `vllm serve --help`.
