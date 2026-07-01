@@ -1,5 +1,49 @@
 # Changelog
 
+## v0.24.0-win-cu128 - 2026-07-01
+
+Upstream bump from vLLM 0.23.0 to **vLLM 0.24.0**, still targeting
+Python 3.13, CUDA 12.8, PyTorch 2.11.0+cu128, and
+`TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0`.
+
+### New
+
+- **`vllm-windows-v7.patch`** generated against upstream tag `v0.24.0`
+  and validated with `git apply --check` on a fresh checkout.
+- **`assemble_wheel_cu128_v0.24.0.py`** packages the already-built tree
+  into `vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl`.
+- **Rust tool parser support**: v0.24 adds `_rust_tool_parser.pyd`, now
+  included in the wheel beside `vllm-rs.exe`.
+
+### Fixed
+
+- Skipped QuTLASS on Windows and kept the optional `_qutlass_C` warning
+  quiet when the module is intentionally absent.
+- Skipped cooperative TopK on Windows and guarded the sparse-attention
+  caller so it falls back cleanly when the op is not compiled.
+- Skipped DeepGEMM on Windows; upstream's build helper still invokes
+  `g++`, which is not available in the MSVC build environment.
+- Updated Windows precompiled Rust artifact detection to recognize
+  `vllm-rs.exe` and `_rust_*.pyd`.
+- Carried forward the v0.23 OpenAI API server, DP supervisor, uvloop,
+  selector-event-loop, safetensors, and CUDA/MSVC fixes.
+
+### Verified
+
+- Native CUDA build completed for `_C_stable_libtorch`,
+  `_moe_C_stable_libtorch`, `cumem_allocator`, `spinloop`, FA2,
+  `vllm-rs.exe`, and `_rust_tool_parser.pyd`.
+- Final wheel installed with `pip install --force-reinstall --no-deps`.
+- Smoke test imported `vllm 0.24.0+cu128`, all native extensions above,
+  OpenAI API server / DP supervisor import surface, `vllm --help`, and
+  `vllm serve --help`.
+- Verified `VLLM_USE_RUST_FRONTEND=1` resolves the packaged
+  `vllm-rs.exe`.
+- Verified intentionally skipped paths report unavailable:
+  `has_deep_gemm=False` and `has_cooperative_topk=False`.
+- Wheel SHA256:
+  `5B304EC24E1BAA427627FB1A3D4308763E8EF7020524A39200A87934028F15F5`.
+
 ## v0.23.0-win-cu128 - 2026-06-30
 
 Upstream bump from vLLM 0.21.0 to **vLLM 0.23.0**, still targeting

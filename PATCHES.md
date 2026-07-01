@@ -1,6 +1,6 @@
 # Patch Reference
 
-Detailed breakdown of every change in `vllm-windows-v6.patch` (active),
+Detailed breakdown of every change in `vllm-windows-v7.patch` (active),
 organized by category. Older patches against earlier vLLM versions are
 kept in the repo for legacy installs.
 
@@ -11,7 +11,7 @@ see [docs/build.md](docs/build.md).
 
 | | |
 |---|---|
-| Base | vLLM v0.23.0 (tag `v0.23.0`, commit `0fc695fc6`) |
+| Base | vLLM v0.24.0 (tag `v0.24.0`, commit `ee0da84ab`) |
 | Compiler | MSVC 19.43.34810 (Visual Studio 2022 Community 17.13) |
 | CUDA | 12.8 (first toolkit with Blackwell sm_120; was 12.6) |
 | Python | 3.13.11 (was 3.10.11) |
@@ -26,11 +26,25 @@ see [docs/build.md](docs/build.md).
 ## Diff stats
 
 ```
-v6 patch size: ~115 KB unified diff against upstream v0.23.0.
+v7 patch size: ~122 KB unified diff against upstream v0.24.0.
 + 3 new files: vllm/v1/attention/ops/multi_turboquant_kv.py (295 lines),
   cutlass-windows.patch (69 lines),
   vllm-flash-attn-cutlass-windows.patch (69 lines)
 ```
+
+## v0.24.0 additions
+
+These hunks were added on top of the v0.23.0 Windows/cu128 work:
+
+| Category | File(s) | Purpose |
+|---|---|---|
+| Build system | `CMakeLists.txt`, `setup.py` | Skip QuTLASS and DeepGEMM on Windows; both are optional paths and their Linux build assumptions do not hold under MSVC |
+| Build system | `CMakeLists.txt` | Skip cooperative TopK on Windows; CUDA 12.8's PTX wrapper signatures do not match the v0.24 cooperative top-k calls under this toolchain |
+| Runtime Python | `vllm/model_executor/layers/sparse_attn_indexer.py` | Guard `torch.ops._C.cooperative_topk` so sparse attention falls back when the optional op is absent |
+| Runtime Python | `vllm/platforms/cuda.py` | Suppress the expected missing `_qutlass_C` warning on Windows while preserving warnings for real import failures |
+| Rust packaging | `setup.py` | Recognize `vllm-rs.exe` and `_rust_*.pyd` as prebuilt Rust artifacts on Windows |
+| Wheel packaging | `assemble_wheel_cu128_v0.24.0.py` | Assembles the already-built tree into a cp313/cu128 wheel including `_rust_tool_parser.pyd`, `vllm-rs.exe`, `triton_kernels`, and `fmha_sm100` |
+| Requirements | `requirements/cuda.txt` | Keep Linux-only CUDA helper packages out of the Windows install path: FlashInfer, TVM FFI, TileLang, CUDNN frontend, CUTLASS DSL, QuACK, TokenSpeed-MLA, Humming kernels, and fastsafetensors |
 
 ## v0.23.0 additions
 
@@ -60,8 +74,8 @@ These hunks were added on top of the original cu126 patch for the
 | Blackwell build | `cmake/external_projects/qutlass.cmake` (include guard in `CMakeLists.txt`) | Skip QuTLASS (NVFP4/MXFP4) on WIN32 — GCC inline-PTX, not MSVC-portable |
 
 > **Note:** v0.21.0 cu128 context:
-> These v0.21.0 cu128 fixes are carried forward in `vllm-windows-v6.patch`
-> for v0.23.0.
+> These v0.21.0 cu128 fixes are carried forward in `vllm-windows-v7.patch`
+> for v0.24.0.
 
 ## Files modified
 
@@ -329,7 +343,8 @@ keep landing on the TritonAttention path with our hooks.
 - **FlashAttention 3** — Has MSVC-incompatible PTX macros. FA2 works fine.
 - **FlashAttention 4 (CuteDSL)** — Needs `nvidia-cutlass-dsl`, no Windows wheel.
 - **`nvidia-cutlass-dsl`** — No Windows wheel. Used by FA4 / QuACK; FA2 path is fine.
-- **DeepGEMM** — CMake skips automatically when target arch < SM 9.0.
+- **DeepGEMM** - skipped on Windows because the v0.24 build helper invokes `g++`; callers fall back when the package is unavailable.
+- **Cooperative TopK** - skipped on Windows; sparse attention falls back to the persistent TopK path when the op is absent.
 - **fastsafetensors** — Linux-only (`io_uring`); our custom Windows safetensors reader replaces it.
 - **Gloo distributed** — Worked around with `FakeProcessGroup`.
 - **Our 6 Multi-TurboQuant methods' throughput** — Encode/decode runs in PyTorch (no fused Triton kernel). Memory savings real, throughput cost is the trade-off. Upstream `turboquant_*` variants don't pay this cost.
@@ -343,11 +358,12 @@ installs:
 
 | Patch file | Base vLLM | Status |
 |---|---|---|
-| `vllm-windows-v6.patch` | v0.23.0 | **current** |
+| `vllm-windows-v7.patch` | v0.24.0 | **current** |
+| `vllm-windows-v6.patch` | v0.23.0 | stale; still works for v0.23.0 builds |
 | `vllm-windows-v5.patch` | v0.21.0 | stale; still works for v0.21.0 builds |
 | `vllm-windows-v4.patch` | v0.19.1 | stale; still works for v0.19.1 builds |
 | `vllm-windows-v3.patch` | v0.19.0 | stale; for v0.19.0 builds |
 | `vllm-windows-v2.patch` | v0.17.1 | stale; for v0.17.1 builds |
 | `vllm-windows.patch` | v0.14.1 | stale; for v0.14.2 legacy install |
-| `cutlass-windows-v0.21.0.patch` | CUTLASS v4.4.2 | legacy standalone copy; bundled into v5/v6 patchsets |
-| `vllm-flash-attn-cutlass-windows-v0.21.0.patch` | vllm-flash-attn `f5bc33cfc` submodule | legacy standalone copy; bundled into v5/v6 patchsets |
+| `cutlass-windows-v0.21.0.patch` | CUTLASS v4.4.2 | legacy standalone copy; bundled into v5/v6/v7 patchsets |
+| `vllm-flash-attn-cutlass-windows-v0.21.0.patch` | vllm-flash-attn `f5bc33cfc` submodule | legacy standalone copy; bundled into v5/v6/v7 patchsets |

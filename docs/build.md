@@ -1,168 +1,175 @@
-# Build from Source
+# Build From Source
 
-This page covers what each phase of the v0.19.0 Windows build actually
-does, what to look for if it breaks, and how to iterate when modifying
-the patches.
+This page documents the v0.24.0 Windows build flow and how to iterate on
+`vllm-windows-v7.patch`.
 
-For a quick "I just want to build it" walk-through, see [install.md](install.md#b-build-from-source).
+For install-only usage, see [install.md](install.md).
 
----
+## Patch Scope
 
-## What's in the patch
+`vllm-windows-v7.patch` is a unified diff against upstream
+`vllm-project/vllm` tag `v0.24.0` (`ee0da84ab`).
 
-`vllm-windows-v3.patch` is a unified diff against `vllm-project/vllm`
-at tag `v0.19.0`. It touches **33 files** across four categories:
+Main categories:
 
-### 1. Build system (4 files)
-
-| File | Purpose |
+| Area | Purpose |
 |---|---|
-| `CMakeLists.txt` | Force `CUDA_HOME` toolkit, MSVC `/Zc:preprocessor`, quote python paths, link `CUDA::cublas` |
-| `cmake/utils.cmake` | Quote executable paths in `file(REAL_PATH)` |
-| `setup.py` | Allow Windows CUDA builds, backslash → forward-slash, find Ninja in venv Scripts |
-| `requirements/cuda.txt` | Comment out flashinfer, nvidia-cudnn-frontend, cutlass-dsl, quack-kernels (no Windows wheels) |
+| Build system | Allow CUDA builds on Windows, force CUDA 12.8 paths, apply CUTLASS patches, skip Linux-only optional extensions |
+| CUDA kernels | MSVC compatibility for GCC-only syntax, `__int128_t`, `__builtin_clz`, macro/preprocessor issues, and generated selector depth |
+| Runtime Python | Windows multiprocessing/network/event-loop fixes, safetensors reader, FakeProcessGroup, API server fallbacks |
+| Rust artifacts | Build and package `vllm-rs.exe` and `_rust_tool_parser.pyd` |
+| Multi-TurboQuant | Carry the 6 local KV-cache compression methods alongside upstream TurboQuant variants |
 
-### 2. CUDA kernels (16 files) — MSVC compatibility
+## Required Toolchain
 
-MSVC's host compiler is stricter than gcc/clang in a few specific ways
-nvcc relies on. Each fix is the smallest change that compiles cleanly:
-
-| Pattern | Files | Fix |
-|---|---|---|
-| `__builtin_clz` (gcc-only) | `csrc/core/math.hpp` | Portable bit-twiddling |
-| `__attribute((aligned))` | `csrc/moe/grouped_topk_kernels.cu` | `__align__(N)` instead |
-| `__asm__ __volatile__` | `csrc/quantization/awq/gemm_kernels.cu` | `asm volatile` (MSVC PTX syntax) |
-| Designated initializers `{.x = N}` in CUDA | `csrc/quantization/activation_kernels.cu`, `csrc/topk.cu` | Positional init `{N}` |
-| `__int128_t` / `__int64_t` (gcc-only) | `csrc/quantization/activation_kernels.cu` | `int4` / `int64_t` |
-| `or` / `and` / `not` keywords | `csrc/quantization/gptq_allspark/...`, `csrc/quantization/fused_kernels/fused_layernorm_dynamic_per_token_quant.cu` | `\|\|` / `&&` / `!` |
-| `std::isinf` in device code | `csrc/attention/merge_attn_states.cu` | `isinf` (CUDA built-in) |
-| Variable templates with `__device__` | `csrc/quantization/utils.cuh` | Function templates |
-| Nested `BOOL_SWITCH` lambdas | `csrc/mamba/mamba_ssm/selective_scan_fwd.cu` | Explicit template dispatch |
-| Deeply nested `else if` (C1061) | `csrc/quantization/marlin/generate_kernels.py`, `csrc/moe/marlin_moe_wna16/generate_kernels.py` | Flat `if` chain |
-| `__builtin_clz` / `ssize_t` | `csrc/cumem_allocator.cpp` | `<BaseTsd.h>`, `SSIZE_T` |
-| Missing `uint` typedef | several `.cu` files | `typedef unsigned int uint;` under `#ifdef _MSC_VER` |
-| `subprocess.call(["rm", ...])` | both `generate_kernels.py` files | `os.remove(...)` |
-
-### 3. Runtime Python (8 files) — Windows platform fixes
-
-| File | Fix |
+| Component | Version |
 |---|---|
-| `vllm/distributed/parallel_state.py` | PyTorch Windows builds have no Gloo TCP/UV — fall back to `FakeProcessGroup` + `FileStore` |
-| `vllm/utils/network_utils.py` | ZMQ IPC sockets unavailable — use `tcp://127.0.0.1` instead |
-| `vllm/utils/system_utils.py` | Force `spawn` multiprocessing (no `fork` on Windows) |
-| `vllm/v1/engine/core_client.py` | Force `InprocClient` (multiprocess ZMQ fails with spawn) |
-| `vllm/entrypoints/openai/api_server.py` | Guard `SO_REUSEPORT` |
-| `vllm/model_executor/layers/fused_moe/routed_experts_capturer.py` | `fcntl.flock` → `msvcrt.locking` |
-| `vllm/model_executor/model_loader/weight_utils.py` | Custom safetensors reader (numpy mmap → chunked GPU streaming) for systems with small/disabled pagefile |
-| `vllm/v1/attention/backends/triton_attn.py` | Wire Multi-TurboQuant encode/decode dispatch |
+| Visual Studio | 2022 Community or newer, C++ workload |
+| CUDA Toolkit | 12.8 |
+| Python | 3.13.x |
+| PyTorch | 2.11.0+cu128 |
+| Triton | triton-windows 3.6.0.post26 |
+| Rust | MSVC stable toolchain |
+| protoc | Required for Rust frontend/tool parser |
+| Generator | Ninja |
 
-### 4. Multi-TurboQuant integration (4 files + 1 new)
-
-| File | Change |
-|---|---|
-| `vllm/config/cache.py` | Add 6 new `CacheDType` literals: `turboquant25`, `turboquant35`, `isoquant3`, `isoquant4`, `planarquant3`, `planarquant4` |
-| `vllm/utils/torch_utils.py` | Map all 6 TQ dtypes to `torch.uint8` (storage type) |
-| `vllm/v1/attention/backends/triton_attn.py` | Hook `do_kv_cache_update` and `forward` to dispatch through the TQ helper |
-| `vllm/v1/attention/ops/triton_reshape_and_cache_flash.py` | Pass through TQ dtypes (handled upstream) |
-| **`vllm/v1/attention/ops/multi_turboquant_kv.py` (NEW)** | The encode/decode bridge — gathers active blocks, calls `multi_turboquant.{iso,planar,turbo}_quant.encode/decode`, remaps `block_table` for the compact temporary cache |
-
-The new file is included in the patch (it shows up as a `--- /dev/null`
-add) so a single `git apply vllm-windows-v3.patch` does everything.
-
----
-
-## Build phases
-
-### Phase 1: CMake configure (~5-10 min)
-
-Triggered by `pip install -e .`, runs `cmake -G Ninja vllm-source`.
-
-What happens:
-1. Detect MSVC, CUDA toolkit version, Python, torch, GPU arch list
-2. `FetchContent` clones CUTLASS, FlashAttention, triton_kernels into `.deps/`
-3. Generate Marlin kernel sources (`generate_kernels.py` produces ~250 `.cu` files)
-4. Write `build.ninja`
-
-**What to watch for:**
-- `Found CUDA: ... (found version "12.6")` — confirms it's not picking up CUDA 13.x via VS MSBuild integration
-- `Build files have been written to: ...build-temp/Release` — configure done
-
-If CMake errors out with "generator: Visual Studio 17 2022 does not match
-the generator used previously: Ninja", clean `.deps/`:
+Recommended environment:
 
 ```bat
-rmdir /s /q vllm-source\.deps
+set CUDA_HOME=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8
+set TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0
+set VLLM_TARGET_DEVICE=cuda
+set CMAKE_BUILD_TYPE=Release
+set VLLM_DISABLE_SCCACHE=1
+set SETUPTOOLS_SCM_PRETEND_VERSION=0.24.0
+set MAX_JOBS=2
+set PROTOC=C:\path\to\protoc.exe
 ```
 
-### Phase 2: Compile (~25-35 min)
+## Build Phases
 
-Runs `cmake --build .` which invokes Ninja.
-
-Targets:
-1. `cumem_allocator` (~1 min) — small CXX
-2. `_C` (~10 min) — main CUDA extension, 30+ kernels
-3. `_moe_C` (~10 min) — Marlin MOE templates, lots of variants
-4. `_C_stable_libtorch` (~30 sec)
-5. `_vllm_fa2_C` (~10 min) — FlashAttention 2 with bundled CUTLASS
-
-**What to watch for:**
-- `[N/140] Building CUDA object ...` — progress
-- `error MSB3721` — compiler crashed (usually OOM, lower `MAX_JOBS`)
-- `catastrophic error: out of memory` — same; lower `MAX_JOBS`
-- `cl : error C2018: unknown character 'or' / 'and' / 'not'` — missing operator-keyword fix; check the patch applied cleanly
-
-### Phase 3: Editable install (~30 sec)
-
-`pip install -e .` writes a `__editable__.vllm-0.19.0+cu126.pth` finder
-into the venv site-packages that points back at `vllm-source/vllm/`.
-The compiled `.pyd` files live in `vllm-source/vllm/` next to the
-Python sources.
-
----
-
-## Iterating on the patch
-
-If you change a `.cu` file in `vllm-source/`, just re-run `pip install
--e . --no-build-isolation`. Ninja only recompiles what changed (~10-30s
-per kernel).
-
-If you change `setup.py` or `CMakeLists.txt`, you usually need to clear
-the build temp:
+### 1. Patch Upstream
 
 ```bat
-del /s /q "%TEMP%\tmp*.build-temp"
-```
-
-If you change anything in `vllm-source/vllm/*.py`, the editable install
-picks it up automatically — just re-run your test.
-
-If you change `vllm/v1/attention/ops/multi_turboquant_kv.py` (the TQ
-helper), no rebuild needed — it's pure Python.
-
----
-
-## Regenerating the patch
-
-After modifying files in `vllm-source/`:
-
-```bat
+git clone https://github.com/vllm-project/vllm.git vllm-source
 cd vllm-source
-git add -N vllm/v1/attention/ops/multi_turboquant_kv.py
-git diff > ..\vllm-windows-v3.patch
+git checkout v0.24.0
+git apply ..\vllm-windows-v7.patch
+cd ..
 ```
 
-The `git add -N` step is needed to make the new
-`multi_turboquant_kv.py` show up in the diff (it's untracked).
+### 2. Configure And Build
 
----
+`pip install -e . --no-build-isolation -v` drives CMake/Ninja through
+`setup.py`.
 
-## Build environment cheat-sheet
+Expected native artifacts in `vllm-source\vllm\` after a successful build:
 
-| Variable | Value | Why |
-|---|---|---|
-| `CUDA_HOME` | `C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6` | Forces CMake to ignore other CUDA installs |
-| `TORCH_CUDA_ARCH_LIST` | `8.6` (RTX 30xx) | Compiles only for your GPU; saves ~30% build time |
-| `VLLM_TARGET_DEVICE` | `cuda` | Required on Windows since vLLM defaults to "empty" |
-| `MAX_JOBS` | `4` (32 GB) or `8` (64 GB) | Higher uses more RAM during compile |
-| `SETUPTOOLS_SCM_PRETEND_VERSION` | `0.19.0` | Stops setuptools-scm from reading git tags |
-| `PYTORCH_CUDA_ALLOC_CONF` | `expandable_segments:True` | Required at runtime if Windows pagefile is small |
+```text
+_C_stable_libtorch.pyd
+_moe_C_stable_libtorch.pyd
+_rust_tool_parser.pyd
+cumem_allocator.pyd
+spinloop.pyd
+vllm_flash_attn\_vllm_fa2_C.pyd
+vllm-rs.exe
+third_party\triton_kernels\...
+third_party\fmha_sm100\...
+```
+
+Intentionally absent on Windows:
+
+```text
+_qutlass_C.pyd
+_deep_gemm_C.pyd
+cooperative_topk op
+```
+
+Those paths are optional in this build. vLLM falls back when they are not
+available.
+
+### 3. Generate Metadata
+
+If `vllm.egg-info` was not left in the source tree by the editable build,
+generate it before assembling a wheel:
+
+```bat
+set VLLM_TARGET_DEVICE=cuda
+set SETUPTOOLS_SCM_PRETEND_VERSION=0.24.0
+python setup.py egg_info
+```
+
+Confirm `vllm.egg-info\PKG-INFO` contains:
+
+```text
+Version: 0.24.0+cu128
+```
+
+### 4. Assemble Wheel
+
+```bat
+python assemble_wheel_cu128_v0.24.0.py
+```
+
+Output:
+
+```text
+dist-v7\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
+```
+
+### 5. Smoke Test The Wheel
+
+Install the wheel from outside the source tree:
+
+```bat
+python -m pip install --force-reinstall --no-deps dist-v7\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
+```
+
+Run:
+
+```bat
+python -c "import vllm; print(vllm.__version__)"
+vllm --help
+vllm serve --help
+```
+
+Optional Rust frontend check:
+
+```bat
+set VLLM_USE_RUST_FRONTEND=1
+python -c "from pathlib import Path; import vllm.envs as e; print(e.VLLM_RUST_FRONTEND_PATH); assert Path(e.VLLM_RUST_FRONTEND_PATH).exists()"
+```
+
+## Iterating
+
+If you change Python files, rerun the smoke tests.
+
+If you change CUDA/C++ files:
+
+```bat
+pip install -e . --no-build-isolation -v
+```
+
+If you change `setup.py` or CMake files, clear the temp build directory
+or start from a fresh build temp before rebuilding.
+
+## Regenerating The Patch
+
+From the patched vLLM source tree:
+
+```bat
+git diff --binary v0.24.0..HEAD --output=..\vllm-windows-v7.patch -- .
+```
+
+Validate against a clean upstream worktree:
+
+```bat
+git worktree add --detach ..\patch-check-v0.24.0 v0.24.0
+git -C ..\patch-check-v0.24.0 apply --check ..\vllm-windows-v7.patch
+```
+
+Also run:
+
+```bat
+git diff --check v0.24.0..HEAD -- . ":!cutlass-windows.patch" ":!vllm-flash-attn-cutlass-windows.patch"
+```

@@ -4,8 +4,8 @@ cd /d "%~dp0"
 
 echo.
 echo  ============================================================
-echo          vLLM v0.23.0 Windows Installer
-echo     Portable Python 3.13.11 + PyTorch 2.11.0 (cu128) + vLLM 0.23.0
+echo          vLLM v0.24.0 Windows Installer
+echo     Portable Python 3.13.11 + PyTorch 2.11.0 (cu128) + vLLM 0.24.0
 echo  ============================================================
 echo.
 
@@ -19,9 +19,9 @@ set "PYTHON_PTH_ZIP=python313.zip"
 set "GETPIP_URL=https://bootstrap.pypa.io/get-pip.py"
 set "TORCH_INDEX=https://download.pytorch.org/whl/cu128"
 
-REM Pre-built vLLM wheel (auto-downloaded into dist-v6\ if not present locally)
-set "WHEEL_NAME=vllm-0.23.0+cu128-cp313-cp313-win_amd64.whl"
-set "WHEEL_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.23.0-win-cu128/vllm-0.23.0+cu128-cp313-cp313-win_amd64.whl"
+REM Pre-built vLLM wheel (auto-downloaded into dist-v7\ if not present locally)
+set "WHEEL_NAME=vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl"
+set "WHEEL_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.24.0-win-cu128/vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl"
 
 set "STAGES_TOTAL=5"
 
@@ -29,7 +29,7 @@ echo  Components to install:
 echo    - Python %PYTHON_VERSION% (embedded distribution)
 echo    - pip (package manager)
 echo    - PyTorch 2.11.0+cu128 + triton-windows (CUDA GPU acceleration)
-echo    - vLLM 0.23.0 wheel (pre-built Windows binary)
+echo    - vLLM 0.24.0 wheel (pre-built Windows binary)
 echo    - Verification
 echo.
 
@@ -148,9 +148,12 @@ if exist "%~dp0python\.vllm-installed" (
     goto :stage5
 )
 
-REM Find the v0.23.0 wheel first, then fall back to older releases
+REM Find the v0.24.0 wheel first, then fall back to older releases
 set "WHEEL_FILE="
-for %%f in ("%~dp0dist-v6\vllm-0.23.0*.whl") do set "WHEEL_FILE=%%f"
+for %%f in ("%~dp0dist-v7\vllm-0.24.0*.whl") do set "WHEEL_FILE=%%f"
+if "!WHEEL_FILE!"=="" (
+    for %%f in ("%~dp0dist-v6\vllm-0.23.0*.whl") do set "WHEEL_FILE=%%f"
+)
 if "!WHEEL_FILE!"=="" (
     for %%f in ("%~dp0dist-v5\vllm-0.21.0*.whl") do set "WHEEL_FILE=%%f"
 )
@@ -168,29 +171,29 @@ if "!WHEEL_FILE!"=="" (
 )
 REM No local wheel found - auto-download the latest (cu128) from GitHub Releases
 if "!WHEEL_FILE!"=="" (
-    echo          No local wheel found - downloading from GitHub Releases ^(~314 MB^)...
-    if not exist "%~dp0dist-v6" mkdir "%~dp0dist-v6"
+    echo          No local wheel found - downloading from GitHub Releases ^(~319 MB^)...
+    if not exist "%~dp0dist-v7" mkdir "%~dp0dist-v7"
     powershell -NoProfile -ExecutionPolicy Bypass -Command ^
         "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;" ^
         "$ProgressPreference = 'SilentlyContinue';" ^
-        "Invoke-WebRequest -Uri '%WHEEL_URL%' -OutFile '%~dp0dist-v6\%WHEEL_NAME%'"
+        "Invoke-WebRequest -Uri '%WHEEL_URL%' -OutFile '%~dp0dist-v7\%WHEEL_NAME%'"
     if !ERRORLEVEL! NEQ 0 (
         echo          FAILED: Could not download the vLLM wheel.
         echo          URL: %WHEEL_URL%
-        echo          Download it manually and place it in: %~dp0dist-v6\
+        echo          Download it manually and place it in: %~dp0dist-v7\
         exit /b 1
     )
-    REM Sanity check: the real wheel is ~314 MB; reject a truncated/HTML error page
-    for %%f in ("%~dp0dist-v6\%WHEEL_NAME%") do set "WHEEL_SIZE=%%~zf"
+    REM Sanity check: the real wheel is ~319 MB; reject a truncated/HTML error page
+    for %%f in ("%~dp0dist-v7\%WHEEL_NAME%") do set "WHEEL_SIZE=%%~zf"
     if !WHEEL_SIZE! LSS 100000000 (
-        echo          FAILED: Downloaded wheel is only !WHEEL_SIZE! bytes ^(expected ~314 MB^).
+        echo          FAILED: Downloaded wheel is only !WHEEL_SIZE! bytes ^(expected ~319 MB^).
         echo          The download was likely incomplete or blocked. Delete it and retry,
         echo          or download manually from:
         echo            https://github.com/aivrar/vllm-windows-build/releases
-        del "%~dp0dist-v6\%WHEEL_NAME%" 2>nul
+        del "%~dp0dist-v7\%WHEEL_NAME%" 2>nul
         exit /b 1
     )
-    set "WHEEL_FILE=%~dp0dist-v6\%WHEEL_NAME%"
+    set "WHEEL_FILE=%~dp0dist-v7\%WHEEL_NAME%"
     echo          Downloaded OK ^(!WHEEL_SIZE! bytes^)
 )
 echo          Found wheel: !WHEEL_FILE!

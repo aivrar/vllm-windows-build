@@ -1,156 +1,155 @@
-# Install vLLM v0.19.0 on Windows
+# Install vLLM v0.24.0 on Windows
 
-Two paths: **(A)** install the pre-built wheel (no C++ toolchain needed,
-~3 min), **(B)** build from source (requires VS 2022 + CUDA 12.6,
-~30-45 min). Pick A unless you need to modify the patches.
+Two paths:
 
-> **TL;DR** — `install.bat` does (A) end-to-end, `build.bat` does (B).
+- **Install the pre-built wheel**: no compiler needed; recommended for most users.
+- **Build from source**: requires Visual Studio 2022, CUDA 12.8, Python 3.13, and patience.
 
----
+`install.bat` handles the wheel path end to end. `build.bat` and
+`run_build.bat` handle the source build path.
 
-## (A) Install the pre-built wheel
+## Install The Wheel
 
 ### Requirements
 
 | Component | Version | Notes |
 |---|---|---|
-| Windows | 10 / 11 (x64) | Tested on Windows 10 Pro 22H2 |
-| GPU | NVIDIA, SM 8.0+ | RTX 3060/3070/3080/3090, A4000/A5000/A6000, RTX 40-series |
-| Driver | R545+ | CUDA 12.6 runtime is bundled with the wheel via PyTorch |
-| RAM | 32 GB recommended | 16 GB works for <14B models |
-| Disk | ~5 GB free | wheel + Python + dependencies |
+| Windows | 10 / 11 x64 | Tested on Windows 10 Pro 22H2 |
+| GPU | NVIDIA SM 8.0+ | RTX 30/40/50, A100, H100 |
+| Driver | R570+ | Required for RTX 50-series / Blackwell |
+| Python | 3.13.x | `install.bat` uses embedded Python 3.13.11 |
+| PyTorch | 2.11.0+cu128 | CUDA 12.8 runtime from PyTorch wheels |
+| Triton | triton-windows 3.6.0.post26 | Installed by `install.bat` |
+| Disk | 5 GB+ | Python, PyTorch, Triton, and wheel |
 
-You do **not** need a CUDA toolkit, Visual Studio, or any compiler — the
-wheel ships pre-built `_C.pyd` extensions.
+You do not need CUDA Toolkit or Visual Studio to install the pre-built wheel.
 
-### Option 1 — automated installer
+### Automated Install
 
 ```bat
 install.bat
 ```
 
-This downloads Python 3.10.11 (embedded), installs PyTorch 2.10.0+cu126,
-installs the vLLM wheel, and runs a smoke import. The whole thing is
-self-contained in the script directory; nothing touches your system
-Python.
+The installer downloads embedded Python, installs PyTorch cu128,
+triton-windows, the vLLM wheel, structured-output backends, and runs a
+smoke import.
 
-The installer caches state in `python\.torch-installed` and
-`python\.vllm-installed`. Delete those files to force a re-install.
+It caches state in:
 
-### Option 2 — manual install in your own venv
+- `python\.torch-installed`
+- `python\.vllm-installed`
+
+Delete those files to force reinstall.
+
+### Manual Install
 
 ```bat
-python -m venv venv
+py -3.13 -m venv venv
 venv\Scripts\activate
-pip install torch==2.10.0 torchaudio==2.10.0 torchvision==0.25.0 --index-url https://download.pytorch.org/whl/cu126
+
+pip install torch==2.11.0 torchaudio==2.11.0 torchvision==0.26.0 ^
+    --index-url https://download.pytorch.org/whl/cu128
+
 pip install triton-windows==3.6.0.post26
-pip install dist-v3\vllm-0.19.0+cu126-cp310-cp310-win_amd64.whl
+pip install "llguidance>=1.7.0,<1.8.0" "xgrammar>=0.2.0,<1.0.0"
+pip install git+https://github.com/aivrar/multi-turboquant.git
+pip install dist-v7\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
 ```
 
-Or download the wheel directly from
-[Releases](https://github.com/aivrar/vllm-windows-build/releases/latest).
+Or download the wheel from the latest GitHub release:
+
+```text
+https://github.com/aivrar/vllm-windows-build/releases/tag/v0.24.0-win-cu128
+```
 
 ### Verify
 
 ```bat
 python -c "import vllm; print(vllm.__version__)"
+vllm --help
+vllm serve --help
 ```
 
-Should print `0.19.0+cu126`. If you see a DLL load error, see
-[Troubleshooting](troubleshooting.md).
+Expected version:
 
----
+```text
+0.24.0+cu128
+```
 
-## (B) Build from source
+## Build From Source
 
 ### Requirements
 
 | Component | Version |
 |---|---|
-| Visual Studio 2022 | Community (or higher) with C++ workload |
-| CUDA Toolkit | 12.6 (CUDA 12.8+ would skip QuTLASS but should work) |
-| Python | 3.10.x (3.11/3.12 untested) |
+| Visual Studio | VS 2022 with C++ workload |
+| CUDA Toolkit | 12.8 |
+| Python | 3.13.x |
+| PyTorch | 2.11.0+cu128 |
+| Ninja | Available in the venv or on PATH |
+| Rust | Current stable MSVC toolchain |
+| protoc | Required for v0.24 Rust frontend/tool parser |
 | RAM | 32 GB minimum, 64 GB recommended |
-| Disk | ~25 GB free |
-| Time | 30-45 minutes |
+| Disk | 30 GB+ |
 
-### Prepare the source tree
+### Source Tree
 
 ```bat
 git clone https://github.com/vllm-project/vllm.git vllm-source
 cd vllm-source
-git checkout v0.19.0
-cd ..
-```
-
-### Apply the Windows patch
-
-The patch (`vllm-windows-v3.patch`) modifies 33 files: build system,
-CUDA kernels, runtime Python, plus a new file
-`vllm/v1/attention/ops/multi_turboquant_kv.py` for the TurboQuant
-integration.
-
-```bat
-cd vllm-source
-git apply ..\vllm-windows-v3.patch
+git checkout v0.24.0
+git apply ..\vllm-windows-v7.patch
 cd ..
 ```
 
 ### Build
 
-Edit the paths at the top of `run_build.bat` to match your install:
-
-```bat
-set "VS_VCVARS=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-set "VENV_PATH=%~dp0venv"
-set "CUDA_HOME=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6"
-set "TORCH_CUDA_ARCH_LIST=8.6"
-set "MAX_JOBS=4"
-```
-
-`TORCH_CUDA_ARCH_LIST` should match your GPU:
-- RTX 30-series → `8.6`
-- RTX 40-series → `8.9`
-- RTX 50-series → `12.0`
-- A100 → `8.0`
-- H100 → `9.0`
-
-Then run:
+Edit `run_build.bat` for your paths, then run it from a normal command prompt:
 
 ```bat
 run_build.bat
 ```
 
-The build compiles 140 CUDA targets in two phases:
-
-1. **CMake configure** (~5-10 min) — fetches CUTLASS and triton_kernels via FetchContent.
-2. **Compile** (~25-35 min with MAX_JOBS=4 on a 16-core CPU).
-
-### Build a redistributable wheel
-
-After the editable install succeeds, you can package the compiled
-binaries into a `.whl`:
+Important defaults:
 
 ```bat
-python build_wheel.py
+set TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0
+set MAX_JOBS=2
+set VLLM_DISABLE_SCCACHE=1
+set SETUPTOOLS_SCM_PRETEND_VERSION=0.24.0
 ```
 
-This produces `dist-v3\vllm-0.19.0+cu126-cp310-cp310-win_amd64.whl`.
+Keep `MAX_JOBS=2`. Higher parallelism has repeatedly produced MSVC
+compiler crashes on the heavy multi-arch CUDA translation units.
 
----
+### Build A Wheel From An Already-Built Tree
 
-## Post-install: Windows runtime env vars
+After the editable install succeeds and `vllm.egg-info` exists:
 
-Whether you install the wheel or build from source, set these env vars
-before importing vLLM in your own scripts:
+```bat
+python assemble_wheel_cu128_v0.24.0.py
+```
+
+Output:
+
+```text
+dist-v7\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
+```
+
+## Runtime Environment
+
+These are recommended before running models:
 
 ```bat
 set PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 set VLLM_HOST_IP=127.0.0.1
 ```
 
-`expandable_segments` is **required** if your Windows pagefile is small
-or disabled — without it, PyTorch's allocator hits fragmentation and
-crashes mid-run.
+For multi-GPU systems, set the CUDA device ordering explicitly:
 
-For more, see [Troubleshooting → "CUDA out of memory" with free GPU](troubleshooting.md#oom-with-free-gpu).
+```bat
+set CUDA_DEVICE_ORDER=PCI_BUS_ID
+set CUDA_VISIBLE_DEVICES=0
+```
+
+For more, see [troubleshooting.md](troubleshooting.md).

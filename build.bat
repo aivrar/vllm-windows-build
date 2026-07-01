@@ -2,12 +2,12 @@
 setlocal enabledelayedexpansion
 
 :: ============================================================
-:: vLLM v0.23.0 Windows Build Script
+:: vLLM v0.24.0 Windows Build Script
 :: Compiles vLLM from patched source with MSVC + CUDA + Ninja
 :: ============================================================
 
 echo.
-echo  vLLM v0.23.0 Windows Build
+echo  vLLM v0.24.0 Windows Build
 echo  ==========================
 echo.
 
@@ -49,7 +49,7 @@ if not defined TORCH_CUDA_ARCH_LIST set TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0
 if not defined MAX_JOBS set MAX_JOBS=2
 
 set VLLM_TARGET_DEVICE=cuda
-set SETUPTOOLS_SCM_PRETEND_VERSION=0.23.0
+set SETUPTOOLS_SCM_PRETEND_VERSION=0.24.0
 
 :: -----------------------------------------------------------
 :: 3. Locate vllm source
@@ -64,7 +64,7 @@ if exist "%SCRIPT_DIR%vllm-source\setup.py" (
 ) else (
     echo [ERROR] Cannot find vLLM source. Clone it into vllm-source\ next to this script:
     echo         git clone https://github.com/vllm-project/vllm.git vllm-source
-    echo         cd vllm-source ^&^& git checkout v0.23.0
+    echo         cd vllm-source ^&^& git checkout v0.24.0
     exit /b 1
 )
 
@@ -72,12 +72,12 @@ if exist "%SCRIPT_DIR%vllm-source\setup.py" (
 :: 4. Apply patch
 :: -----------------------------------------------------------
 
-if exist "%SCRIPT_DIR%vllm-windows-v6.patch" (
+if exist "%SCRIPT_DIR%vllm-windows-v7.patch" (
     pushd "%VLLM_SRC%"
     git diff --quiet HEAD 2>nul
     if !ERRORLEVEL! equ 0 (
-        echo Applying vllm-windows-v6.patch...
-        git apply "%SCRIPT_DIR%vllm-windows-v6.patch"
+        echo Applying vllm-windows-v7.patch...
+        git apply "%SCRIPT_DIR%vllm-windows-v7.patch"
         if !ERRORLEVEL! neq 0 (
             echo [WARN] Patch may already be applied or has conflicts. Continuing anyway.
         )
@@ -86,7 +86,7 @@ if exist "%SCRIPT_DIR%vllm-windows-v6.patch" (
     )
     popd
 ) else (
-    echo [WARN] vllm-windows-v6.patch not found next to build.bat
+    echo [WARN] vllm-windows-v7.patch not found next to build.bat
 )
 
 if not defined PROTOC (
@@ -96,7 +96,7 @@ if not defined PROTOC (
 )
 
 if not defined PROTOC (
-    echo [WARN] PROTOC is not set. vLLM 0.23.0's optional Rust frontend needs protoc.
+    echo [WARN] PROTOC is not set. vLLM 0.24.0's optional Rust frontend needs protoc.
     echo        Install protoc and set PROTOC=...\protoc.exe to build vllm-rs.exe.
 )
 
