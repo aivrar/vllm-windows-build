@@ -18,11 +18,10 @@ import os
 import sys
 
 os.environ.setdefault('VLLM_WORKER_MULTIPROC_METHOD', 'spawn')
-os.environ.setdefault('VLLM_ATTENTION_BACKEND', 'TRITON_ATTN')
 
 CUDA_BIN = os.environ.get(
     'CUDA_BIN',
-    r'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\bin',
+    r'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\bin',
 )
 if os.path.isdir(CUDA_BIN):
     os.add_dll_directory(CUDA_BIN)

@@ -1,6 +1,11 @@
 # Benchmarks
 
-All numbers below are from the same hardware running the same model with
+This page preserves the original v0.19.0/cu126 Multi-TurboQuant benchmark
+run. It is useful for understanding the local TQ memory/throughput tradeoff,
+but it is not the current v0.24.0/cu128 install matrix. For current install
+requirements, see [install.md](install.md).
+
+All numbers below are from the same historical hardware run with
 the same settings, varying only `kv_cache_dtype`. Source data is in
 [tests/](../tests/).
 

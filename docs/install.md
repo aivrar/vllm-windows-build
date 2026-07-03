@@ -17,7 +17,7 @@ Two paths:
 | Windows | 10 / 11 x64 | Tested on Windows 10 Pro 22H2 |
 | GPU | NVIDIA SM 8.0+ | RTX 30/40/50, A100, H100 |
 | Driver | R570+ | Required for RTX 50-series / Blackwell |
-| Python | 3.13.x | `install.bat` uses embedded Python 3.13.11 |
+| Python | 3.13.x | `install.bat` uses embedded Python 3.13.11 plus headers/libs for Triton |
 | PyTorch | 2.11.0+cu128 | CUDA 12.8 runtime from PyTorch wheels |
 | Triton | triton-windows 3.6.0.post26 | Installed by `install.bat` |
 | Disk | 5 GB+ | Python, PyTorch, Triton, and wheel |
@@ -30,9 +30,10 @@ You do not need CUDA Toolkit or Visual Studio to install the pre-built wheel.
 install.bat
 ```
 
-The installer downloads embedded Python, installs PyTorch cu128,
-triton-windows, the vLLM wheel, structured-output backends, and runs a
-smoke import.
+The installer downloads embedded Python, adds the Python headers/libs
+needed by Triton's runtime compiler, installs PyTorch cu128,
+triton-windows, the vLLM wheel, structured-output backends, and verifies
+both `import vllm` and Triton's CUDA runtime driver path.
 
 It caches state in:
 
@@ -40,6 +41,12 @@ It caches state in:
 - `python\.vllm-installed`
 
 Delete those files to force reinstall.
+
+Rerunning `install.bat` also repairs an existing portable Python 3.13
+directory if `Include\Python.h` or `libs\python313.lib` is missing.
+`launch.bat` performs the same repair check before starting the server.
+If `python\` is from an older major/minor Python version, delete
+`python\` and rerun the installer.
 
 ### Manual Install
 

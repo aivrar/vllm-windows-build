@@ -1,8 +1,42 @@
 # Troubleshooting
 
-Common errors when building or running vLLM v0.19.0 on Windows.
+Common errors when building or running vLLM v0.24.0 on Windows.
 
 ## Runtime errors
+
+### `Failed to find Python libs` / `Python.h not found`
+
+Triton compiles a small CUDA driver helper the first time some kernels are
+loaded. With the portable `install.bat` setup, this fails if the embedded
+Python directory has no CPython development files:
+
+```text
+triton\windows_utils.py:302: UserWarning: Failed to find Python libs.
+cuda_utils.c:15: error: include file 'Python.h' not found
+```
+
+This is not a model architecture problem, even if vLLM wraps it as
+`Error in inspecting model architecture`.
+
+Fix: pull the latest repo and run either `launch.bat` or `install.bat`.
+Both paths now repair an existing portable Python 3.13 install by
+copying `Include\Python.h` and `libs\python313.lib` from the Python
+3.13.11 NuGet package. If your `python\` directory is from an older
+major/minor Python version, delete `python\` and rerun `install.bat`.
+
+### `FAILED: Triton CUDA runtime check failed.`
+
+`install.bat` verifies that Triton can initialize its CUDA driver helper
+before reporting success. If this check fails:
+
+- Confirm the NVIDIA driver is installed and the GPU is visible.
+- Pull the latest repo and rerun `install.bat` so the portable Python
+  dev files are present.
+- If the portable `python\` directory came from an older release, delete
+  it and rerun `install.bat`.
+
+The launcher pins Triton to its bundled CUDA helper toolkit when present,
+so a mismatched system `CUDA_PATH` should not be needed for wheel installs.
 
 ### `ImportError: DLL load failed while importing _C: The specified module could not be found.`
 
@@ -12,7 +46,7 @@ Python DLL search path **before** importing vLLM:
 
 ```python
 import os
-os.add_dll_directory(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\bin")
+os.add_dll_directory(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\bin")
 os.add_dll_directory(r"E:\path\to\venv\Lib\site-packages\torch\lib")
 import vllm
 ```
@@ -42,7 +76,7 @@ allocation.
 problem by using `numpy.memmap` (file-backed, no commit charge) plus
 chunked GPU streaming. It's already enabled — if you're seeing this
 error you may have an older patched build. Re-apply
-`vllm-windows-v3.patch`.
+`vllm-windows-v7.patch`.
 
 ### `torch.OutOfMemoryError: CUDA out of memory. ... X GiB is free` <a id="oom-with-free-gpu"></a>
 
@@ -68,9 +102,15 @@ then 0.4).
 
 ### `ValueError: not enough values to unpack (expected 2, got 1)` in `torch.unique`
 
-You're running an old PyTorch + new vLLM combo. The custom code uses
-`torch.unique(t, sorted=True)` which returns a single tensor on
-PyTorch 2.10+. Make sure your venv has `torch==2.10.0`.
+You're running a mismatched PyTorch + vLLM combo. The v0.24 wheel in
+this repo expects Python 3.13 and PyTorch 2.11.0+cu128. Reinstall with
+`install.bat`, or in a manual venv reinstall:
+
+```bat
+pip install torch==2.11.0 torchaudio==2.11.0 torchvision==0.26.0 ^
+    --index-url https://download.pytorch.org/whl/cu128
+pip install --force-reinstall dist-v7\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
+```
 
 ### `pyo3_runtime.PanicException: Python API call failed`
 
@@ -100,12 +140,12 @@ Then re-run `build.bat`.
 ### `cl : error C2018: unknown character 'or' / 'and' / 'not'`
 
 MSVC doesn't accept `or` / `and` / `not` as keywords by default. The
-patch fixes every known instance — make sure `vllm-windows-v3.patch`
+patch fixes every known instance - make sure `vllm-windows-v7.patch`
 applied cleanly:
 
 ```bat
 cd vllm-source
-git apply --check ..\vllm-windows-v3.patch
+git apply --check ..\vllm-windows-v7.patch
 ```
 
 If the check fails, the patch is partially applied or the source has
@@ -113,9 +153,9 @@ been modified. Reset:
 
 ```bat
 cd vllm-source
-git checkout v0.19.0
-git reset --hard v0.19.0
-git apply ..\vllm-windows-v3.patch
+git checkout v0.24.0
+git reset --hard v0.24.0
+git apply ..\vllm-windows-v7.patch
 ```
 
 ### `nvcc fatal: Unsupported gpu architecture 'compute_120'`

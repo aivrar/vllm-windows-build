@@ -1,4 +1,4 @@
-"""Smoke test: vLLM 0.19.0 on Windows with normal FP16 KV cache.
+"""Smoke test: vLLM 0.24.0 on Windows with normal FP16 KV cache.
 
 Configuration via environment variables (set before running):
     VLLM_MODEL_PATH       Path to a Qwen3 / Llama / similar model.
@@ -27,13 +27,10 @@ os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
 # Add CUDA DLL search path. Edit if your CUDA install lives elsewhere.
 _CUDA_BIN = os.environ.get(
     "CUDA_HOME",
-    r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6",
+    r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8",
 ) + r"\bin"
 if os.path.isdir(_CUDA_BIN):
     os.add_dll_directory(_CUDA_BIN)
-
-# Stub uvloop on Windows so vLLM imports cleanly
-sys.modules.setdefault("uvloop", type(sys)("uvloop"))
 
 MODEL = os.environ.get("VLLM_MODEL_PATH")
 if not MODEL:
@@ -41,7 +38,7 @@ if not MODEL:
     sys.exit(1)
 
 print("=" * 60)
-print("vLLM 0.19.0 Windows smoke test (FP16 KV cache)")
+print("vLLM 0.24.0 Windows smoke test (FP16 KV cache)")
 print("=" * 60)
 print(f"Model: {MODEL}")
 print()

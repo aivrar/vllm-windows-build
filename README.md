@@ -65,6 +65,13 @@ and Multi-TurboQuant integration.
   modules, ran `vllm --help` and `vllm serve --help`, verified
   `VLLM_USE_RUST_FRONTEND=1` resolves `vllm-rs.exe`, and verified the
   intentionally skipped DeepGEMM/cooperative-TopK paths report unavailable.
+- **Portable installer repairs Triton runtime compilation support** -
+  `install.bat` now adds `Python.h` and `python313.lib` to the embedded
+  Python tree, which Triton needs when it JIT-compiles CUDA helpers for
+  models such as Qwen3.5. `launch.bat` runs the same repair check before
+  starting the server, and both scripts pin Triton to its bundled CUDA
+  helper toolkit when present. `launch.bat` also no longer sets the
+  removed `VLLM_ATTENTION_BACKEND` environment variable.
 
 ### What's new in v0.23.0
 
@@ -215,6 +222,10 @@ itself (no manual download or folder creation needed). If you already have the
 `.whl` locally, drop it in `dist-v7\` next to `install.bat` and the script uses
 that instead of downloading.
 
+Rerunning `install.bat` repairs an existing portable Python 3.13 install if
+Triton cannot find `Include\Python.h` or `libs\python313.lib`; `launch.bat`
+checks the same files before it starts the server.
+
 ### Option B — Build from source
 
 Requires Visual Studio 2022 (Community is fine), CUDA 12.8, and a Python 3.13
@@ -286,7 +297,7 @@ For OpenAI-compatible HTTP serving and more usage patterns:
 
 ## KV cache compression: 10 methods (6 ours + 4 upstream)
 
-vLLM v0.21.0 on Windows ships with integrated support for **ten** KV cache
+vLLM v0.24.0 on Windows ships with integrated support for **ten** KV cache
 compression dtypes. The four `turboquant_*` entries are the new upstream
 TurboQuant attention backend (PR #38479, landed in v0.19.2rc0); the six
 others come from our [Multi-TurboQuant](https://github.com/aivrar/multi-turboquant)

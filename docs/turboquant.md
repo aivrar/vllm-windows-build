@@ -1,9 +1,10 @@
 # Multi-TurboQuant KV cache compression
 
-vLLM v0.19.0 on Windows ships with integrated support for six KV cache
-compression methods from the
+vLLM v0.24.0 on Windows ships with integrated support for ten KV cache
+compression methods: six local
 [Multi-TurboQuant](https://github.com/aivrar/multi-turboquant)
-library:
+methods plus four upstream TurboQuant variants. This page focuses on
+the six local methods:
 
 | Method | Bits | Family | Calibration | Notes |
 |---|---|---|---|---|
@@ -26,7 +27,7 @@ llm = LLM(
 )
 ```
 
-The methods can also be selected via the v0.19.0 OpenAI server's
+The methods can also be selected via the OpenAI server's
 `--kv-cache-dtype` command-line flag.
 
 ---

@@ -54,11 +54,10 @@ faulthandler.enable()
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 _cuda_bin = os.environ.get(
     "CUDA_HOME",
-    r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6",
+    r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8",
 ) + r"\bin"
 if os.path.isdir(_cuda_bin):
     os.add_dll_directory(_cuda_bin)
-sys.modules.setdefault("uvloop", type(sys)("uvloop"))
 
 model_path = sys.argv[1]
 kv_dtype = sys.argv[2]

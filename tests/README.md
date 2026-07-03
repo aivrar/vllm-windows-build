@@ -1,6 +1,6 @@
 # Tests
 
-End-to-end test scripts for the Windows vLLM 0.19.1 build with Multi-TurboQuant.
+End-to-end test scripts for the Windows vLLM 0.24.0 build with Multi-TurboQuant.
 
 ## Setup
 
@@ -28,7 +28,7 @@ couple of short prompts, prints them.
 
 Should finish in well under 60 seconds for a 14B AWQ-4bit model.
 
-## test_tq_diag.py — per-method hang diagnostic (new in v0.19.1)
+## test_tq_diag.py — per-method hang diagnostic
 
 Runs a single TQ method with a 90-second `faulthandler` watchdog. If
 `generate()` stalls past the timeout, the watchdog dumps every

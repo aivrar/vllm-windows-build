@@ -1,6 +1,6 @@
 # Usage
 
-How to actually run vLLM v0.19.0 on Windows after installing it. Three
+How to actually run vLLM v0.24.0 on Windows after installing it. Three
 modes covered: **(A)** Python embedding, **(B)** OpenAI-compatible HTTP
 server via `vllm_launcher.py`, **(C)** the raw `vllm serve` upstream
 CLI.
@@ -18,12 +18,8 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 os.environ["VLLM_HOST_IP"] = "127.0.0.1"
 
 # Make sure CUDA + torch DLLs are findable
-os.add_dll_directory(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\bin")
+os.add_dll_directory(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\bin")
 os.add_dll_directory(r"C:\path\to\venv\Lib\site-packages\torch\lib")
-
-# Stub uvloop (not available on Windows)
-import sys
-sys.modules.setdefault("uvloop", type(sys)("uvloop"))
 
 from vllm import LLM, SamplingParams
 
@@ -74,6 +70,10 @@ scans `models\` next to the script. With arguments:
 ```bat
 launch.bat --model E:\models\Qwen3-14B-AWQ-4bit --port 8000
 ```
+
+`launch.bat` also checks the portable install and reruns `install.bat`
+if Python, PyTorch, Triton, vLLM, or Triton's Python development files
+are missing.
 
 ### Full options
 
@@ -161,7 +161,7 @@ Then load-balance with nginx or your own router.
 
 ## (C) Upstream `vllm serve`
 
-vLLM v0.19.0 ships an OpenAI-compatible server out of the box at
+vLLM v0.24.0 ships an OpenAI-compatible server out of the box at
 `vllm serve`. It works on Windows after the patches are applied:
 
 ```bat
@@ -173,12 +173,14 @@ vllm serve E:\models\Qwen3-14B-AWQ-4bit ^
     --enforce-eager
 ```
 
-The `--kv-cache-dtype` flag accepts any of the 6 Multi-TurboQuant
-methods plus the standard `auto`, `fp8`, `fp8_e4m3`, `fp8_e5m2`.
+The `--kv-cache-dtype` flag accepts the 6 Multi-TurboQuant methods,
+the 4 upstream TurboQuant variants, plus the standard `auto`, `fp8`,
+`fp8_e4m3`, and `fp8_e5m2` values.
 
 `vllm_launcher.py` (mode B) is generally the more reliable choice on
-Windows because it bypasses the multiprocess engine path. Try `vllm
-serve` first; if you hit ZMQ or asyncio errors, fall back to mode B.
+Windows because it keeps the launch path explicit and pins the portable
+environment. `vllm serve` is useful when you want the upstream CLI
+surface directly.
 
 ---
 
