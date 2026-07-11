@@ -22,9 +22,10 @@ set "TRITON_NVIDIA_DIR=%~dp0python\Lib\site-packages\triton\backends\nvidia"
 set "GETPIP_URL=https://bootstrap.pypa.io/get-pip.py"
 set "TORCH_INDEX=https://download.pytorch.org/whl/cu128"
 
-REM Pre-built vLLM wheel (auto-downloaded into dist-v7\ if not present locally)
+REM Pre-built vLLM wheel (auto-downloaded into dist-v8\ if not present locally)
 set "WHEEL_NAME=vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl"
 set "WHEEL_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.24.0-win-cu128/vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl"
+set "WHEEL_SHA256=4A76CDE2F36689A76A6F8AB7C4EE9B4C47AEFC194479C085619F9072C563B7DA"
 
 set "STAGES_TOTAL=5"
 if not defined CUDA_DEVICE_ORDER set "CUDA_DEVICE_ORDER=PCI_BUS_ID"
@@ -196,7 +197,7 @@ REM  STAGE 4: Install vLLM Wheel + Dependencies
 REM ============================================================
 echo [4/%STAGES_TOTAL%] vLLM wheel + dependencies...
 if exist "%~dp0python\.vllm-installed" (
-    "%~dp0python\python.exe" -c "import vllm, llguidance, xgrammar" >nul 2>nul
+    "%~dp0python\python.exe" -c "import vllm, llguidance, xgrammar; from vllm.vllm_flash_attn.layers.rotary import apply_rotary_emb; assert vllm.__version__ == '0.24.0+cu128'" >nul 2>nul
     if !ERRORLEVEL! EQU 0 (
         echo          SKIP - already installed ^(delete python\.vllm-installed to force^)
         goto :stage5
@@ -205,59 +206,59 @@ if exist "%~dp0python\.vllm-installed" (
     del "%~dp0python\.vllm-installed" 2>nul
 )
 
-REM Find the v0.24.0 wheel first, then fall back to older releases
+REM Only accept the current fixed v0.24.0 wheel. Older local wheels are not
+REM compatible substitutes and the original dist-v7 artifact omitted required
+REM FlashAttention Python modules.
 set "WHEEL_FILE="
-for %%f in ("%~dp0dist-v7\vllm-0.24.0*.whl") do set "WHEEL_FILE=%%f"
-if "!WHEEL_FILE!"=="" (
-    for %%f in ("%~dp0dist-v6\vllm-0.23.0*.whl") do set "WHEEL_FILE=%%f"
-)
-if "!WHEEL_FILE!"=="" (
-    for %%f in ("%~dp0dist-v5\vllm-0.21.0*.whl") do set "WHEEL_FILE=%%f"
-)
-if "!WHEEL_FILE!"=="" (
-    for %%f in ("%~dp0dist-v4\vllm-0.19.1*.whl") do set "WHEEL_FILE=%%f"
-)
-if "!WHEEL_FILE!"=="" (
-    for %%f in ("%~dp0dist-v3\vllm-0.19.0*.whl") do set "WHEEL_FILE=%%f"
-)
-if "!WHEEL_FILE!"=="" (
-    for %%f in ("%~dp0dist-v2\vllm-*.whl") do set "WHEEL_FILE=%%f"
-)
-if "!WHEEL_FILE!"=="" (
-    for %%f in ("%~dp0dist\vllm-*.whl") do set "WHEEL_FILE=%%f"
-)
+for %%f in ("%~dp0dist-v8\%WHEEL_NAME%") do if exist "%%~f" set "WHEEL_FILE=%%~f"
 REM No local wheel found - auto-download the latest (cu128) from GitHub Releases
 if "!WHEEL_FILE!"=="" (
     echo          No local wheel found - downloading from GitHub Releases ^(~319 MB^)...
-    if not exist "%~dp0dist-v7" mkdir "%~dp0dist-v7"
+    if not exist "%~dp0dist-v8" mkdir "%~dp0dist-v8"
     powershell -NoProfile -ExecutionPolicy Bypass -Command ^
         "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;" ^
         "$ProgressPreference = 'SilentlyContinue';" ^
-        "Invoke-WebRequest -Uri '%WHEEL_URL%' -OutFile '%~dp0dist-v7\%WHEEL_NAME%'"
+        "Invoke-WebRequest -Uri '%WHEEL_URL%' -OutFile '%~dp0dist-v8\%WHEEL_NAME%'"
     if !ERRORLEVEL! NEQ 0 (
         echo          FAILED: Could not download the vLLM wheel.
         echo          URL: %WHEEL_URL%
-        echo          Download it manually and place it in: %~dp0dist-v7\
+        echo          Download it manually and place it in: %~dp0dist-v8\
         goto :fail
     )
     REM Sanity check: the real wheel is ~319 MB; reject a truncated/HTML error page
-    for %%f in ("%~dp0dist-v7\%WHEEL_NAME%") do set "WHEEL_SIZE=%%~zf"
+    for %%f in ("%~dp0dist-v8\%WHEEL_NAME%") do set "WHEEL_SIZE=%%~zf"
     if !WHEEL_SIZE! LSS 100000000 (
         echo          FAILED: Downloaded wheel is only !WHEEL_SIZE! bytes ^(expected ~319 MB^).
         echo          The download was likely incomplete or blocked. Delete it and retry,
         echo          or download manually from:
         echo            https://github.com/aivrar/vllm-windows-build/releases
-        del "%~dp0dist-v7\%WHEEL_NAME%" 2>nul
+        del "%~dp0dist-v8\%WHEEL_NAME%" 2>nul
         goto :fail
     )
-    set "WHEEL_FILE=%~dp0dist-v7\%WHEEL_NAME%"
+    set "WHEEL_FILE=%~dp0dist-v8\%WHEEL_NAME%"
     echo          Downloaded OK ^(!WHEEL_SIZE! bytes^)
 )
 echo          Found wheel: !WHEEL_FILE!
-echo          Installing vLLM and dependencies...
-"%~dp0python\python.exe" -m pip install "!WHEEL_FILE!" --no-warn-script-location
+set "WHEEL_HASH="
+for /f "usebackq delims=" %%h in (`powershell -NoProfile -Command "(Get-FileHash -LiteralPath '!WHEEL_FILE!' -Algorithm SHA256).Hash"`) do set "WHEEL_HASH=%%h"
+if /I not "!WHEEL_HASH!"=="%WHEEL_SHA256%" (
+    echo          FAILED: Wheel SHA256 does not match the fixed release artifact.
+    echo          Expected: %WHEEL_SHA256%
+    echo          Actual:   !WHEEL_HASH!
+    echo          Delete the stale or incomplete wheel and rerun install.bat.
+    goto :fail
+)
+echo          SHA256 verified
+echo          Installing corrected vLLM wheel...
+"%~dp0python\python.exe" -m pip install "!WHEEL_FILE!" --force-reinstall --no-deps --no-warn-script-location
 if !ERRORLEVEL! NEQ 0 (
     echo          FAILED: vLLM installation error - check output above
+    goto :fail
+)
+echo          Resolving vLLM dependencies...
+"%~dp0python\python.exe" -m pip install "!WHEEL_FILE!" --no-warn-script-location
+if !ERRORLEVEL! NEQ 0 (
+    echo          FAILED: vLLM dependency installation error - check output above
     goto :fail
 )
 REM llguidance and xgrammar (structured-output backends) are gated in vLLM's
@@ -283,7 +284,7 @@ if exist "%TRITON_NVIDIA_DIR%\bin\ptxas.exe" (
     set "PATH=%TRITON_NVIDIA_DIR%\bin;%PATH%"
     echo          Using bundled Triton CUDA toolkit: %TRITON_NVIDIA_DIR%
 )
-"%~dp0python\python.exe" -c "import vllm; print(f'  vLLM {vllm.__version__} loaded successfully')"
+"%~dp0python\python.exe" -c "import vllm; from vllm.vllm_flash_attn.layers.rotary import apply_rotary_emb; assert vllm.__version__ == '0.24.0+cu128'; print(f'  vLLM {vllm.__version__} and FlashAttention rotary loaded successfully')"
 if !ERRORLEVEL! NEQ 0 (
     echo          FAILED: vLLM import failed - check the install output above.
     goto :fail

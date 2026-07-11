@@ -1,13 +1,13 @@
 # Build From Source
 
 This page documents the v0.24.0 Windows build flow and how to iterate on
-`vllm-windows-v7.patch`.
+`vllm-windows-v8.patch`.
 
 For install-only usage, see [install.md](install.md).
 
 ## Patch Scope
 
-`vllm-windows-v7.patch` is a unified diff against upstream
+`vllm-windows-v8.patch` is a unified diff against upstream
 `vllm-project/vllm` tag `v0.24.0` (`ee0da84ab`).
 
 Main categories:
@@ -54,7 +54,7 @@ set PROTOC=C:\path\to\protoc.exe
 git clone https://github.com/vllm-project/vllm.git vllm-source
 cd vllm-source
 git checkout v0.24.0
-git apply ..\vllm-windows-v7.patch
+git apply ..\vllm-windows-v8.patch
 cd ..
 ```
 
@@ -114,15 +114,21 @@ python assemble_wheel_cu128_v0.24.0.py
 Output:
 
 ```text
-dist-v7\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
+dist-v8\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
 ```
 
 ### 5. Smoke Test The Wheel
 
+Validate archive completeness and RECORD before installing:
+
+```bat
+python tests\test_wheel_contents.py dist-v8\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
+```
+
 Install the wheel from outside the source tree:
 
 ```bat
-python -m pip install --force-reinstall --no-deps dist-v7\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
+python -m pip install --force-reinstall --no-deps dist-v8\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
 ```
 
 Run:
@@ -131,6 +137,14 @@ Run:
 python -c "import vllm; print(vllm.__version__)"
 vllm --help
 vllm serve --help
+```
+
+For the issue #7 Qwen3-VL/FlashAttention regression, install the wheel into
+an isolated target and run:
+
+```bat
+python -m pip install --no-deps --target %TEMP%\vllm-wheel-test dist-v8\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
+python tests\test_issue7_flash_attn.py --package-root %TEMP%\vllm-wheel-test
 ```
 
 Optional Rust frontend check:
@@ -158,14 +172,14 @@ or start from a fresh build temp before rebuilding.
 From the patched vLLM source tree:
 
 ```bat
-git diff --binary v0.24.0..HEAD --output=..\vllm-windows-v7.patch -- .
+git diff --binary v0.24.0..HEAD --output=..\vllm-windows-v8.patch -- .
 ```
 
 Validate against a clean upstream worktree:
 
 ```bat
 git worktree add --detach ..\patch-check-v0.24.0 v0.24.0
-git -C ..\patch-check-v0.24.0 apply --check ..\vllm-windows-v7.patch
+git -C ..\patch-check-v0.24.0 apply --check ..\vllm-windows-v8.patch
 ```
 
 Also run:

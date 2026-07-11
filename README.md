@@ -59,6 +59,11 @@ and Multi-TurboQuant integration.
 - **v0.24 third-party CUDA helper packages included** - the wheel carries
   the generated `vllm.third_party.triton_kernels` and `fmha_sm100` files
   copied by the build.
+- **Qwen3-VL FlashAttention packaging fixed** - the rebuilt wheel includes
+  the generated rotary, Triton rotary, and CuteDSL Python modules that the
+  upstream editable-build copy step dropped on Windows. The v8 patch makes
+  that copy path platform-independent, and the assembler now rejects an
+  incomplete FlashAttention payload.
 - **Smoke tested from the final wheel** - installed the assembled wheel,
   imported `vllm`, the stable libtorch CUDA extensions, FA2, `spinloop`,
   `cumem_allocator`, `_rust_tool_parser`, OpenAI API server / DP supervisor
@@ -219,7 +224,7 @@ pip install git+https://github.com/aivrar/multi-turboquant.git
 Or just run **`install.bat`** for a fully self-contained, one-click portable
 Python install — it downloads Python 3.13, PyTorch cu128, and the vLLM wheel
 itself (no manual download or folder creation needed). If you already have the
-`.whl` locally, drop it in `dist-v7\` next to `install.bat` and the script uses
+`.whl` locally, drop it in `dist-v8\` next to `install.bat` and the script uses
 that instead of downloading.
 
 Rerunning `install.bat` repairs an existing portable Python 3.13 install if
@@ -237,7 +242,7 @@ on the heavy multi-arch CUDA kernels.
 ```batch
 git clone https://github.com/vllm-project/vllm.git vllm-source
 cd vllm-source && git checkout v0.24.0 && cd ..
-git apply vllm-windows-v7.patch --directory vllm-source
+git apply vllm-windows-v8.patch --directory vllm-source
 build.bat
 ```
 
@@ -334,7 +339,7 @@ fused Triton kernels and don't pay this cost.  See
 
 ## What's in the patch
 
-`vllm-windows-v7.patch` is a unified diff against `vllm-project/vllm`
+`vllm-windows-v8.patch` is a unified diff against `vllm-project/vllm`
 at tag `v0.24.0`. It touches the Windows build/runtime/Rust frontend
 surface plus **3 new files** (the TQ
 dispatch helper plus two CUTLASS-vendor patches):

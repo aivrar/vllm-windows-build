@@ -8,14 +8,14 @@ How the v0.24.0 Windows build hangs together and what each piece owns.
 vllm-windows-build/
   README.md
   VLLM.md
-  vllm-windows-v7.patch
+  vllm-windows-v8.patch
   build.bat
   run_build.bat
   install.bat
   launch.bat
   assemble_wheel_cu128_v0.24.0.py
   vllm_launcher.py
-  dist-v7/
+  dist-v8/
     vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
   docs/
   tests/
@@ -23,13 +23,14 @@ vllm-windows-build/
 
 ## Layer 1: Windows Compatibility Patch
 
-`vllm-windows-v7.patch` is a unified diff against upstream
+`vllm-windows-v8.patch` is a unified diff against upstream
 `vllm-project/vllm` tag `v0.24.0`.
 
 Main categories:
 
 - Build system: MSVC/CUDA flags, CUDA 12.8 paths, CUTLASS patching, and
-  skips for Linux-only optional extensions.
+  skips for Linux-only optional extensions, plus Windows-safe generated
+  FlashAttention Python-file copy-back.
 - CUDA kernels: MSVC compatibility for GCC-only syntax and generated
   selector depth.
 - Runtime Python: Windows multiprocessing, event-loop, networking,
@@ -39,6 +40,11 @@ Main categories:
   alongside the four upstream TurboQuant variants.
 
 See [build.md](build.md) for the current build flow.
+
+The wheel assembler overlays generated FlashAttention Python modules from
+the fetched dependency when needed and refuses to produce an artifact if
+the rotary or CuteDSL payload is incomplete. `tests/test_wheel_contents.py`
+then validates every ZIP member against wheel RECORD before release.
 
 ## Layer 2: Portable Installer
 

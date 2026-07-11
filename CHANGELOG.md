@@ -6,9 +6,23 @@ Upstream bump from vLLM 0.23.0 to **vLLM 0.24.0**, still targeting
 Python 3.13, CUDA 12.8, PyTorch 2.11.0+cu128, and
 `TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0`.
 
+### 2026-07-11 packaging hotfix
+
+- Rebuilt the wheel with the generated `vllm_flash_attn.layers`,
+  `vllm_flash_attn.ops`, and 48 CuteDSL Python files required by Qwen3-VL
+  and other FlashAttention call paths.
+- Replaced the Windows-unsafe editable-build path split with
+  `Path.relative_to`, so future source builds copy generated Python files
+  out of the temporary build directory correctly.
+- Added assembler fail-fast checks plus complete wheel ZIP/RECORD and CUDA
+  rotary regression tests.
+- Updated the installer to accept only the current v0.24.0 wheel, pin its
+  SHA256, force-reinstall that wheel without replacing PyTorch, and verify
+  the FlashAttention rotary import before marking installation complete.
+
 ### New
 
-- **`vllm-windows-v7.patch`** generated against upstream tag `v0.24.0`
+- **`vllm-windows-v8.patch`** generated against upstream tag `v0.24.0`
   and validated with `git apply --check` on a fresh checkout.
 - **`assemble_wheel_cu128_v0.24.0.py`** packages the already-built tree
   into `vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl`.
@@ -42,7 +56,7 @@ Python 3.13, CUDA 12.8, PyTorch 2.11.0+cu128, and
 - Verified intentionally skipped paths report unavailable:
   `has_deep_gemm=False` and `has_cooperative_topk=False`.
 - Wheel SHA256:
-  `5B304EC24E1BAA427627FB1A3D4308763E8EF7020524A39200A87934028F15F5`.
+  `4A76CDE2F36689A76A6F8AB7C4EE9B4C47AEFC194479C085619F9072C563B7DA`.
 
 ## v0.23.0-win-cu128 - 2026-06-30
 

@@ -72,12 +72,12 @@ if exist "%SCRIPT_DIR%vllm-source\setup.py" (
 :: 4. Apply patch
 :: -----------------------------------------------------------
 
-if exist "%SCRIPT_DIR%vllm-windows-v7.patch" (
+if exist "%SCRIPT_DIR%vllm-windows-v8.patch" (
     pushd "%VLLM_SRC%"
     git diff --quiet HEAD 2>nul
     if !ERRORLEVEL! equ 0 (
-        echo Applying vllm-windows-v7.patch...
-        git apply "%SCRIPT_DIR%vllm-windows-v7.patch"
+        echo Applying vllm-windows-v8.patch...
+        git apply "%SCRIPT_DIR%vllm-windows-v8.patch"
         if !ERRORLEVEL! neq 0 (
             echo [WARN] Patch may already be applied or has conflicts. Continuing anyway.
         )
@@ -86,7 +86,7 @@ if exist "%SCRIPT_DIR%vllm-windows-v7.patch" (
     )
     popd
 ) else (
-    echo [WARN] vllm-windows-v7.patch not found next to build.bat
+    echo [WARN] vllm-windows-v8.patch not found next to build.bat
 )
 
 if not defined PROTOC (

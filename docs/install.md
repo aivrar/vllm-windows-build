@@ -60,7 +60,7 @@ pip install torch==2.11.0 torchaudio==2.11.0 torchvision==0.26.0 ^
 pip install triton-windows==3.6.0.post26
 pip install "llguidance>=1.7.0,<1.8.0" "xgrammar>=0.2.0,<1.0.0"
 pip install git+https://github.com/aivrar/multi-turboquant.git
-pip install dist-v7\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
+pip install dist-v8\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
 ```
 
 Or download the wheel from the latest GitHub release:
@@ -105,7 +105,7 @@ Expected version:
 git clone https://github.com/vllm-project/vllm.git vllm-source
 cd vllm-source
 git checkout v0.24.0
-git apply ..\vllm-windows-v7.patch
+git apply ..\vllm-windows-v8.patch
 cd ..
 ```
 
@@ -140,7 +140,7 @@ python assemble_wheel_cu128_v0.24.0.py
 Output:
 
 ```text
-dist-v7\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
+dist-v8\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
 ```
 
 ## Runtime Environment

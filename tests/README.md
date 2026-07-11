@@ -1,5 +1,21 @@
 # Tests
 
+Before publishing a rebuilt wheel, validate its complete ZIP payload and RECORD:
+
+```powershell
+python tests/test_wheel_contents.py dist-v8/vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
+```
+
+This check includes the generated FlashAttention rotary and CuteDSL modules that
+are not stored directly in the upstream vLLM source tree.
+
+Issue #7's Qwen3-VL import and CUDA rotary path can be exercised against an
+isolated `pip --target` installation with:
+
+```powershell
+python tests/test_issue7_flash_attn.py --package-root $env:TEMP\vllm-issue7-wheeltest
+```
+
 End-to-end test scripts for the Windows vLLM 0.24.0 build with Multi-TurboQuant.
 
 ## Setup
