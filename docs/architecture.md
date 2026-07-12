@@ -14,6 +14,8 @@ vllm-windows-build/
   install.bat
   launch.bat
   verify_artifact.py
+  verify_bootstrap.ps1
+  expand_zip.ps1
   verify_install.py
   engine_dispatcher.py
   assemble_wheel_cu128_v0.24.0.py
@@ -63,6 +65,11 @@ then validates every ZIP member against wheel RECORD before release.
    Artifacts are downloaded through `.part` files and the install marker stores
    both release SHA-256 values only after the full runtime check succeeds.
 5. Verifies both `import vllm` and Triton's CUDA driver path.
+
+Before Python exists, `verify_bootstrap.ps1` computes SHA-256 through .NET and
+`expand_zip.ps1` extracts archives through `System.IO.Compression`. This avoids
+PowerShell module cmdlets that are absent in some Windows environments; the ZIP
+helper also rejects entries that escape the destination directory.
 
 `launch.bat` checks the exact marker hash plus Python, native/Rust,
 FlashAttention, model-module, dependency, and Triton development files before

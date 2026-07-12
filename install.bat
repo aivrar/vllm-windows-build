@@ -23,7 +23,7 @@ set "PYTHON_PTH_FILE=python313._pth"
 set "PYTHON_PTH_ZIP=python313.zip"
 set "PYTHON_LIB_NAME=python313.lib"
 set "TRITON_NVIDIA_DIR=%~dp0python\Lib\site-packages\triton\backends\nvidia"
-set "GETPIP_URL=https://bootstrap.pypa.io/get-pip.py"
+set "GETPIP_URL=https://raw.githubusercontent.com/pypa/get-pip/5e84c8360eaf92009551b3eec69d734137f31cec/public/get-pip.py"
 set "GETPIP_SHA256=A341E1A43E38001C551A1508A73FF23636A11970B61D901D9A1CAD2A18F57055"
 set "GETPIP_SIZE=2226848"
 set "TORCH_INDEX=https://download.pytorch.org/whl/cu128"
@@ -55,6 +55,20 @@ echo    - vLLM 0.24.0 wheel (pre-built Windows binary)
 echo    - Verification
 echo.
 
+if not exist "%~dp0verify_bootstrap.ps1" (
+    echo  FAILED: verify_bootstrap.ps1 is missing next to install.bat.
+    goto :fail
+)
+if not exist "%~dp0expand_zip.ps1" (
+    echo  FAILED: expand_zip.ps1 is missing next to install.bat.
+    goto :fail
+)
+powershell -NoProfile -Command "if ($PSVersionTable.PSVersion.Major -lt 3) { exit 1 }"
+if errorlevel 1 (
+    echo  FAILED: install.bat requires Windows PowerShell 3 or newer.
+    goto :fail
+)
+
 REM ============================================================
 REM  STAGE 1: Download and Extract Python Embedded
 REM ============================================================
@@ -76,26 +90,44 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "$ProgressPreference = 'SilentlyContinue';" ^
     "$path = Join-Path $env:TEMP 'vllm-python-embed.zip';" ^
     "Remove-Item $path -Force -ErrorAction SilentlyContinue;" ^
-    "Invoke-WebRequest -Uri '%PYTHON_URL%' -OutFile $path;" ^
-    "$item = Get-Item -LiteralPath $path; $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash;" ^
-    "Write-Host ('         SHA256: ' + $hash);" ^
-    "if ($item.Length -ne %PYTHON_SIZE% -or $hash -ne '%PYTHON_SHA256%') { throw 'Python archive integrity check failed' }"
+    "Invoke-WebRequest -UseBasicParsing -Uri '%PYTHON_URL%' -OutFile $path"
 if errorlevel 1 (
     echo          FAILED: Could not download Python %PYTHON_VERSION%
     echo          URL: %PYTHON_URL%
     goto :fail
 )
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0verify_bootstrap.ps1" ^
+    "%TEMP%\vllm-python-embed.zip" "%PYTHON_SHA256%" %PYTHON_SIZE%
+if errorlevel 1 (
+    echo          FAILED: Python archive integrity check failed.
+    del "%TEMP%\vllm-python-embed.zip" 2>nul
+    goto :fail
+)
 echo          Extracting to python\ ...
-if not exist "%~dp0python" mkdir "%~dp0python"
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-    "$ErrorActionPreference = 'Stop'; Expand-Archive -LiteralPath '%TEMP%\vllm-python-embed.zip' -DestinationPath '%~dp0python' -Force"
+if exist "%~dp0python.part" rmdir /S /Q "%~dp0python.part"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0expand_zip.ps1" ^
+    "%TEMP%\vllm-python-embed.zip" "%~dp0python.part"
 if errorlevel 1 (
     echo          FAILED: Could not extract Python archive
+    rmdir /S /Q "%~dp0python.part" 2>nul
     goto :fail
 )
 del "%TEMP%\vllm-python-embed.zip" 2>nul
-if not exist "%~dp0python\python.exe" (
+if not exist "%~dp0python.part\python.exe" (
     echo          FAILED: python.exe not found after extraction
+    rmdir /S /Q "%~dp0python.part" 2>nul
+    goto :fail
+)
+"%~dp0python.part\python.exe" -c "import sys; raise SystemExit(0 if sys.version_info[:3] == (3, 13, 14) else 1)" >nul 2>nul
+if errorlevel 1 (
+    echo          FAILED: Extracted Python version is not %PYTHON_VERSION%.
+    rmdir /S /Q "%~dp0python.part" 2>nul
+    goto :fail
+)
+move /Y "%~dp0python.part" "%~dp0python" >nul
+if errorlevel 1 (
+    echo          FAILED: Could not move verified Python into place.
+    rmdir /S /Q "%~dp0python.part" 2>nul
     goto :fail
 )
 echo          OK
@@ -114,16 +146,29 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;" ^
     "$ProgressPreference = 'SilentlyContinue';" ^
     "$pkg = Join-Path $env:TEMP 'vllm-python-dev.nupkg';" ^
-    "$zip = Join-Path $env:TEMP 'vllm-python-dev.zip';" ^
     "$out = Join-Path $env:TEMP 'vllm-python-dev';" ^
-    "Remove-Item $pkg, $zip -Force -ErrorAction SilentlyContinue;" ^
+    "Remove-Item $pkg -Force -ErrorAction SilentlyContinue;" ^
     "Remove-Item $out -Recurse -Force -ErrorAction SilentlyContinue;" ^
-    "Invoke-WebRequest -Uri '%PYTHON_DEV_URL%' -OutFile $pkg;" ^
-    "$item = Get-Item -LiteralPath $pkg; $hash = (Get-FileHash -LiteralPath $pkg -Algorithm SHA256).Hash;" ^
-    "Write-Host ('         SHA256: ' + $hash);" ^
-    "if ($item.Length -ne %PYTHON_DEV_SIZE% -or $hash -ne '%PYTHON_DEV_SHA256%') { throw 'Python development package integrity check failed' };" ^
-    "Copy-Item $pkg $zip -Force;" ^
-    "Expand-Archive -Path $zip -DestinationPath $out -Force;" ^
+    "Invoke-WebRequest -UseBasicParsing -Uri '%PYTHON_DEV_URL%' -OutFile $pkg"
+if errorlevel 1 (
+    echo          FAILED: Could not download Python headers/libs.
+    goto :fail
+)
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0verify_bootstrap.ps1" ^
+    "%TEMP%\vllm-python-dev.nupkg" "%PYTHON_DEV_SHA256%" %PYTHON_DEV_SIZE%
+if errorlevel 1 (
+    echo          FAILED: Python development package integrity check failed.
+    goto :fail
+)
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0expand_zip.ps1" ^
+    "%TEMP%\vllm-python-dev.nupkg" "%TEMP%\vllm-python-dev"
+if errorlevel 1 (
+    echo          FAILED: Could not extract Python headers/libs.
+    goto :fail
+)
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "$ErrorActionPreference = 'Stop';" ^
+    "$out = Join-Path $env:TEMP 'vllm-python-dev';" ^
     "New-Item -ItemType Directory -Force -Path '%~dp0python\Include', '%~dp0python\libs' | Out-Null;" ^
     "Copy-Item -Path (Join-Path $out 'tools\include\*') -Destination '%~dp0python\Include' -Recurse -Force;" ^
     "Copy-Item -Path (Join-Path $out 'tools\libs\*') -Destination '%~dp0python\libs' -Recurse -Force"
@@ -176,12 +221,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "$ProgressPreference = 'SilentlyContinue';" ^
     "$path = Join-Path $env:TEMP 'get-pip.py';" ^
     "Remove-Item $path -Force -ErrorAction SilentlyContinue;" ^
-    "Invoke-WebRequest -Uri '%GETPIP_URL%' -OutFile $path;" ^
-    "$item = Get-Item -LiteralPath $path; $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash;" ^
-    "Write-Host ('         SHA256: ' + $hash);" ^
-    "if ($item.Length -ne %GETPIP_SIZE% -or $hash -ne '%GETPIP_SHA256%') { throw 'get-pip.py integrity check failed' }"
+    "Invoke-WebRequest -UseBasicParsing -Uri '%GETPIP_URL%' -OutFile $path"
 if errorlevel 1 (
     echo          FAILED: Could not download get-pip.py
+    goto :fail
+)
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0verify_bootstrap.ps1" ^
+    "%TEMP%\get-pip.py" "%GETPIP_SHA256%" %GETPIP_SIZE%
+if errorlevel 1 (
+    echo          FAILED: get-pip.py integrity check failed.
     goto :fail
 )
 echo          Installing pip...
@@ -269,7 +317,7 @@ if not exist "%WHEEL_FILE%" (
         "$ErrorActionPreference = 'Stop';" ^
         "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;" ^
         "$ProgressPreference = 'SilentlyContinue';" ^
-        "Invoke-WebRequest -Uri '%WHEEL_URL%' -OutFile '%WHEEL_PART%'"
+        "Invoke-WebRequest -UseBasicParsing -Uri '%WHEEL_URL%' -OutFile '%WHEEL_PART%'"
     if errorlevel 1 (
         echo          FAILED: Could not download the vLLM wheel.
         echo          URL: %WHEEL_URL%
@@ -327,7 +375,7 @@ if not exist "%MTQ_FILE%" (
         "$ErrorActionPreference = 'Stop';" ^
         "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;" ^
         "$ProgressPreference = 'SilentlyContinue';" ^
-        "Invoke-WebRequest -Uri '%MTQ_URL%' -OutFile '%MTQ_PART%'"
+        "Invoke-WebRequest -UseBasicParsing -Uri '%MTQ_URL%' -OutFile '%MTQ_PART%'"
     if errorlevel 1 (
         echo          FAILED: Could not download the Multi-TurboQuant wheel.
         del /F /Q "%MTQ_PART%" 2>nul

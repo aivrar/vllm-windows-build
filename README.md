@@ -82,6 +82,9 @@ and Multi-TurboQuant integration.
   Wheels download to a temporary file, stale/truncated local wheels are
   replaced automatically, and the install marker records the verified wheel
   hash only after CUDA, Rust, Qwen3.5/Qwen3-VL, and FlashAttention checks pass.
+- **Older Windows PowerShell bootstrap fixed** - pre-Python verification and
+  extraction use direct .NET APIs, not `Get-FileHash` or `Expand-Archive`.
+  Windows PowerShell 3 or newer is required for the downloader.
 - **Concurrent launcher requests fixed** - one dispatcher now owns
   `engine.step()` and routes outputs by request ID. Streaming and
   non-streaming requests can no longer consume each other's engine output.

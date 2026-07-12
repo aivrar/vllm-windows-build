@@ -12,8 +12,12 @@ are not stored directly in the upstream vLLM source tree.
 Run the installer/hash and concurrent engine-dispatch regressions with:
 
 ```powershell
-python -m unittest tests.test_verify_artifact tests.test_engine_dispatcher tests.test_release_contract -v
+python -m unittest tests.test_verify_artifact tests.test_bootstrap_helpers tests.test_engine_dispatcher tests.test_release_contract -v
 ```
+
+The bootstrap suite specifically runs the PowerShell helpers without
+`Get-FileHash`/`Expand-Archive`, checks paths with spaces and overwrite repair,
+and verifies that a ZIP path-traversal entry is rejected.
 
 All six Multi-TurboQuant write/decode paths have a small CUDA integration test:
 

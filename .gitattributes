@@ -2,4 +2,5 @@
 *.md text eol=lf
 *.patch text eol=lf
 *.py text eol=lf
+*.ps1 text eol=crlf
 *.yml text eol=lf

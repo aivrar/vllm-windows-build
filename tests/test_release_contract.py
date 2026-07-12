@@ -34,9 +34,33 @@ class ReleaseContractTests(unittest.TestCase):
     def test_installer_is_atomic_and_does_not_parse_hash_stdout(self) -> None:
         script = (ROOT / "install.bat").read_text(encoding="utf-8")
         self.assertIn("verify_artifact.py", script)
+        self.assertIn("verify_bootstrap.ps1", script)
+        self.assertIn("expand_zip.ps1", script)
+        self.assertIn("PowerShell 3 or newer", script)
+        download_lines = [
+            line for line in script.splitlines() if "Invoke-WebRequest" in line
+        ]
+        self.assertEqual(len(download_lines), 5)
+        self.assertTrue(
+            all("Invoke-WebRequest -UseBasicParsing" in line for line in download_lines)
+        )
+        self.assertIn(
+            "pypa/get-pip/5e84c8360eaf92009551b3eec69d734137f31cec/",
+            script,
+        )
+        self.assertNotIn("bootstrap.pypa.io/get-pip.py", script)
         self.assertIn("%WHEEL_NAME%.part", script)
         self.assertIn("%MTQ_NAME%.part", script)
-        self.assertNotRegex(script, r"for /f[^\n]+Get-FileHash")
+        self.assertIn('"%~dp0python.part"', script)
+        self.assertIn('move /Y "%~dp0python.part" "%~dp0python"', script)
+        self.assertNotIn("Get-FileHash", script)
+        self.assertNotIn("Expand-Archive", script)
+        bootstrap_helpers = (
+            (ROOT / "verify_bootstrap.ps1").read_text(encoding="utf-8")
+            + (ROOT / "expand_zip.ps1").read_text(encoding="utf-8")
+        )
+        self.assertNotIn("Get-FileHash", bootstrap_helpers)
+        self.assertNotIn("Expand-Archive", bootstrap_helpers)
         self.assertLess(script.index("--cuda"), script.rindex("WHEEL_SHA256=%WHEEL_SHA256%"))
 
     def test_build_fails_closed(self) -> None:

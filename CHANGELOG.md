@@ -35,6 +35,25 @@ Python 3.13, CUDA 12.8, PyTorch 2.11.0+cu128, and
   `--uds` rejection. Final wheel SHA-256:
   `A3C324281E5BE9D8FEAF0BE50B50DCE08F3FCDE56E3F74129A128D3B1A49645B`.
 
+### 2026-07-12 legacy PowerShell bootstrap fix
+
+- Fixed issue #9: pre-Python integrity checks no longer require the unavailable
+  `Get-FileHash` cmdlet.
+- Replaced bootstrap hashing with direct .NET SHA-256 and replaced
+  `Expand-Archive` with a .NET ZIP extractor that supports overwrite repair and
+  rejects path-traversal entries.
+- Forced basic web parsing for every bootstrap download so Windows PowerShell
+  does not depend on Internet Explorer or stop at a script-execution prompt.
+- Pinned `get-pip.py` to an immutable upstream commit so its verified hash
+  cannot drift when PyPA updates the floating download URL.
+- Made embedded-Python extraction transactional through `python.part`, so an
+  interrupted extraction cannot be mistaken for a valid Python installation.
+- Added regression tests that forbid both cmdlets in `install.bat` and exercise
+  exact hash/size verification, paths with spaces, overwrite extraction, and a
+  malicious ZIP path.
+- Revalidated a complete fresh Python 3.13.14 bootstrap including the Python
+  archive, NuGet development files, `get-pip.py`, both project wheels, and CUDA.
+
 ### 2026-07-11 packaging hotfix
 
 - Rebuilt the wheel with the generated `vllm_flash_attn.layers`,

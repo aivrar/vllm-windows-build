@@ -35,6 +35,16 @@ needed by Triton's runtime compiler, installs PyTorch cu128,
 triton-windows, the vLLM wheel, structured-output backends, and verifies
 both `import vllm` and Triton's CUDA runtime driver path.
 
+The pre-Python bootstrap requires Windows PowerShell 3 or newer but does not
+require `Get-FileHash` or `Expand-Archive`. Hashing and ZIP extraction use .NET
+helpers included beside `install.bat`, and downloads use basic parsing without
+the Internet Explorer engine. `get-pip.py` is fetched from an immutable PyPA
+commit so its pinned size and SHA-256 remain reproducible.
+
+Fresh embedded-Python extraction is staged under `python.part` and renamed only
+after the exact Python version runs successfully. A failed extraction removes
+the staging directory, so rerunning the installer starts from a clean state.
+
 It caches state in:
 
 - `python\.torch-installed`

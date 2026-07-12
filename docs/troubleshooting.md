@@ -4,6 +4,18 @@ Common errors when building or running vLLM v0.24.0 on Windows.
 
 ## Runtime errors
 
+### `Get-FileHash` is not recognized
+
+This was issue #9. Some Windows PowerShell environments do not expose the
+`Get-FileHash` cmdlet, so the old pre-Python integrity check stopped immediately
+after downloading the embedded Python archive.
+
+Pull the latest repository and rerun `install.bat`. Bootstrap hashing now uses
+the .NET SHA-256 implementation in `verify_bootstrap.ps1`; ZIP extraction uses
+`expand_zip.ps1` instead of `Expand-Archive`. No manual PowerShell module install
+is required. Windows PowerShell 3 or newer is required because the downloader
+uses `Invoke-WebRequest`.
+
 ### Wheel SHA-256 shows a blank `Actual:` value
 
 This was issue #8. The old batch installer parsed `Get-FileHash` through a
