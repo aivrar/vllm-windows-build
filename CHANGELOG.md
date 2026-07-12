@@ -48,6 +48,7 @@ Python 3.13, CUDA 12.8, PyTorch 2.11.0+cu128, and
   cannot drift when PyPA updates the floating download URL.
 - Made embedded-Python extraction transactional through `python.part`, so an
   interrupted extraction cannot be mistaken for a valid Python installation.
+- Updated the audit workflow to the current GitHub Actions Node 24 runtimes.
 - Added regression tests that forbid both cmdlets in `install.bat` and exercise
   exact hash/size verification, paths with spaces, overwrite extraction, and a
   malicious ZIP path.
