@@ -13,6 +13,9 @@ vllm-windows-build/
   run_build.bat
   install.bat
   launch.bat
+  verify_artifact.py
+  verify_install.py
+  engine_dispatcher.py
   assemble_wheel_cu128_v0.24.0.py
   vllm_launcher.py
   dist-v8/
@@ -50,16 +53,20 @@ then validates every ZIP member against wheel RECORD before release.
 
 `install.bat` provides the no-compiler path:
 
-1. Downloads embedded Python 3.13.11.
+1. Downloads embedded Python 3.13.14 and verifies its exact size and SHA-256.
 2. Adds CPython development files (`Include\Python.h` and
    `libs\python313.lib`) from the Python NuGet package for Triton's
    runtime CUDA helper compilation.
 3. Installs PyTorch 2.11.0+cu128 and `triton-windows`.
-4. Installs the v0.24.0+cu128 wheel and structured-output backends.
+4. Verifies and installs the v0.24.0+cu128 wheel, the pinned Multi-TurboQuant
+   wheel, and structured-output backends.
+   Artifacts are downloaded through `.part` files and the install marker stores
+   both release SHA-256 values only after the full runtime check succeeds.
 5. Verifies both `import vllm` and Triton's CUDA driver path.
 
-`launch.bat` checks for missing Python, package directories, marker
-files, and Triton Python development files before starting the server.
+`launch.bat` checks the exact marker hash plus Python, native/Rust,
+FlashAttention, model-module, dependency, and Triton development files before
+starting the server.
 If anything is incomplete, it reruns `install.bat`.
 
 For wheel installs, both scripts prefer Triton's bundled CUDA helper
@@ -71,12 +78,16 @@ system `CUDA_PATH`.
 There are two serving paths:
 
 - `vllm_launcher.py`: a Windows-friendly OpenAI-compatible server that
-  keeps the launch path explicit and supports chat, completions,
+  keeps the launch path explicit and supports chat completions,
   embeddings, health checks, streaming, and parsed tool calls.
 - `vllm serve`: upstream vLLM's CLI server, with the Windows event-loop
   and process-handling fixes carried in the patch.
 
 `launch.bat` starts `vllm_launcher.py` and pins the portable environment.
+`engine_dispatcher.py` gives one task exclusive ownership of `engine.step()`
+and routes each output to its request queue so concurrent streams cannot steal
+or discard another request's output. The installer adds the repository root to
+`python313._pth` so embedded Python can import this launcher module explicitly.
 
 ## Layer 4: KV Cache Compression
 

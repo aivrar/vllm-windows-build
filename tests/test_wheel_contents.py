@@ -9,6 +9,7 @@ import hashlib
 import io
 import zipfile
 from collections import Counter
+from email.parser import BytesParser
 from pathlib import Path
 
 
@@ -23,6 +24,22 @@ REQUIRED_FLASH_ATTN_FILES = {
     "vllm/vllm_flash_attn/cute/interface.py",
 }
 
+REQUIRED_RELEASE_FILES = REQUIRED_FLASH_ATTN_FILES | {
+    "vllm/_C_stable_libtorch.pyd",
+    "vllm/_moe_C_stable_libtorch.pyd",
+    "vllm/_rust_tool_parser.pyd",
+    "vllm/cumem_allocator.pyd",
+    "vllm/spinloop.pyd",
+    "vllm/vllm-rs.exe",
+}
+
+REQUIRED_NONEMPTY_FILES = REQUIRED_RELEASE_FILES - {
+    "vllm/vllm_flash_attn/layers/__init__.py",
+    "vllm/vllm_flash_attn/ops/__init__.py",
+    "vllm/vllm_flash_attn/ops/triton/__init__.py",
+    "vllm/vllm_flash_attn/cute/__init__.py",
+}
+
 
 def sha256_record(data: bytes) -> str:
     digest = base64.urlsafe_b64encode(hashlib.sha256(data).digest()).rstrip(b"=")
@@ -31,12 +48,22 @@ def sha256_record(data: bytes) -> str:
 
 def validate_wheel(wheel_path: Path) -> None:
     with zipfile.ZipFile(wheel_path) as wheel:
+        bad_member = wheel.testzip()
+        assert bad_member is None, f"ZIP CRC check failed: {bad_member}"
         names = wheel.namelist()
         duplicates = sorted(name for name, count in Counter(names).items() if count > 1)
         assert not duplicates, f"duplicate archive members: {duplicates}"
 
-        missing = sorted(REQUIRED_FLASH_ATTN_FILES - set(names))
-        assert not missing, f"missing FlashAttention payloads: {missing}"
+        missing = sorted(REQUIRED_RELEASE_FILES - set(names))
+        assert not missing, f"missing release payloads: {missing}"
+        for name in REQUIRED_NONEMPTY_FILES:
+            assert wheel.getinfo(name).file_size > 0, f"empty release payload: {name}"
+
+        metadata_names = [name for name in names if name.endswith(".dist-info/METADATA")]
+        assert len(metadata_names) == 1, f"expected one METADATA, found {metadata_names}"
+        metadata = BytesParser().parsebytes(wheel.read(metadata_names[0]))
+        assert metadata.get("Name", "").lower() == "vllm"
+        assert metadata.get("Version") == "0.24.0+cu128"
 
         cute_files = [
             name

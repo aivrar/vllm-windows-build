@@ -60,8 +60,13 @@ cd ..
 
 ### 2. Configure And Build
 
-`pip install -e . --no-build-isolation -v` drives CMake/Ninja through
+`python -m pip install -e . --no-build-isolation -v` drives CMake/Ninja through
 `setup.py`.
+
+`build.bat` accepts either a clean upstream v0.24.0 tree or a tree with the
+complete v8 patch already applied. It stops on a partial/conflicting patch and
+verifies the Python, PyTorch, CUDA, `protoc`, native, Rust, FlashAttention, and
+third-party payload contract before reporting success.
 
 Expected native artifacts in `vllm-source\vllm\` after a successful build:
 
@@ -147,7 +152,7 @@ python -m pip install --no-deps --target %TEMP%\vllm-wheel-test dist-v8\vllm-0.2
 python tests\test_issue7_flash_attn.py --package-root %TEMP%\vllm-wheel-test
 ```
 
-Optional Rust frontend check:
+Required Rust frontend check:
 
 ```bat
 set VLLM_USE_RUST_FRONTEND=1
@@ -161,7 +166,7 @@ If you change Python files, rerun the smoke tests.
 If you change CUDA/C++ files:
 
 ```bat
-pip install -e . --no-build-isolation -v
+python -m pip install -e . --no-build-isolation -v
 ```
 
 If you change `setup.py` or CMake files, clear the temp build directory

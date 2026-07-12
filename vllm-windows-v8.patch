@@ -2041,7 +2041,7 @@ index 08a3ab58c..16ef1aeba 100644
      async def handle_shutdown() -> None:
          await shutdown_event.wait()
 diff --git a/vllm/entrypoints/openai/api_server.py b/vllm/entrypoints/openai/api_server.py
-index a16f52218..9108b7564 100644
+index a16f52218..147b70cdc 100644
 --- a/vllm/entrypoints/openai/api_server.py
 +++ b/vllm/entrypoints/openai/api_server.py
 @@ -15,7 +15,16 @@ from collections.abc import AsyncIterator
@@ -2062,7 +2062,7 @@ index a16f52218..9108b7564 100644
  from fastapi import FastAPI, HTTPException
  from fastapi.exceptions import RequestValidationError
  from fastapi.middleware.cors import CORSMiddleware
-@@ -486,7 +495,8 @@ def create_server_socket(addr: tuple[str, int]) -> socket.socket:
+@@ -486,13 +495,16 @@ def create_server_socket(addr: tuple[str, int]) -> socket.socket:
  
      sock = socket.socket(family=family, type=socket.SOCK_STREAM)
      sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -2071,6 +2071,14 @@ index a16f52218..9108b7564 100644
 +        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
      sock.bind(addr)
  
+     return sock
+ 
+ 
+ def create_server_unix_socket(path: str) -> socket.socket:
++    if not hasattr(socket, "AF_UNIX"):
++        raise RuntimeError("--uds is not supported by this Windows Python build")
+     sock = socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM)
+     sock.bind(path)
      return sock
 diff --git a/vllm/entrypoints/openai/dp_supervisor.py b/vllm/entrypoints/openai/dp_supervisor.py
 index 73b10a04e..4462bd0bb 100644
@@ -2415,10 +2423,18 @@ index cf3141a0c..f35f7b2be 100644
      return f"ipc://{base_rpc_path}/{uuid4()}"
  
 diff --git a/vllm/utils/system_utils.py b/vllm/utils/system_utils.py
-index 7f56f972a..0fdee7fc6 100644
+index 7f56f972a..eaa65cea2 100644
 --- a/vllm/utils/system_utils.py
 +++ b/vllm/utils/system_utils.py
-@@ -178,6 +178,8 @@ def get_mp_context():
+@@ -6,7 +6,6 @@ from __future__ import annotations
+ import contextlib
+ import multiprocessing
+ import os
+-import signal
+ import sys
+ from collections.abc import Callable, Iterator
+ from pathlib import Path
+@@ -178,6 +177,8 @@ def get_mp_context():
      # of whether spawn was already set.
      _sync_visible_devices_env_vars()
      mp_method = envs.VLLM_WORKER_MULTIPROC_METHOD
@@ -2427,6 +2443,35 @@ index 7f56f972a..0fdee7fc6 100644
      return multiprocessing.get_context(mp_method)
  
  
+@@ -255,7 +256,7 @@ def decorate_logs(
+ 
+ def kill_process_tree(pid: int):
+     """
+-    Kills all descendant processes of the given pid by sending SIGKILL.
++    Kills all descendant processes of the given pid.
+ 
+     Args:
+         pid (int): Process ID of the parent process
+@@ -268,14 +269,14 @@ def kill_process_tree(pid: int):
+     # Get all children recursively
+     children = parent.children(recursive=True)
+ 
+-    # Send SIGKILL to all children first
++    # psutil uses TerminateProcess on Windows and SIGKILL on POSIX.
+     for child in children:
+-        with contextlib.suppress(ProcessLookupError):
+-            os.kill(child.pid, signal.SIGKILL)
++        with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
++            child.kill()
+ 
+     # Finally kill the parent
+-    with contextlib.suppress(ProcessLookupError):
+-        os.kill(pid, signal.SIGKILL)
++    with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
++        parent.kill()
+ 
+ 
+ # Resource utilities
 diff --git a/vllm/utils/torch_utils.py b/vllm/utils/torch_utils.py
 index 9269fbb44..a79f41b37 100644
 --- a/vllm/utils/torch_utils.py

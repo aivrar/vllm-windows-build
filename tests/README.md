@@ -9,6 +9,24 @@ python tests/test_wheel_contents.py dist-v8/vllm-0.24.0+cu128-cp313-cp313-win_am
 This check includes the generated FlashAttention rotary and CuteDSL modules that
 are not stored directly in the upstream vLLM source tree.
 
+Run the installer/hash and concurrent engine-dispatch regressions with:
+
+```powershell
+python -m unittest tests.test_verify_artifact tests.test_engine_dispatcher tests.test_release_contract -v
+```
+
+All six Multi-TurboQuant write/decode paths have a small CUDA integration test:
+
+```powershell
+python tests/test_multi_turboquant_integration.py
+```
+
+Windows process cleanup and Unix-socket guards are covered by:
+
+```powershell
+python -m unittest tests.test_windows_runtime_guards -v
+```
+
 Issue #7's Qwen3-VL import and CUDA rotary path can be exercised against an
 isolated `pip --target` installation with:
 

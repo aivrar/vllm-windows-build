@@ -27,6 +27,8 @@ import logging
 import uuid
 from pathlib import Path
 
+from engine_dispatcher import EngineDispatcher, EngineDispatchFailure
+
 # Stub uvloop on Windows before any vLLM imports
 if sys.platform == "win32":
     uvloop = types.ModuleType("uvloop")
@@ -34,7 +36,6 @@ if sys.platform == "win32":
     sys.modules["uvloop"] = uvloop
 
 from vllm import LLM, SamplingParams
-from vllm.sampling_params import StructuredOutputsParams
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("vllm_launcher")
@@ -162,52 +163,23 @@ def create_app(llm: LLM, model_name: str, task: str = "generate"):
     """Create FastAPI app with OpenAI-compatible endpoints."""
     from fastapi import FastAPI, Request
     from fastapi.responses import StreamingResponse, JSONResponse
-    import threading
-
     app = FastAPI()
     engine = llm.llm_engine
 
-    # Pending non-streaming requests: rid -> {event, output}
-    pending_results: dict = {}
-    pending_lock = threading.Lock()
-
-    # Background engine step loop — processes ALL queued requests together
-    # This is what enables vLLM's continuous batching across concurrent requests
-    engine_running = True
-
-    async def engine_step_loop():
-        """Continuously step the engine to process batched requests."""
-        idle_count = 0
-        while engine_running:
-            try:
-                # Always step — step() is a no-op when nothing queued,
-                # but stepping eagerly keeps latency minimal for new arrivals
-                step_outputs = engine.step()
-                if step_outputs:
-                    idle_count = 0
-                    for output in step_outputs:
-                        rid = output.request_id
-                        if output.finished and rid in pending_results:
-                            with pending_lock:
-                                if rid in pending_results:
-                                    pending_results[rid]["output"] = output
-                                    pending_results[rid]["event"].set()
-                else:
-                    idle_count += 1
-            except Exception as e:
-                logger.error(f"Engine step error: {e}")
-                idle_count += 1
-            # Adaptive polling: 0.001s when busy, 0.003s when idle
-            await asyncio.sleep(0.001 if idle_count < 10 else 0.003)
+    # One dispatcher owns engine.step() and routes every request's outputs.
+    dispatcher = EngineDispatcher(engine, logger)
+    dispatcher_task: asyncio.Task | None = None
 
     @app.on_event("startup")
     async def startup():
-        asyncio.create_task(engine_step_loop())
+        nonlocal dispatcher_task
+        dispatcher_task = asyncio.create_task(dispatcher.run())
 
     @app.on_event("shutdown")
     async def shutdown():
-        nonlocal engine_running
-        engine_running = False
+        dispatcher.stop()
+        if dispatcher_task is not None:
+            await dispatcher_task
 
     @app.get("/health")
     async def health():
@@ -236,6 +208,8 @@ def create_app(llm: LLM, model_name: str, task: str = "generate"):
         input_texts = body.get("input", [])
         if isinstance(input_texts, str):
             input_texts = [input_texts]
+        if not isinstance(input_texts, list) or not input_texts:
+            return JSONResponse({"error": "input must be a non-empty string or list"}, status_code=400)
 
         request_id = f"embd-{uuid.uuid4().hex[:12]}"
 
@@ -271,6 +245,10 @@ def create_app(llm: LLM, model_name: str, task: str = "generate"):
 
     @app.post("/v1/chat/completions")
     async def chat_completions(request: Request):
+        if task != "generate":
+            return JSONResponse(
+                {"error": "This server is running in 'embed' mode."}, status_code=400
+            )
         body = await request.json()
 
         messages = body.get("messages", [])
@@ -284,13 +262,10 @@ def create_app(llm: LLM, model_name: str, task: str = "generate"):
         presence_penalty = body.get("presence_penalty", 0.0)
         frequency_penalty = body.get("frequency_penalty", 0.0)
         tools = body.get("tools")
-        tool_choice = body.get("tool_choice", "auto")
         response_format = body.get("response_format")
 
         # Build prompt from messages using tokenizer's chat template
         tokenizer = llm.get_tokenizer()
-        has_native_tools = False
-
         if tools:
             # Strategy 1: Try native tools via chat template
             native_ok = False
@@ -303,13 +278,11 @@ def create_app(llm: LLM, model_name: str, task: str = "generate"):
                 tool_name = tools[0].get("function", tools[0]).get("name", "")
                 if tool_name and tool_name in prompt:
                     native_ok = True
-                    has_native_tools = True
-            except (TypeError, Exception):
+            except Exception:
                 pass
 
             # Strategy 2: Inject tool descriptions into the system prompt
             if not native_ok:
-                has_native_tools = False
                 tool_prompt = build_tool_system_prompt(tools)
                 augmented_messages = list(messages)
                 if augmented_messages and augmented_messages[0].get("role") == "system":
@@ -338,7 +311,6 @@ def create_app(llm: LLM, model_name: str, task: str = "generate"):
                     parts.append("assistant:")
                     prompt = "\n".join(parts)
         else:
-            has_native_tools = False
             try:
                 prompt = tokenizer.apply_chat_template(
                     messages, tokenize=False, add_generation_prompt=True
@@ -376,23 +348,23 @@ def create_app(llm: LLM, model_name: str, task: str = "generate"):
         request_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
 
         if not stream:
-            # Non-streaming: queue request and wait for engine to batch-process it
-            # This allows vLLM to batch multiple concurrent requests on the GPU
-            event = asyncio.Event()
-            with pending_lock:
-                pending_results[request_id] = {"event": event, "output": None}
-
-            engine.add_request(request_id, prompt, params)
-
-            # Wait for completion (the background step loop will set the event)
-            await event.wait()
-
-            with pending_lock:
-                result = pending_results.pop(request_id, None)
-
-            output = result["output"] if result else None
-            if not output:
-                return JSONResponse({"error": "Request failed"}, status_code=500)
+            try:
+                output_queue = dispatcher.add_request(request_id, prompt, params)
+                while True:
+                    output = await output_queue.get()
+                    if isinstance(output, EngineDispatchFailure):
+                        raise output.error
+                    if output.finished:
+                        break
+            except asyncio.CancelledError:
+                dispatcher.abort(request_id)
+                raise
+            except Exception as exc:
+                dispatcher.abort(request_id)
+                logger.exception("Request %s failed", request_id)
+                return JSONResponse({"error": str(exc)}, status_code=500)
+            finally:
+                dispatcher.finish(request_id)
 
             text = output.outputs[0].text
             tokens = len(output.outputs[0].token_ids)
@@ -400,7 +372,7 @@ def create_app(llm: LLM, model_name: str, task: str = "generate"):
 
             # Check for tool calls in the response
             message = {"role": "assistant", "content": text}
-            finish_reason = "stop"
+            finish_reason = output.outputs[0].finish_reason or "stop"
 
             if tools:
                 parsed_tools = parse_tool_calls(text)
@@ -425,22 +397,24 @@ def create_app(llm: LLM, model_name: str, task: str = "generate"):
                 },
             })
 
-        # Streaming: use engine.add_request() + engine.step()
+        try:
+            output_queue = dispatcher.add_request(request_id, prompt, params)
+        except Exception as exc:
+            logger.exception("Could not add request %s", request_id)
+            return JSONResponse({"error": str(exc)}, status_code=500)
+
         async def stream_response():
             rid = request_id
-            engine.add_request(rid, prompt, params)
-
             prev_len = 0
-            full_text = ""
-            while True:
-                step_outputs = engine.step()
-                for output in step_outputs:
-                    if output.request_id != rid:
-                        continue
+            completed = False
+            try:
+                while True:
+                    output = await output_queue.get()
+                    if isinstance(output, EngineDispatchFailure):
+                        raise output.error
                     text = output.outputs[0].text
                     new_text = text[prev_len:]
                     prev_len = len(text)
-                    full_text = text
 
                     if new_text:
                         chunk = {
@@ -456,6 +430,7 @@ def create_app(llm: LLM, model_name: str, task: str = "generate"):
                         yield f"data: {json.dumps(chunk)}\n\n"
 
                     if output.finished:
+                        completed = True
                         finish_chunk = {
                             "id": rid,
                             "object": "chat.completion.chunk",
@@ -463,15 +438,23 @@ def create_app(llm: LLM, model_name: str, task: str = "generate"):
                             "choices": [{
                                 "index": 0,
                                 "delta": {},
-                                "finish_reason": "stop",
+                                "finish_reason": output.outputs[0].finish_reason or "stop",
                             }],
                         }
                         yield f"data: {json.dumps(finish_chunk)}\n\n"
                         yield "data: [DONE]\n\n"
                         return
-
-                # Small yield to avoid blocking
-                await asyncio.sleep(0)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                logger.exception("Streaming request %s failed", rid)
+                yield f"data: {json.dumps({'error': str(exc)})}\n\n"
+                yield "data: [DONE]\n\n"
+            finally:
+                if completed:
+                    dispatcher.finish(rid)
+                else:
+                    dispatcher.abort(rid)
 
         return StreamingResponse(
             stream_response(),

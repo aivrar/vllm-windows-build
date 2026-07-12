@@ -17,7 +17,7 @@ Two paths:
 | Windows | 10 / 11 x64 | Tested on Windows 10 Pro 22H2 |
 | GPU | NVIDIA SM 8.0+ | RTX 30/40/50, A100, H100 |
 | Driver | R570+ | Required for RTX 50-series / Blackwell |
-| Python | 3.13.x | `install.bat` uses embedded Python 3.13.11 plus headers/libs for Triton |
+| Python | 3.13.x | `install.bat` uses embedded Python 3.13.14 plus headers/libs for Triton |
 | PyTorch | 2.11.0+cu128 | CUDA 12.8 runtime from PyTorch wheels |
 | Triton | triton-windows 3.6.0.post26 | Installed by `install.bat` |
 | Disk | 5 GB+ | Python, PyTorch, Triton, and wheel |
@@ -38,13 +38,16 @@ both `import vllm` and Triton's CUDA runtime driver path.
 It caches state in:
 
 - `python\.torch-installed`
-- `python\.vllm-installed`
+- `python\.vllm-installed` (contains the verified vLLM and Multi-TurboQuant SHA-256 values)
 
 Delete those files to force reinstall.
 
-Rerunning `install.bat` also repairs an existing portable Python 3.13
-directory if `Include\Python.h` or `libs\python313.lib` is missing.
-`launch.bat` performs the same repair check before starting the server.
+Rerunning `install.bat` repairs an existing portable Python 3.13 directory if
+its marker hash, dependencies, native/Rust files, generated FlashAttention
+modules, `Include\Python.h`, or `libs\python313.lib` are missing. A stale or
+truncated local wheel is deleted and downloaded again through a `.part` file.
+`launch.bat` performs the same release-contract checks before starting the
+server.
 If `python\` is from an older major/minor Python version, delete
 `python\` and rerun the installer.
 
@@ -59,7 +62,7 @@ pip install torch==2.11.0 torchaudio==2.11.0 torchvision==0.26.0 ^
 
 pip install triton-windows==3.6.0.post26
 pip install "llguidance>=1.7.0,<1.8.0" "xgrammar>=0.2.0,<1.0.0"
-pip install git+https://github.com/aivrar/multi-turboquant.git
+pip install multi_turboquant-0.1.0-py3-none-any.whl
 pip install dist-v8\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
 ```
 

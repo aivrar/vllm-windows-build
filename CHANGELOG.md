@@ -6,6 +6,35 @@ Upstream bump from vLLM 0.23.0 to **vLLM 0.24.0**, still targeting
 Python 3.13, CUDA 12.8, PyTorch 2.11.0+cu128, and
 `TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0`.
 
+### 2026-07-12 reliability audit
+
+- Fixed issue #8 by replacing fragile PowerShell stdout hash capture with a
+  Python streaming SHA-256 verifier that always reports the actual digest.
+- Pinned exact sizes and SHA-256 digests for Python 3.13.14, its NuGet
+  development package, `get-pip.py`, and both project release wheels. Project
+  wheels now use temporary files; stale or truncated copies are repaired
+  automatically.
+- Changed `.vllm-installed` from a timestamp to the verified wheel SHA-256 and
+  write it only after dependency, native/Rust, model-import, Triton, and CUDA
+  rotary checks pass. `launch.bat` now rejects stale or incomplete installs.
+- Made build patching fail closed: missing, partial, or conflicting patches,
+  wrong source bases, wrong Python/PyTorch/CUDA versions, missing `protoc`, and
+  missing release artifacts now stop the build.
+- Removed the unsafe post-build FlashAttention `xcopy`; the patched build and
+  assembler own that payload. The assembler now self-validates metadata, ZIP
+  integrity, required binaries/modules, CuteDSL import rewrites, and `RECORD`.
+- Fixed concurrent streaming/non-streaming output routing in
+  `vllm_launcher.py` by giving one dispatcher exclusive ownership of
+  `engine.step()`.
+- Fixed the portable install's missing `multi_turboquant` dependency. A
+  pure-Python wheel built from commit `e2b59ee474132999c2b42d5c96bfc48fcaf850dc`
+  is now a pinned release asset, and all six vLLM write/decode paths are tested.
+- Added pure-Python regression tests for artifact verification and concurrent
+  engine output dispatch.
+- Repacked the vLLM wheel with Windows-safe process-tree shutdown and a clear
+  `--uds` rejection. Final wheel SHA-256:
+  `A3C324281E5BE9D8FEAF0BE50B50DCE08F3FCDE56E3F74129A128D3B1A49645B`.
+
 ### 2026-07-11 packaging hotfix
 
 - Rebuilt the wheel with the generated `vllm_flash_attn.layers`,
@@ -56,7 +85,7 @@ Python 3.13, CUDA 12.8, PyTorch 2.11.0+cu128, and
 - Verified intentionally skipped paths report unavailable:
   `has_deep_gemm=False` and `has_cooperative_topk=False`.
 - Wheel SHA256:
-  `4A76CDE2F36689A76A6F8AB7C4EE9B4C47AEFC194479C085619F9072C563B7DA`.
+  `A3C324281E5BE9D8FEAF0BE50B50DCE08F3FCDE56E3F74129A128D3B1A49645B`.
 
 ## v0.23.0-win-cu128 - 2026-06-30
 

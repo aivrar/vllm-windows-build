@@ -4,6 +4,22 @@ Common errors when building or running vLLM v0.24.0 on Windows.
 
 ## Runtime errors
 
+### Wheel SHA-256 shows a blank `Actual:` value
+
+This was issue #8. The old batch installer parsed `Get-FileHash` through a
+`for /f` command substitution; on some Windows configurations the command
+succeeded but its stdout was not captured, leaving the digest blank and
+rejecting a valid wheel.
+
+Pull the latest repository and rerun `install.bat`. Hashing now runs through
+`verify_artifact.py`, reports size and SHA-256 directly, and replaces stale or
+truncated wheels automatically. The current wheel is exactly 319,115,748 bytes
+with SHA-256:
+
+```text
+A3C324281E5BE9D8FEAF0BE50B50DCE08F3FCDE56E3F74129A128D3B1A49645B
+```
+
 ### `Failed to find Python libs` / `Python.h not found`
 
 Triton compiles a small CUDA driver helper the first time some kernels are
@@ -21,7 +37,7 @@ This is not a model architecture problem, even if vLLM wraps it as
 Fix: pull the latest repo and run either `launch.bat` or `install.bat`.
 Both paths now repair an existing portable Python 3.13 install by
 copying `Include\Python.h` and `libs\python313.lib` from the Python
-3.13.11 NuGet package. If your `python\` directory is from an older
+3.13.14 NuGet package. If your `python\` directory is from an older
 major/minor Python version, delete `python\` and rerun `install.bat`.
 
 ### `FAILED: Triton CUDA runtime check failed.`
@@ -51,7 +67,7 @@ force-reinstall the wheel currently attached to `v0.24.0-win-cu128`. The
 corrected wheel SHA256 is:
 
 ```text
-4A76CDE2F36689A76A6F8AB7C4EE9B4C47AEFC194479C085619F9072C563B7DA
+A3C324281E5BE9D8FEAF0BE50B50DCE08F3FCDE56E3F74129A128D3B1A49645B
 ```
 
 Verify the repaired import with:

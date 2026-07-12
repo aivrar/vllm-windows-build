@@ -9,6 +9,8 @@ import io
 import os
 import sys
 import zipfile
+from collections import Counter
+from email.parser import BytesParser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -46,10 +48,23 @@ REQUIRED_FILES = [
     "LICENSE",
 ]
 REQUIRED_ARCHIVE_FILES = {
+    "vllm/vllm_flash_attn/layers/__init__.py",
     "vllm/vllm_flash_attn/layers/rotary.py",
+    "vllm/vllm_flash_attn/ops/__init__.py",
+    "vllm/vllm_flash_attn/ops/triton/__init__.py",
     "vllm/vllm_flash_attn/ops/triton/rotary.py",
     "vllm/vllm_flash_attn/cute/__init__.py",
     "vllm/vllm_flash_attn/cute/interface.py",
+}
+
+REQUIRED_NONEMPTY_FILES = {
+    "vllm/_C_stable_libtorch.pyd",
+    "vllm/_moe_C_stable_libtorch.pyd",
+    "vllm/_rust_tool_parser.pyd",
+    "vllm/cumem_allocator.pyd",
+    "vllm/spinloop.pyd",
+    "vllm/vllm_flash_attn/_vllm_fa2_C.pyd",
+    "vllm/vllm-rs.exe",
 }
 
 
@@ -144,11 +159,88 @@ def rel(path: Path) -> str:
     return path.relative_to(SRC).as_posix()
 
 
+def validate_source() -> list[str]:
+    errors: list[str] = []
+    for name in REQUIRED_FILES:
+        path = SRC / name
+        if not path.exists():
+            errors.append(f"missing required path: {path}")
+        elif path.is_dir() and not any(item.is_file() for item in path.rglob("*")):
+            errors.append(f"required directory is empty: {path}")
+    for name in REQUIRED_NONEMPTY_FILES:
+        path = SRC / name
+        if path.is_file() and path.stat().st_size == 0:
+            errors.append(f"required binary is empty: {path}")
+
+    metadata_path = SRC / "vllm.egg-info" / "PKG-INFO"
+    if metadata_path.is_file():
+        metadata = BytesParser().parsebytes(metadata_path.read_bytes())
+        if metadata.get("Name", "").lower() != DIST_NAME:
+            errors.append(f"metadata Name is {metadata.get('Name')!r}, expected {DIST_NAME!r}")
+        if metadata.get("Version") != VERSION:
+            errors.append(
+                f"metadata Version is {metadata.get('Version')!r}, expected {VERSION!r}"
+            )
+    return errors
+
+
+def validate_wheel(path: Path) -> None:
+    with zipfile.ZipFile(path) as wheel:
+        bad_member = wheel.testzip()
+        if bad_member:
+            raise ValueError(f"ZIP CRC check failed: {bad_member}")
+
+        names = wheel.namelist()
+        duplicates = [name for name, count in Counter(names).items() if count > 1]
+        if duplicates:
+            raise ValueError(f"duplicate archive members: {sorted(duplicates)}")
+
+        missing = REQUIRED_ARCHIVE_FILES - set(names)
+        if missing:
+            raise ValueError(f"missing required wheel payloads: {sorted(missing)}")
+
+        cute_files = [
+            name
+            for name in names
+            if name.startswith("vllm/vllm_flash_attn/cute/") and name.endswith(".py")
+        ]
+        if len(cute_files) < 40:
+            raise ValueError(f"incomplete CuteDSL payload: {len(cute_files)} files")
+        for name in cute_files:
+            data = wheel.read(name).replace(b"vllm.vllm_flash_attn.cute", b"")
+            if b"flash_attn.cute" in data:
+                raise ValueError(f"unrewritten CuteDSL import: {name}")
+
+        metadata_name = f"{DIST_INFO}/METADATA"
+        metadata = BytesParser().parsebytes(wheel.read(metadata_name))
+        if metadata.get("Name", "").lower() != DIST_NAME:
+            raise ValueError(f"wheel metadata has invalid Name: {metadata.get('Name')!r}")
+        if metadata.get("Version") != VERSION:
+            raise ValueError(f"wheel metadata has invalid Version: {metadata.get('Version')!r}")
+
+        record_name = f"{DIST_INFO}/RECORD"
+        rows = {
+            row[0]: (row[1], row[2])
+            for row in csv.reader(io.StringIO(wheel.read(record_name).decode("utf-8")))
+        }
+        if set(rows) != set(names):
+            raise ValueError("RECORD does not cover every archive member")
+        for name in names:
+            file_digest, size = rows[name]
+            if name == record_name:
+                if file_digest or size:
+                    raise ValueError("RECORD must not hash itself")
+                continue
+            data = wheel.read(name)
+            if file_digest != digest(data) or size != str(len(data)):
+                raise ValueError(f"invalid RECORD entry: {name}")
+
+
 def main() -> int:
-    missing = [name for name in REQUIRED_FILES if not (SRC / name).exists()]
-    if missing:
-        for name in missing:
-            print(f"ERROR: missing required file: {SRC / name}", file=sys.stderr)
+    source_errors = validate_source()
+    if source_errors:
+        for error in source_errors:
+            print(f"ERROR: {error}", file=sys.stderr)
         return 1
 
     entries = archive_entries()
@@ -195,10 +287,18 @@ def main() -> int:
         writer.writerow([f"{DIST_INFO}/RECORD", "", ""])
         zout.writestr(f"{DIST_INFO}/RECORD", record.getvalue().encode("utf-8"))
 
+    try:
+        validate_wheel(WHEEL)
+    except (OSError, KeyError, ValueError, zipfile.BadZipFile) as exc:
+        print(f"ERROR: assembled wheel validation failed: {exc}", file=sys.stderr)
+        WHEEL.unlink(missing_ok=True)
+        return 1
+
     print(f"package files : {len(entries)}")
     print(f"flash-attn src: {FLASH_ATTN_SRC}")
     print(f"wheel         : {WHEEL}")
     print(f"size          : {WHEEL.stat().st_size / 1e6:.1f} MB")
+    print("validation    : passed")
     return 0
 
 

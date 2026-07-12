@@ -1,31 +1,48 @@
 @echo off
-setlocal enabledelayedexpansion
+setlocal DisableDelayedExpansion
 cd /d "%~dp0"
 
 echo.
 echo  ============================================================
 echo          vLLM v0.24.0 Windows Installer
-echo     Portable Python 3.13.11 + PyTorch 2.11.0 (cu128) + vLLM 0.24.0
+echo     Portable Python 3.13.14 + PyTorch 2.11.0 (cu128) + vLLM 0.24.0
 echo  ============================================================
 echo.
 
 REM ============================================================
 REM  Version Configuration
 REM ============================================================
-set "PYTHON_VERSION=3.13.11"
-set "PYTHON_URL=https://www.python.org/ftp/python/3.13.11/python-3.13.11-embed-amd64.zip"
-set "PYTHON_DEV_URL=https://www.nuget.org/api/v2/package/python/3.13.11"
+set "PYTHON_VERSION=3.13.14"
+set "PYTHON_URL=https://www.python.org/ftp/python/3.13.14/python-3.13.14-embed-amd64.zip"
+set "PYTHON_SHA256=90B4E5B9898B72D744650524BFF92377C367F44BD5FBD09E3148656C080AD907"
+set "PYTHON_SIZE=10964839"
+set "PYTHON_DEV_URL=https://www.nuget.org/api/v2/package/python/3.13.14"
+set "PYTHON_DEV_SHA256=9AC15CFA6CAB1115C83D48F2AF55C554EFA4D1BB044BBC4AB1C9D17AD426E16C"
+set "PYTHON_DEV_SIZE=14345376"
 set "PYTHON_PTH_FILE=python313._pth"
 set "PYTHON_PTH_ZIP=python313.zip"
 set "PYTHON_LIB_NAME=python313.lib"
 set "TRITON_NVIDIA_DIR=%~dp0python\Lib\site-packages\triton\backends\nvidia"
 set "GETPIP_URL=https://bootstrap.pypa.io/get-pip.py"
+set "GETPIP_SHA256=A341E1A43E38001C551A1508A73FF23636A11970B61D901D9A1CAD2A18F57055"
+set "GETPIP_SIZE=2226848"
 set "TORCH_INDEX=https://download.pytorch.org/whl/cu128"
 
 REM Pre-built vLLM wheel (auto-downloaded into dist-v8\ if not present locally)
 set "WHEEL_NAME=vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl"
 set "WHEEL_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.24.0-win-cu128/vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl"
-set "WHEEL_SHA256=4A76CDE2F36689A76A6F8AB7C4EE9B4C47AEFC194479C085619F9072C563B7DA"
+set "WHEEL_SHA256=A3C324281E5BE9D8FEAF0BE50B50DCE08F3FCDE56E3F74129A128D3B1A49645B"
+set "WHEEL_SIZE=319115748"
+set "WHEEL_FILE=%~dp0dist-v8\%WHEEL_NAME%"
+set "WHEEL_PART=%~dp0dist-v8\%WHEEL_NAME%.part"
+
+REM Pure-Python Multi-TurboQuant wheel built from commit e2b59ee474132999c2b42d5c96bfc48fcaf850dc.
+set "MTQ_NAME=multi_turboquant-0.1.0-py3-none-any.whl"
+set "MTQ_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.24.0-win-cu128/multi_turboquant-0.1.0-py3-none-any.whl"
+set "MTQ_SHA256=5B310E05904B588539D9A8E3374DFA6C160F025F9C2099BA5C7877C79B2FA149"
+set "MTQ_SIZE=136429"
+set "MTQ_FILE=%~dp0dist-v8\%MTQ_NAME%"
+set "MTQ_PART=%~dp0dist-v8\%MTQ_NAME%.part"
 
 set "STAGES_TOTAL=5"
 if not defined CUDA_DEVICE_ORDER set "CUDA_DEVICE_ORDER=PCI_BUS_ID"
@@ -44,7 +61,7 @@ REM ============================================================
 echo [1/%STAGES_TOTAL%] Python %PYTHON_VERSION% embedded...
 if exist "%~dp0python\python.exe" (
     "%~dp0python\python.exe" -c "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 13) else 1)" >nul 2>nul
-    if !ERRORLEVEL! NEQ 0 (
+    if errorlevel 1 (
         echo          FAILED: Existing python\ is not Python 3.13.
         echo          Delete python\ and rerun install.bat to install Python %PYTHON_VERSION%.
         goto :fail
@@ -54,10 +71,16 @@ if exist "%~dp0python\python.exe" (
 )
 echo          Downloading from python.org...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "$ErrorActionPreference = 'Stop';" ^
     "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;" ^
     "$ProgressPreference = 'SilentlyContinue';" ^
-    "Invoke-WebRequest -Uri '%PYTHON_URL%' -OutFile '%TEMP%\vllm-python-embed.zip'"
-if !ERRORLEVEL! NEQ 0 (
+    "$path = Join-Path $env:TEMP 'vllm-python-embed.zip';" ^
+    "Remove-Item $path -Force -ErrorAction SilentlyContinue;" ^
+    "Invoke-WebRequest -Uri '%PYTHON_URL%' -OutFile $path;" ^
+    "$item = Get-Item -LiteralPath $path; $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash;" ^
+    "Write-Host ('         SHA256: ' + $hash);" ^
+    "if ($item.Length -ne %PYTHON_SIZE% -or $hash -ne '%PYTHON_SHA256%') { throw 'Python archive integrity check failed' }"
+if errorlevel 1 (
     echo          FAILED: Could not download Python %PYTHON_VERSION%
     echo          URL: %PYTHON_URL%
     goto :fail
@@ -65,8 +88,8 @@ if !ERRORLEVEL! NEQ 0 (
 echo          Extracting to python\ ...
 if not exist "%~dp0python" mkdir "%~dp0python"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-    "Expand-Archive -Path '%TEMP%\vllm-python-embed.zip' -DestinationPath '%~dp0python' -Force"
-if !ERRORLEVEL! NEQ 0 (
+    "$ErrorActionPreference = 'Stop'; Expand-Archive -LiteralPath '%TEMP%\vllm-python-embed.zip' -DestinationPath '%~dp0python' -Force"
+if errorlevel 1 (
     echo          FAILED: Could not extract Python archive
     goto :fail
 )
@@ -87,6 +110,7 @@ if exist "%~dp0python\Include\Python.h" if exist "%~dp0python\libs\%PYTHON_LIB_N
 )
 echo          Downloading Python headers/libs from NuGet...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "$ErrorActionPreference = 'Stop';" ^
     "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;" ^
     "$ProgressPreference = 'SilentlyContinue';" ^
     "$pkg = Join-Path $env:TEMP 'vllm-python-dev.nupkg';" ^
@@ -95,11 +119,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "Remove-Item $pkg, $zip -Force -ErrorAction SilentlyContinue;" ^
     "Remove-Item $out -Recurse -Force -ErrorAction SilentlyContinue;" ^
     "Invoke-WebRequest -Uri '%PYTHON_DEV_URL%' -OutFile $pkg;" ^
+    "$item = Get-Item -LiteralPath $pkg; $hash = (Get-FileHash -LiteralPath $pkg -Algorithm SHA256).Hash;" ^
+    "Write-Host ('         SHA256: ' + $hash);" ^
+    "if ($item.Length -ne %PYTHON_DEV_SIZE% -or $hash -ne '%PYTHON_DEV_SHA256%') { throw 'Python development package integrity check failed' };" ^
     "Copy-Item $pkg $zip -Force;" ^
     "Expand-Archive -Path $zip -DestinationPath $out -Force;" ^
-    "Copy-Item -Path (Join-Path $out 'tools\include') -Destination '%~dp0python\Include' -Recurse -Force;" ^
-    "Copy-Item -Path (Join-Path $out 'tools\libs') -Destination '%~dp0python\libs' -Recurse -Force"
-if !ERRORLEVEL! NEQ 0 (
+    "New-Item -ItemType Directory -Force -Path '%~dp0python\Include', '%~dp0python\libs' | Out-Null;" ^
+    "Copy-Item -Path (Join-Path $out 'tools\include\*') -Destination '%~dp0python\Include' -Recurse -Force;" ^
+    "Copy-Item -Path (Join-Path $out 'tools\libs\*') -Destination '%~dp0python\libs' -Recurse -Force"
+if errorlevel 1 (
     echo          FAILED: Could not install Python headers/libs.
     goto :fail
 )
@@ -124,6 +152,7 @@ echo          Configuring %PYTHON_PTH_FILE%...
 (
     echo %PYTHON_PTH_ZIP%
     echo .
+    echo ..
     echo Lib
     echo Lib\site-packages
     echo DLLs
@@ -142,16 +171,22 @@ if exist "%~dp0python\Scripts\pip.exe" (
 REM Download and run get-pip.py
 echo          Downloading get-pip.py...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "$ErrorActionPreference = 'Stop';" ^
     "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;" ^
     "$ProgressPreference = 'SilentlyContinue';" ^
-    "Invoke-WebRequest -Uri '%GETPIP_URL%' -OutFile '%TEMP%\get-pip.py'"
-if !ERRORLEVEL! NEQ 0 (
+    "$path = Join-Path $env:TEMP 'get-pip.py';" ^
+    "Remove-Item $path -Force -ErrorAction SilentlyContinue;" ^
+    "Invoke-WebRequest -Uri '%GETPIP_URL%' -OutFile $path;" ^
+    "$item = Get-Item -LiteralPath $path; $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash;" ^
+    "Write-Host ('         SHA256: ' + $hash);" ^
+    "if ($item.Length -ne %GETPIP_SIZE% -or $hash -ne '%GETPIP_SHA256%') { throw 'get-pip.py integrity check failed' }"
+if errorlevel 1 (
     echo          FAILED: Could not download get-pip.py
     goto :fail
 )
 echo          Installing pip...
 "%~dp0python\python.exe" "%TEMP%\get-pip.py" --no-warn-script-location
-if !ERRORLEVEL! NEQ 0 (
+if errorlevel 1 (
     echo          FAILED: pip installation error
     goto :fail
 )
@@ -168,8 +203,8 @@ REM  STAGE 3: Install PyTorch 2.11.0+cu128 + triton-windows
 REM ============================================================
 echo [3/%STAGES_TOTAL%] PyTorch 2.11.0+cu128 + triton-windows (~2.5 GB download)...
 if exist "%~dp0python\.torch-installed" (
-    "%~dp0python\python.exe" -c "import torch, triton" >nul 2>nul
-    if !ERRORLEVEL! EQU 0 (
+    "%~dp0python\python.exe" -c "import torch, triton; assert torch.__version__.startswith('2.11.0'); assert triton.__version__.startswith('3.6.0')" >nul 2>nul
+    if not errorlevel 1 (
         echo          SKIP - already installed ^(delete python\.torch-installed to force^)
         goto :stage4
     )
@@ -178,13 +213,13 @@ if exist "%~dp0python\.torch-installed" (
 )
 echo          Installing PyTorch 2.11.0 from pytorch.org...
 "%~dp0python\python.exe" -m pip install torch==2.11.0 torchaudio==2.11.0 torchvision==0.26.0 --index-url %TORCH_INDEX% --no-warn-script-location
-if !ERRORLEVEL! NEQ 0 (
+if errorlevel 1 (
     echo          FAILED: PyTorch installation error - check output above
     goto :fail
 )
 echo          Installing triton-windows 3.6.0...
 "%~dp0python\python.exe" -m pip install "triton-windows==3.6.0.post26" --no-warn-script-location
-if !ERRORLEVEL! NEQ 0 (
+if errorlevel 1 (
     echo          FAILED: triton-windows installation error
     goto :fail
 )
@@ -197,80 +232,138 @@ REM  STAGE 4: Install vLLM Wheel + Dependencies
 REM ============================================================
 echo [4/%STAGES_TOTAL%] vLLM wheel + dependencies...
 if exist "%~dp0python\.vllm-installed" (
-    "%~dp0python\python.exe" -c "import vllm, llguidance, xgrammar; from vllm.vllm_flash_attn.layers.rotary import apply_rotary_emb; assert vllm.__version__ == '0.24.0+cu128'" >nul 2>nul
-    if !ERRORLEVEL! EQU 0 (
+    findstr /I /X /C:"WHEEL_SHA256=%WHEEL_SHA256%" "%~dp0python\.vllm-installed" >nul 2>nul
+    if not errorlevel 1 findstr /I /X /C:"MTQ_SHA256=%MTQ_SHA256%" "%~dp0python\.vllm-installed" >nul 2>nul
+    if not errorlevel 1 "%~dp0python\python.exe" "%~dp0verify_install.py" --root "%~dp0." >nul 2>nul
+    if not errorlevel 1 (
         echo          SKIP - already installed ^(delete python\.vllm-installed to force^)
         goto :stage5
     )
-    echo          Existing marker found, but vLLM dependencies import failed - reinstalling...
+    echo          Existing install is stale or incomplete - repairing...
     del "%~dp0python\.vllm-installed" 2>nul
 )
 
 REM Only accept the current fixed v0.24.0 wheel. Older local wheels are not
 REM compatible substitutes and the original dist-v7 artifact omitted required
 REM FlashAttention Python modules.
-set "WHEEL_FILE="
-for %%f in ("%~dp0dist-v8\%WHEEL_NAME%") do if exist "%%~f" set "WHEEL_FILE=%%~f"
-REM No local wheel found - auto-download the latest (cu128) from GitHub Releases
-if "!WHEEL_FILE!"=="" (
+if not exist "%~dp0verify_artifact.py" (
+    echo          FAILED: verify_artifact.py is missing next to install.bat.
+    goto :fail
+)
+
+if exist "%WHEEL_FILE%" (
+    echo          Checking local wheel...
+    "%~dp0python\python.exe" "%~dp0verify_artifact.py" "%WHEEL_FILE%" "%WHEEL_SHA256%" %WHEEL_SIZE%
+    if errorlevel 1 (
+        echo          Local wheel is stale or incomplete - downloading a clean copy.
+        del /F /Q "%WHEEL_FILE%" 2>nul
+    )
+)
+
+REM Download to a temporary name so an interrupted request cannot look complete.
+if not exist "%WHEEL_FILE%" (
     echo          No local wheel found - downloading from GitHub Releases ^(~319 MB^)...
     if not exist "%~dp0dist-v8" mkdir "%~dp0dist-v8"
+    del /F /Q "%WHEEL_PART%" 2>nul
     powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+        "$ErrorActionPreference = 'Stop';" ^
         "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;" ^
         "$ProgressPreference = 'SilentlyContinue';" ^
-        "Invoke-WebRequest -Uri '%WHEEL_URL%' -OutFile '%~dp0dist-v8\%WHEEL_NAME%'"
-    if !ERRORLEVEL! NEQ 0 (
+        "Invoke-WebRequest -Uri '%WHEEL_URL%' -OutFile '%WHEEL_PART%'"
+    if errorlevel 1 (
         echo          FAILED: Could not download the vLLM wheel.
         echo          URL: %WHEEL_URL%
         echo          Download it manually and place it in: %~dp0dist-v8\
+        del /F /Q "%WHEEL_PART%" 2>nul
         goto :fail
     )
-    REM Sanity check: the real wheel is ~319 MB; reject a truncated/HTML error page
-    for %%f in ("%~dp0dist-v8\%WHEEL_NAME%") do set "WHEEL_SIZE=%%~zf"
-    if !WHEEL_SIZE! LSS 100000000 (
-        echo          FAILED: Downloaded wheel is only !WHEEL_SIZE! bytes ^(expected ~319 MB^).
-        echo          The download was likely incomplete or blocked. Delete it and retry,
-        echo          or download manually from:
-        echo            https://github.com/aivrar/vllm-windows-build/releases
-        del "%~dp0dist-v8\%WHEEL_NAME%" 2>nul
+
+    "%~dp0python\python.exe" "%~dp0verify_artifact.py" "%WHEEL_PART%" "%WHEEL_SHA256%" %WHEEL_SIZE%
+    if errorlevel 1 (
+        echo          FAILED: Downloaded wheel failed its integrity check.
+        del /F /Q "%WHEEL_PART%" 2>nul
         goto :fail
     )
-    set "WHEEL_FILE=%~dp0dist-v8\%WHEEL_NAME%"
-    echo          Downloaded OK ^(!WHEEL_SIZE! bytes^)
+
+    move /Y "%WHEEL_PART%" "%WHEEL_FILE%" >nul
+    if errorlevel 1 (
+        echo          FAILED: Could not move the verified wheel into dist-v8\.
+        goto :fail
+    )
 )
-echo          Found wheel: !WHEEL_FILE!
-set "WHEEL_HASH="
-for /f "usebackq delims=" %%h in (`powershell -NoProfile -Command "(Get-FileHash -LiteralPath '!WHEEL_FILE!' -Algorithm SHA256).Hash"`) do set "WHEEL_HASH=%%h"
-if /I not "!WHEEL_HASH!"=="%WHEEL_SHA256%" (
-    echo          FAILED: Wheel SHA256 does not match the fixed release artifact.
-    echo          Expected: %WHEEL_SHA256%
-    echo          Actual:   !WHEEL_HASH!
-    echo          Delete the stale or incomplete wheel and rerun install.bat.
+
+REM Verify again immediately before pip consumes the final file.
+"%~dp0python\python.exe" "%~dp0verify_artifact.py" "%WHEEL_FILE%" "%WHEEL_SHA256%" %WHEEL_SIZE%
+if errorlevel 1 (
+    echo          FAILED: Wheel integrity check failed.
     goto :fail
 )
 echo          SHA256 verified
 echo          Installing corrected vLLM wheel...
-"%~dp0python\python.exe" -m pip install "!WHEEL_FILE!" --force-reinstall --no-deps --no-warn-script-location
-if !ERRORLEVEL! NEQ 0 (
+"%~dp0python\python.exe" -m pip install "%WHEEL_FILE%" --force-reinstall --no-deps --no-warn-script-location
+if errorlevel 1 (
     echo          FAILED: vLLM installation error - check output above
     goto :fail
 )
 echo          Resolving vLLM dependencies...
-"%~dp0python\python.exe" -m pip install "!WHEEL_FILE!" --no-warn-script-location
-if !ERRORLEVEL! NEQ 0 (
+"%~dp0python\python.exe" -m pip install "%WHEEL_FILE%" --no-warn-script-location
+if errorlevel 1 (
     echo          FAILED: vLLM dependency installation error - check output above
     goto :fail
 )
+
+if exist "%MTQ_FILE%" (
+    echo          Checking local Multi-TurboQuant wheel...
+    "%~dp0python\python.exe" "%~dp0verify_artifact.py" "%MTQ_FILE%" "%MTQ_SHA256%" %MTQ_SIZE%
+    if errorlevel 1 (
+        echo          Local Multi-TurboQuant wheel is stale - downloading a clean copy.
+        del /F /Q "%MTQ_FILE%" 2>nul
+    )
+)
+if not exist "%MTQ_FILE%" (
+    echo          Downloading pinned Multi-TurboQuant wheel...
+    del /F /Q "%MTQ_PART%" 2>nul
+    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+        "$ErrorActionPreference = 'Stop';" ^
+        "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;" ^
+        "$ProgressPreference = 'SilentlyContinue';" ^
+        "Invoke-WebRequest -Uri '%MTQ_URL%' -OutFile '%MTQ_PART%'"
+    if errorlevel 1 (
+        echo          FAILED: Could not download the Multi-TurboQuant wheel.
+        del /F /Q "%MTQ_PART%" 2>nul
+        goto :fail
+    )
+    "%~dp0python\python.exe" "%~dp0verify_artifact.py" "%MTQ_PART%" "%MTQ_SHA256%" %MTQ_SIZE%
+    if errorlevel 1 (
+        echo          FAILED: Multi-TurboQuant wheel failed its integrity check.
+        del /F /Q "%MTQ_PART%" 2>nul
+        goto :fail
+    )
+    move /Y "%MTQ_PART%" "%MTQ_FILE%" >nul
+    if errorlevel 1 (
+        echo          FAILED: Could not move the verified Multi-TurboQuant wheel.
+        goto :fail
+    )
+)
+"%~dp0python\python.exe" "%~dp0verify_artifact.py" "%MTQ_FILE%" "%MTQ_SHA256%" %MTQ_SIZE%
+if errorlevel 1 goto :fail
+echo          Installing pinned Multi-TurboQuant...
+"%~dp0python\python.exe" -m pip install "%MTQ_FILE%" --force-reinstall --no-deps --no-warn-script-location
+if errorlevel 1 (
+    echo          FAILED: Multi-TurboQuant installation error.
+    goto :fail
+)
+
 REM llguidance and xgrammar (structured-output backends) are gated in vLLM's
 REM requirements on platform_machine=="x86_64", but Windows reports "AMD64",
 REM so pip silently skips them and vLLM then fails to import. Install them
 REM explicitly here.
 echo          Installing structured-output backends (llguidance, xgrammar)...
 "%~dp0python\python.exe" -m pip install "llguidance>=1.7.0,<1.8.0" "xgrammar>=0.2.0,<1.0.0" --no-warn-script-location
-if !ERRORLEVEL! NEQ 0 (
-    echo          WARNING: llguidance/xgrammar install failed - guided decoding may be unavailable
+if errorlevel 1 (
+    echo          FAILED: llguidance/xgrammar installation error.
+    goto :fail
 )
-echo %DATE% %TIME% > "%~dp0python\.vllm-installed"
 echo          OK
 
 :stage5
@@ -284,19 +377,15 @@ if exist "%TRITON_NVIDIA_DIR%\bin\ptxas.exe" (
     set "PATH=%TRITON_NVIDIA_DIR%\bin;%PATH%"
     echo          Using bundled Triton CUDA toolkit: %TRITON_NVIDIA_DIR%
 )
-"%~dp0python\python.exe" -c "import vllm; from vllm.vllm_flash_attn.layers.rotary import apply_rotary_emb; assert vllm.__version__ == '0.24.0+cu128'; print(f'  vLLM {vllm.__version__} and FlashAttention rotary loaded successfully')"
-if !ERRORLEVEL! NEQ 0 (
-    echo          FAILED: vLLM import failed - check the install output above.
-    goto :fail
-)
-echo          Checking Triton CUDA runtime...
-"%~dp0python\python.exe" -c "import triton.runtime.driver as d; drv=getattr(d, 'active', None); drv=drv if drv is not None else d.driver.active; target=drv.get_current_target(); print(f'  Triton CUDA target: {target.backend} {target.arch}')"
-if !ERRORLEVEL! NEQ 0 (
-    echo          FAILED: Triton CUDA runtime check failed.
+"%~dp0python\python.exe" "%~dp0verify_install.py" --root "%~dp0." --cuda
+if errorlevel 1 (
+    echo          FAILED: vLLM runtime verification failed.
     echo          Make sure an NVIDIA driver is installed and rerun install.bat.
     echo          If you see Python.h or python313.lib errors, delete python\ and rerun install.bat.
     goto :fail
 )
+> "%~dp0python\.vllm-installed" echo WHEEL_SHA256=%WHEEL_SHA256%
+>> "%~dp0python\.vllm-installed" echo MTQ_SHA256=%MTQ_SHA256%
 echo          OK
 
 echo.

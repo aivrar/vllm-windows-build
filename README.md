@@ -77,6 +77,14 @@ and Multi-TurboQuant integration.
   starting the server, and both scripts pin Triton to its bundled CUDA
   helper toolkit when present. `launch.bat` also no longer sets the
   removed `VLLM_ATTENTION_BACKEND` environment variable.
+- **Installer integrity and repair hardened** - Python, NuGet, and bootstrap
+  downloads plus both project release wheels are pinned by exact size and SHA-256.
+  Wheels download to a temporary file, stale/truncated local wheels are
+  replaced automatically, and the install marker records the verified wheel
+  hash only after CUDA, Rust, Qwen3.5/Qwen3-VL, and FlashAttention checks pass.
+- **Concurrent launcher requests fixed** - one dispatcher now owns
+  `engine.step()` and routes outputs by request ID. Streaming and
+  non-streaming requests can no longer consume each other's engine output.
 
 ### What's new in v0.23.0
 
@@ -196,7 +204,12 @@ Full benchmarks → [docs/benchmarks.md](docs/benchmarks.md)
 
 Download
 **[vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.24.0-win-cu128)**
-from the Releases page, then:
+and `multi_turboquant-0.1.0-py3-none-any.whl` from the Releases page, then:
+
+| Artifact | SHA-256 |
+|---|---|
+| `vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl` | `A3C324281E5BE9D8FEAF0BE50B50DCE08F3FCDE56E3F74129A128D3B1A49645B` |
+| `multi_turboquant-0.1.0-py3-none-any.whl` | `5B310E05904B588539D9A8E3374DFA6C160F025F9C2099BA5C7877C79B2FA149` |
 
 ```batch
 :: Create a Python 3.13 venv
@@ -218,7 +231,7 @@ pip install vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
 pip install "llguidance>=1.7.0,<1.8.0" "xgrammar>=0.2.0,<1.0.0"
 
 :: Install Multi-TurboQuant for the 6 KV cache compression methods
-pip install git+https://github.com/aivrar/multi-turboquant.git
+pip install multi_turboquant-0.1.0-py3-none-any.whl
 ```
 
 Or just run **`install.bat`** for a fully self-contained, one-click portable
@@ -227,9 +240,12 @@ itself (no manual download or folder creation needed). If you already have the
 `.whl` locally, drop it in `dist-v8\` next to `install.bat` and the script uses
 that instead of downloading.
 
-Rerunning `install.bat` repairs an existing portable Python 3.13 install if
-Triton cannot find `Include\Python.h` or `libs\python313.lib`; `launch.bat`
-checks the same files before it starts the server.
+Fresh installs use Python 3.13.14. Rerunning `install.bat` repairs an existing
+portable Python 3.13 install if its dependencies, native/Rust payloads,
+FlashAttention modules, marker hash, headers, or import checks are incomplete;
+`launch.bat` checks the same release contract before it starts the server.
+The installer also downloads the pinned `multi_turboquant-0.1.0` release wheel;
+Git is not required for the portable path.
 
 ### Option B — Build from source
 
@@ -400,7 +416,7 @@ All changes are guarded by `#ifdef _MSC_VER`, `sys.platform == "win32"`,
 | VRAM | 12 GB | 24 GB |
 | RAM | 16 GB | 32+ GB |
 | CUDA driver | R570+ (Blackwell needs R570+) | latest |
-| Python | 3.13.x | 3.13.11 |
+| Python | 3.13.x | 3.13.14 |
 | Compiler (build only) | VS 2022 Community + Win 10 SDK | Same |
 | CUDA Toolkit (build only) | 12.8 (first toolkit with sm_120) | 12.8 |
 
@@ -418,7 +434,7 @@ fail. See [docs/troubleshooting.md → OSError 1455](docs/troubleshooting.md#ose
 - Windows 10 Pro 22H2
 - Visual Studio 2022 Community 17.13 (MSVC 14.43)
 - CUDA Toolkit 12.8
-- Python 3.13.11
+- Python 3.13.14
 - RTX 50-series (Blackwell sm_120): kernels compiled & verified via `cuobjdump`; runtime confirmation pending community hardware
 
 ### v0.21.0 smoke test (RTX 3090, Qwen3-14B-abliterated-AWQ-4bit)

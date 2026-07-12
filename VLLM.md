@@ -9,7 +9,7 @@ see [docs/](docs/).
 install.bat
 ```
 
-This downloads embedded Python 3.13.11, installs PyTorch 2.11.0+cu128,
+This downloads embedded Python 3.13.14, installs PyTorch 2.11.0+cu128,
 triton-windows, structured-output backends, Multi-TurboQuant, and the
 v0.24.0 wheel. It is self-contained in this directory.
 
@@ -107,6 +107,6 @@ Expected version:
 - vLLM 0.24.0+cu128
 - PyTorch 2.11.0+cu128
 - Triton 3.6.0.post26 via triton-windows
-- Python 3.13.11
+- Python 3.13.14
 - CUDA Toolkit 12.8 for builds
 - Windows 10/11
