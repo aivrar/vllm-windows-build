@@ -16,6 +16,35 @@ requests `dtype=np.int64` explicitly. This failure is separate from the
 original Python/Triton error in issue #10: changing to Python 3.10, 3.11, or
 3.12 alone is not a proven fix for this Windows integer-width bug.
 
+### A small model generates at only `0.01`-`0.3` tokens/s
+
+Check the startup line beginning with `non-default arg`. If it contains
+`kv_cache_dtype: 'isoquant4'` (or another local Multi-TurboQuant dtype), the
+engine is using the current unfused PyTorch encode/decode fallback. That path
+reduces KV-cache memory but is intentionally 30-300× slower than the normal
+`auto` baseline. It is for offline or memory-constrained workloads, not a
+Hello World performance test.
+
+Use the fast baseline first:
+
+```python
+llm = LLM(
+    model=r"E:\models\Qwen2.5-0.5B-Instruct",
+    dtype="float16",
+    kv_cache_dtype="auto",
+    max_model_len=512,
+    gpu_memory_utilization=0.5,
+)
+params = SamplingParams(temperature=0.0, max_tokens=32, seed=0)
+```
+
+Measure a second request in the same process after one-time JIT and CUDA-graph
+setup. `enforce_eager=True` can help isolate a graph/compile compatibility
+problem, but it disables those optimizations and should not be treated as the
+throughput default. In vLLM's progress display, the final `output` rate is the
+generation rate; a very low `input` rate can simply reflect the full elapsed
+request time.
+
 ### `Get-FileHash` is not recognized
 
 This was issue #9. Some Windows PowerShell environments do not expose the
@@ -142,25 +171,22 @@ error you may have an older patched build. Re-apply
 
 ### `torch.OutOfMemoryError: CUDA out of memory. ... X GiB is free` <a id="oom-with-free-gpu"></a>
 
-PyTorch's caching allocator can't satisfy a contiguous allocation even
-when the GPU has plenty of free memory. This is fragmentation.
-
-**Fix**: enable expandable segments before importing vLLM:
+PyTorch's caching allocator may be unable to satisfy an allocation even when
+the GPU appears to have free memory. On Windows, PyTorch reports
+`expandable_segments not supported on this platform`, so the commonly shared
+allocator setting does not fix this condition. Clear it if it is present:
 
 ```bat
-set PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+set PYTORCH_CUDA_ALLOC_CONF=
 ```
 
-Or in Python:
+Then lower vLLM's reservation and concurrency settings:
 
-```python
-import os
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
-import vllm  # must be after the env var
-```
-
-If you still get OOM, lower `gpu_memory_utilization` (try 0.5 first,
-then 0.4).
+1. Lower `gpu_memory_utilization` (try 0.5, then 0.4).
+2. Reduce `max_num_seqs` and `max_model_len`.
+3. Close other GPU processes and keep the Windows pagefile enabled.
+4. Use a compressed KV dtype only when its documented throughput trade-off is
+   acceptable.
 
 ### `ValueError: not enough values to unpack (expected 2, got 1)` in `torch.unique`
 

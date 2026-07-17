@@ -127,7 +127,6 @@ gap. The wiring is in place — the optimization is the next milestone.
 ```bat
 set VLLM_MODEL_PATH=E:\models\Qwen3-14B-abliterated-AWQ-4bit
 set VLLM_PYTHON=E:\vllm-windows-build\venv\Scripts\python.exe
-set PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 REM Smoke test (~30 sec)
 %VLLM_PYTHON% tests\test_v19.py

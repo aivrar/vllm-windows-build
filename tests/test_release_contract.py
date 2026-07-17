@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import re
 import unittest
 from pathlib import Path
@@ -18,6 +19,12 @@ def batch_settings(path: Path) -> dict[str, str]:
         if match:
             settings[match.group(1).upper()] = match.group(2)
     return settings
+
+
+def markdown_section(text: str, heading: str) -> str:
+    start = text.index(heading)
+    end = text.find("\n## ", start + len(heading))
+    return text[start:] if end == -1 else text[start:end]
 
 
 class ReleaseContractTests(unittest.TestCase):
@@ -81,6 +88,93 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertIn(
             "+                _NP_INT64_MIN, _NP_INT64_MAX, dtype=np.int64",
             patch,
+        )
+
+    def test_quickstarts_use_fast_reproducible_baseline(self) -> None:
+        sections = {
+            "README.md": markdown_section(
+                (ROOT / "README.md").read_text(encoding="utf-8"),
+                "## Hello world",
+            ),
+            "VLLM.md": markdown_section(
+                (ROOT / "VLLM.md").read_text(encoding="utf-8"),
+                "## Hello World",
+            ),
+            "docs/usage.md": markdown_section(
+                (ROOT / "docs" / "usage.md").read_text(encoding="utf-8"),
+                "## (A) Python embedding",
+            ),
+        }
+        for name, section in sections.items():
+            with self.subTest(name=name):
+                snippet = section.split("```python", 1)[1].split("```", 1)[0]
+                ast.parse(snippet)
+                self.assertIn('kv_cache_dtype="auto"', section)
+                self.assertNotIn('kv_cache_dtype="isoquant4"', section)
+                self.assertIn("max_tokens=32", section)
+                self.assertIn("seed=0", section)
+                self.assertNotIn("PYTORCH_CUDA_ALLOC_CONF", section)
+
+    def test_launcher_defaults_are_documented_exactly(self) -> None:
+        launcher = (ROOT / "vllm_launcher.py").read_text(encoding="utf-8")
+        usage = (ROOT / "docs" / "usage.md").read_text(encoding="utf-8")
+        expected = (
+            (
+                'parser.add_argument("--port", type=int, default=8100)',
+                "| `--port` | 8100 |",
+            ),
+            (
+                'parser.add_argument("--max-model-len", type=int, default=8192,',
+                "| `--max-model-len` | 8192 |",
+            ),
+            (
+                'parser.add_argument("--gpu-memory-utilization", '
+                "type=float, default=0.6,",
+                "| `--gpu-memory-utilization` | 0.6 |",
+            ),
+            (
+                'parser.add_argument("--gpu-id", type=int, default=None,',
+                "| `--gpu-id` | (none) |",
+            ),
+        )
+        for code_default, documented_default in expected:
+            self.assertIn(code_default, launcher)
+            self.assertIn(documented_default, usage)
+
+    def test_windows_docs_do_not_enable_unsupported_expandable_segments(
+        self,
+    ) -> None:
+        paths = (
+            ROOT / "README.md",
+            ROOT / "VLLM.md",
+            ROOT / "build.bat",
+            ROOT / "docs" / "benchmarks.md",
+            ROOT / "docs" / "install.md",
+            ROOT / "docs" / "usage.md",
+            ROOT / "tests" / "README.md",
+            ROOT / "tests" / "test_tq_real.py",
+            ROOT / "tests" / "test_tq_thorough.py",
+            ROOT / "tests" / "test_v19.py",
+        )
+        for path in paths:
+            with self.subTest(path=path.relative_to(ROOT).as_posix()):
+                text = path.read_text(encoding="utf-8")
+                self.assertNotIn(
+                    "set PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True",
+                    text,
+                )
+                self.assertNotIn(
+                    'os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", '
+                    '"expandable_segments:True")',
+                    text,
+                )
+
+        troubleshooting = (ROOT / "docs" / "troubleshooting.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            "expandable_segments not supported on this platform",
+            troubleshooting,
         )
 
 

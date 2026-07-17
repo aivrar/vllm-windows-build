@@ -50,8 +50,6 @@ PROMPTS = [
 RUNNER_SCRIPT = r'''
 import faulthandler, os, sys, json
 faulthandler.enable()
-# Required on Windows when pagefile is small or disabled.
-os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 _cuda_bin = os.environ.get(
     "CUDA_HOME",
     r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8",
@@ -72,7 +70,7 @@ llm = LLM(
     max_num_seqs=4,
     max_num_batched_tokens=512,
     gpu_memory_utilization=0.5,
-    enforce_eager=True,
+    enforce_eager=True,  # Hold graph/compile behavior constant across methods.
     trust_remote_code=True,
 )
 

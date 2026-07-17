@@ -6,6 +6,20 @@ Upstream bump from vLLM 0.23.0 to **vLLM 0.24.0**, still targeting
 Python 3.13, CUDA 12.8, PyTorch 2.11.0+cu128, and
 `TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0`.
 
+### 2026-07-17 performance quick-start correction
+
+- Changed every Hello World example to the normal `kv_cache_dtype="auto"`
+  baseline. The previous README selected `isoquant4`, whose documented
+  unfused PyTorch fallback is 30-300× slower and is intended for offline or
+  memory-constrained workloads.
+- Stopped presenting `enforce_eager=True` as a throughput default; it is now
+  documented as a graph/compile compatibility option that disables normal
+  optimizations.
+- Synchronized the usage guide with `vllm_launcher.py`'s actual defaults and
+  added slow-generation troubleshooting guidance.
+- Removed the unsupported Windows `expandable_segments` recommendation, which
+  only produced a PyTorch warning and did not repair OOM conditions.
+
 ### 2026-07-17 Windows sampling hotfix
 
 - Fixed the follow-up failure reported in issue #10:
