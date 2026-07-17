@@ -6,6 +6,17 @@ Upstream bump from vLLM 0.23.0 to **vLLM 0.24.0**, still targeting
 Python 3.13, CUDA 12.8, PyTorch 2.11.0+cu128, and
 `TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0`.
 
+### 2026-07-17 Windows sampling hotfix
+
+- Fixed the follow-up failure reported in issue #10:
+  `ValueError: low is out of bounds for int32` during request sampling.
+- Requested NumPy's explicit `int64` output when vLLM generates a seed across
+  the full signed 64-bit range. NumPy otherwise defaults to a C `long`, which
+  remains 32-bit on 64-bit Windows.
+- Added source, patch, and wheel regression guards and repacked the release
+  wheel. Final wheel SHA-256:
+  `41E930FBCF994E4FD7E5CB1585F8D277AF3FFDBA0AEE7F5DDE5822DD90E6FBA7`.
+
 ### 2026-07-12 reliability audit
 
 - Fixed issue #8 by replacing fragile PowerShell stdout hash capture with a
@@ -33,7 +44,7 @@ Python 3.13, CUDA 12.8, PyTorch 2.11.0+cu128, and
   engine output dispatch.
 - Repacked the vLLM wheel with Windows-safe process-tree shutdown and a clear
   `--uds` rejection. Final wheel SHA-256:
-  `A3C324281E5BE9D8FEAF0BE50B50DCE08F3FCDE56E3F74129A128D3B1A49645B`.
+  `41E930FBCF994E4FD7E5CB1585F8D277AF3FFDBA0AEE7F5DDE5822DD90E6FBA7`.
 
 ### 2026-07-12 legacy PowerShell bootstrap fix
 
@@ -105,7 +116,7 @@ Python 3.13, CUDA 12.8, PyTorch 2.11.0+cu128, and
 - Verified intentionally skipped paths report unavailable:
   `has_deep_gemm=False` and `has_cooperative_topk=False`.
 - Wheel SHA256:
-  `A3C324281E5BE9D8FEAF0BE50B50DCE08F3FCDE56E3F74129A128D3B1A49645B`.
+  `41E930FBCF994E4FD7E5CB1585F8D277AF3FFDBA0AEE7F5DDE5822DD90E6FBA7`.
 
 ## v0.23.0-win-cu128 - 2026-06-30
 

@@ -30,6 +30,7 @@ REQUIRED_RELEASE_FILES = REQUIRED_FLASH_ATTN_FILES | {
     "vllm/_rust_tool_parser.pyd",
     "vllm/cumem_allocator.pyd",
     "vllm/spinloop.pyd",
+    "vllm/v1/worker/gpu/sample/states.py",
     "vllm/vllm-rs.exe",
 }
 
@@ -39,6 +40,9 @@ REQUIRED_NONEMPTY_FILES = REQUIRED_RELEASE_FILES - {
     "vllm/vllm_flash_attn/ops/triton/__init__.py",
     "vllm/vllm_flash_attn/cute/__init__.py",
 }
+
+SAMPLING_STATES = "vllm/v1/worker/gpu/sample/states.py"
+INT64_SEED_FIX = b"_NP_INT64_MIN, _NP_INT64_MAX, dtype=np.int64"
 
 
 def sha256_record(data: bytes) -> str:
@@ -58,6 +62,10 @@ def validate_wheel(wheel_path: Path) -> None:
         assert not missing, f"missing release payloads: {missing}"
         for name in REQUIRED_NONEMPTY_FILES:
             assert wheel.getinfo(name).file_size > 0, f"empty release payload: {name}"
+
+        assert INT64_SEED_FIX in wheel.read(SAMPLING_STATES), (
+            "wheel is missing the Windows int64 sampling-seed fix"
+        )
 
         metadata_names = [name for name in names if name.endswith(".dist-info/METADATA")]
         assert len(metadata_names) == 1, f"expected one METADATA, found {metadata_names}"

@@ -2944,3 +2944,14 @@ index 71ade9c86..9fbfb4c5d 100644
  from torch.autograd.profiler import record_function
  
  import vllm.envs as envs
+diff --git a/vllm/v1/worker/gpu/sample/states.py b/vllm/v1/worker/gpu/sample/states.py
+index fe4dee6a6..c25fbdf5f 100644
+--- a/vllm/v1/worker/gpu/sample/states.py
++++ b/vllm/v1/worker/gpu/sample/states.py
+@@ -52,3 +52,5 @@ class SamplingStates:
+         if seed is None:
+-            seed = np.random.randint(_NP_INT64_MIN, _NP_INT64_MAX)
++            seed = np.random.randint(
++                _NP_INT64_MIN, _NP_INT64_MAX, dtype=np.int64
++            )
+         self.seeds.np[req_idx] = seed

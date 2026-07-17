@@ -4,6 +4,18 @@ Common errors when building or running vLLM v0.24.0 on Windows.
 
 ## Runtime errors
 
+### `ValueError: low is out of bounds for int32` during request sampling
+
+This was the follow-up failure in issue #10. vLLM asks NumPy for a random seed
+across the full signed 64-bit range. NumPy's legacy `randint` API defaults to a
+C `long`, which is still 32-bit on 64-bit Windows, so the lower bound was
+rejected before a request could run.
+
+Pull the latest repository and rerun `install.bat`. The patched call now
+requests `dtype=np.int64` explicitly. This failure is separate from the
+original Python/Triton error in issue #10: changing to Python 3.10, 3.11, or
+3.12 alone is not a proven fix for this Windows integer-width bug.
+
 ### `Get-FileHash` is not recognized
 
 This was issue #9. Some Windows PowerShell environments do not expose the
@@ -25,11 +37,11 @@ rejecting a valid wheel.
 
 Pull the latest repository and rerun `install.bat`. Hashing now runs through
 `verify_artifact.py`, reports size and SHA-256 directly, and replaces stale or
-truncated wheels automatically. The current wheel is exactly 319,115,748 bytes
+truncated wheels automatically. The current wheel is exactly 319,115,760 bytes
 with SHA-256:
 
 ```text
-A3C324281E5BE9D8FEAF0BE50B50DCE08F3FCDE56E3F74129A128D3B1A49645B
+41E930FBCF994E4FD7E5CB1585F8D277AF3FFDBA0AEE7F5DDE5822DD90E6FBA7
 ```
 
 ### `Failed to find Python libs` / `Python.h not found`
@@ -79,7 +91,7 @@ force-reinstall the wheel currently attached to `v0.24.0-win-cu128`. The
 corrected wheel SHA256 is:
 
 ```text
-A3C324281E5BE9D8FEAF0BE50B50DCE08F3FCDE56E3F74129A128D3B1A49645B
+41E930FBCF994E4FD7E5CB1585F8D277AF3FFDBA0AEE7F5DDE5822DD90E6FBA7
 ```
 
 Verify the repaired import with:

@@ -11,7 +11,7 @@ REM ============================================================
 REM  Check Python installation
 REM ============================================================
 set "NEEDS_INSTALL=0"
-set "EXPECTED_WHEEL_SHA256=A3C324281E5BE9D8FEAF0BE50B50DCE08F3FCDE56E3F74129A128D3B1A49645B"
+set "EXPECTED_WHEEL_SHA256=41E930FBCF994E4FD7E5CB1585F8D277AF3FFDBA0AEE7F5DDE5822DD90E6FBA7"
 set "EXPECTED_MTQ_SHA256=5B310E05904B588539D9A8E3374DFA6C160F025F9C2099BA5C7877C79B2FA149"
 if not exist "%~dp0python\python.exe" set "NEEDS_INSTALL=1"
 if not exist "%~dp0python\.torch-installed" set "NEEDS_INSTALL=1"

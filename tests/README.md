@@ -7,7 +7,8 @@ python tests/test_wheel_contents.py dist-v8/vllm-0.24.0+cu128-cp313-cp313-win_am
 ```
 
 This check includes the generated FlashAttention rotary and CuteDSL modules that
-are not stored directly in the upstream vLLM source tree.
+are not stored directly in the upstream vLLM source tree. It also rejects a
+wheel missing issue #10's explicit NumPy `int64` request-seed fix.
 
 Run the installer/hash and concurrent engine-dispatch regressions with:
 

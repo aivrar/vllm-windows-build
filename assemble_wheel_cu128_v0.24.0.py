@@ -48,6 +48,7 @@ REQUIRED_FILES = [
     "LICENSE",
 ]
 REQUIRED_ARCHIVE_FILES = {
+    "vllm/v1/worker/gpu/sample/states.py",
     "vllm/vllm_flash_attn/layers/__init__.py",
     "vllm/vllm_flash_attn/layers/rotary.py",
     "vllm/vllm_flash_attn/ops/__init__.py",
@@ -66,6 +67,9 @@ REQUIRED_NONEMPTY_FILES = {
     "vllm/vllm_flash_attn/_vllm_fa2_C.pyd",
     "vllm/vllm-rs.exe",
 }
+
+SAMPLING_STATES = "vllm/v1/worker/gpu/sample/states.py"
+INT64_SEED_FIX = b"_NP_INT64_MIN, _NP_INT64_MAX, dtype=np.int64"
 
 
 def digest(data: bytes) -> str:
@@ -172,6 +176,15 @@ def validate_source() -> list[str]:
         if path.is_file() and path.stat().st_size == 0:
             errors.append(f"required binary is empty: {path}")
 
+    sampling_states = SRC / SAMPLING_STATES
+    if not sampling_states.is_file():
+        errors.append(f"missing sampling state source: {sampling_states}")
+    elif INT64_SEED_FIX not in sampling_states.read_bytes():
+        errors.append(
+            "sampling seed generation does not request np.int64; "
+            "the wheel would fail on Windows"
+        )
+
     metadata_path = SRC / "vllm.egg-info" / "PKG-INFO"
     if metadata_path.is_file():
         metadata = BytesParser().parsebytes(metadata_path.read_bytes())
@@ -198,6 +211,9 @@ def validate_wheel(path: Path) -> None:
         missing = REQUIRED_ARCHIVE_FILES - set(names)
         if missing:
             raise ValueError(f"missing required wheel payloads: {sorted(missing)}")
+
+        if INT64_SEED_FIX not in wheel.read(SAMPLING_STATES):
+            raise ValueError("wheel is missing the Windows int64 sampling-seed fix")
 
         cute_files = [
             name
