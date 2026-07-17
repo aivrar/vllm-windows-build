@@ -26,8 +26,8 @@ see [docs/build.md](docs/build.md).
 ## Diff stats
 
 ```
-v8 patch size: ~125 KB unified diff against upstream v0.24.0.
-SHA-256: 799361D8708E8D8B2B343913C5A1FE88DA1102BDE403CEB228CB77D5FF9A0218
+v8 patch size: 125,230 bytes unified diff against upstream v0.24.0.
+SHA-256: 630ADF8A49430C44195FBDD468D02AD554F9B2936E5EC0AB34E6DFC765C142E2
 + 3 new files: vllm/v1/attention/ops/multi_turboquant_kv.py (295 lines),
   cutlass-windows.patch (69 lines),
   vllm-flash-attn-cutlass-windows.patch (69 lines)
@@ -45,6 +45,7 @@ These hunks were added on top of the v0.23.0 Windows/cu128 work:
 | Runtime Python | `vllm/model_executor/layers/sparse_attn_indexer.py` | Guard `torch.ops._C.cooperative_topk` so sparse attention falls back when the optional op is absent |
 | Runtime Python | `vllm/platforms/cuda.py` | Suppress the expected missing `_qutlass_C` warning on Windows while preserving warnings for real import failures |
 | Runtime Python | `vllm/utils/system_utils.py`, `vllm/entrypoints/openai/api_server.py` | Terminate process trees through psutil instead of unavailable `SIGKILL`; reject `--uds` clearly when Windows Python has no `AF_UNIX` |
+| Runtime Python | `vllm/v1/worker/gpu/sample/states.py` | Request explicit NumPy `int64` output for the full-range random request seed; Windows C `long` is only 32-bit |
 | Rust packaging | `setup.py` | Recognize `vllm-rs.exe` and `_rust_*.pyd` as prebuilt Rust artifacts on Windows |
 | Wheel packaging | `assemble_wheel_cu128_v0.24.0.py` | Assembles the already-built tree into a cp313/cu128 wheel including `_rust_tool_parser.pyd`, `vllm-rs.exe`, `triton_kernels`, `fmha_sm100`, and generated FlashAttention rotary/CuteDSL Python payloads |
 | Requirements | `requirements/cuda.txt` | Keep Linux-only CUDA helper packages out of the Windows install path: FlashInfer, TVM FFI, TileLang, CUDNN frontend, CUTLASS DSL, QuACK, TokenSpeed-MLA, Humming kernels, and fastsafetensors |
@@ -117,6 +118,7 @@ These hunks were added on top of the original cu126 patch for the
 | Runtime Python | `vllm/utils/network_utils.py` | 1 | ZMQ IPC → `tcp://127.0.0.1` |
 | Runtime Python | `vllm/utils/system_utils.py` | 1 | Force `spawn` multiprocessing |
 | Runtime Python | `vllm/v1/engine/core_client.py` | 1 | Force `InprocClient` |
+| Runtime Python | `vllm/v1/worker/gpu/sample/states.py` | 1 | Force `np.int64` seed generation for the full signed 64-bit range on Windows |
 | Runtime Python | `vllm/v1/utils.py` | 1 | `import uvloop` → try/except with asyncio fallback |
 | TQ integration | `vllm/config/cache.py` | 1 | Add 6 TQ entries to `CacheDType` literal (alongside upstream's 4 `turboquant_*`) |
 | TQ integration | `vllm/utils/torch_utils.py` | 1 | Map our 6 TQ dtypes to `torch.uint8` |

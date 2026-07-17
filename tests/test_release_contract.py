@@ -5,9 +5,9 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-VLLM_SHA256 = "A3C324281E5BE9D8FEAF0BE50B50DCE08F3FCDE56E3F74129A128D3B1A49645B"
+VLLM_SHA256 = "41E930FBCF994E4FD7E5CB1585F8D277AF3FFDBA0AEE7F5DDE5822DD90E6FBA7"
 MTQ_SHA256 = "5B310E05904B588539D9A8E3374DFA6C160F025F9C2099BA5C7877C79B2FA149"
-PATCH_SHA256 = "799361D8708E8D8B2B343913C5A1FE88DA1102BDE403CEB228CB77D5FF9A0218"
+PATCH_SHA256 = "630ADF8A49430C44195FBDD468D02AD554F9B2936E5EC0AB34E6DFC765C142E2"
 
 
 def batch_settings(path: Path) -> dict[str, str]:
@@ -28,7 +28,7 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertEqual(install["MTQ_SHA256"], MTQ_SHA256)
         self.assertEqual(launch["EXPECTED_WHEEL_SHA256"], VLLM_SHA256)
         self.assertEqual(launch["EXPECTED_MTQ_SHA256"], MTQ_SHA256)
-        self.assertEqual(install["WHEEL_SIZE"], "319115748")
+        self.assertEqual(install["WHEEL_SIZE"], "319115760")
         self.assertEqual(install["MTQ_SIZE"], "136429")
 
     def test_installer_is_atomic_and_does_not_parse_hash_stdout(self) -> None:
@@ -75,6 +75,13 @@ class ReleaseContractTests(unittest.TestCase):
         from verify_artifact import sha256_file
 
         self.assertEqual(sha256_file(ROOT / "vllm-windows-v8.patch"), PATCH_SHA256)
+
+    def test_patch_forces_int64_sampling_seed(self) -> None:
+        patch = (ROOT / "vllm-windows-v8.patch").read_text(encoding="utf-8")
+        self.assertIn(
+            "+                _NP_INT64_MIN, _NP_INT64_MAX, dtype=np.int64",
+            patch,
+        )
 
 
 if __name__ == "__main__":

@@ -130,6 +130,10 @@ Validate archive completeness and RECORD before installing:
 python tests\test_wheel_contents.py dist-v8\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
 ```
 
+The assembler and wheel-content test also verify that request-seed generation
+explicitly uses NumPy `int64`, preventing the Windows 32-bit C `long` overflow
+reported in issue #10.
+
 Install the wheel from outside the source tree:
 
 ```bat

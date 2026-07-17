@@ -31,8 +31,8 @@ set "TORCH_INDEX=https://download.pytorch.org/whl/cu128"
 REM Pre-built vLLM wheel (auto-downloaded into dist-v8\ if not present locally)
 set "WHEEL_NAME=vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl"
 set "WHEEL_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.24.0-win-cu128/vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl"
-set "WHEEL_SHA256=A3C324281E5BE9D8FEAF0BE50B50DCE08F3FCDE56E3F74129A128D3B1A49645B"
-set "WHEEL_SIZE=319115748"
+set "WHEEL_SHA256=41E930FBCF994E4FD7E5CB1585F8D277AF3FFDBA0AEE7F5DDE5822DD90E6FBA7"
+set "WHEEL_SIZE=319115760"
 set "WHEEL_FILE=%~dp0dist-v8\%WHEEL_NAME%"
 set "WHEEL_PART=%~dp0dist-v8\%WHEEL_NAME%.part"
 

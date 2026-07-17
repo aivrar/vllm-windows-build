@@ -64,6 +64,9 @@ and Multi-TurboQuant integration.
   upstream editable-build copy step dropped on Windows. The v8 patch makes
   that copy path platform-independent, and the assembler now rejects an
   incomplete FlashAttention payload.
+- **Windows request sampling fixed** - NumPy now generates the full-range
+  internal request seed explicitly as `int64`, avoiding the 32-bit C `long`
+  default that caused issue #10's follow-up error on 64-bit Windows.
 - **Smoke tested from the final wheel** - installed the assembled wheel,
   imported `vllm`, the stable libtorch CUDA extensions, FA2, `spinloop`,
   `cumem_allocator`, `_rust_tool_parser`, OpenAI API server / DP supervisor
@@ -211,7 +214,7 @@ and `multi_turboquant-0.1.0-py3-none-any.whl` from the Releases page, then:
 
 | Artifact | SHA-256 |
 |---|---|
-| `vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl` | `A3C324281E5BE9D8FEAF0BE50B50DCE08F3FCDE56E3F74129A128D3B1A49645B` |
+| `vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl` | `41E930FBCF994E4FD7E5CB1585F8D277AF3FFDBA0AEE7F5DDE5822DD90E6FBA7` |
 | `multi_turboquant-0.1.0-py3-none-any.whl` | `5B310E05904B588539D9A8E3374DFA6C160F025F9C2099BA5C7877C79B2FA149` |
 
 ```batch
