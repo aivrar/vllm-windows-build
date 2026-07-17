@@ -202,9 +202,10 @@ call :requireArtifact "vllm\third_party\fmha_sm100" || exit /b 1
 echo.
 echo Build complete!
 echo.
-echo Required environment variables for running vLLM on Windows:
-echo   set PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+echo Recommended environment for single-rank vLLM on Windows:
 echo   set VLLM_HOST_IP=127.0.0.1
+echo Use kv_cache_dtype=auto for the fast baseline.
+echo Enable enforce_eager only for graph/compile troubleshooting.
 echo.
 
 endlocal

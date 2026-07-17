@@ -287,8 +287,7 @@ Full instructions, including all the env vars and prerequisites:
 
 ```python
 import os
-# Required on Windows
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+os.environ["VLLM_HOST_IP"] = "127.0.0.1"
 
 # CUDA + torch DLL search paths
 os.add_dll_directory(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\bin")
@@ -301,21 +300,24 @@ os.add_dll_directory(r"C:\path\to\venv\Lib\site-packages\torch\lib")
 from vllm import LLM, SamplingParams
 
 llm = LLM(
-    model=r"E:\models\Qwen3-14B-AWQ-4bit",
+    model=r"E:\models\Qwen2.5-0.5B-Instruct",
     dtype="float16",
-    kv_cache_dtype="isoquant4",   # 2× KV cache capacity, near-FP16 quality
-    max_model_len=2048,
-    gpu_memory_utilization=0.85,
-    enforce_eager=True,
-    trust_remote_code=True,
+    kv_cache_dtype="auto",        # Fast FP16 baseline
+    max_model_len=512,
+    gpu_memory_utilization=0.5,
 )
 
 outputs = llm.generate(
     ["Explain CUDA streams in three sentences:"],
-    SamplingParams(temperature=0.7, max_tokens=200),
+    SamplingParams(temperature=0.0, max_tokens=32, seed=0),
 )
 print(outputs[0].outputs[0].text)
 ```
+
+`auto` is deliberate here: it establishes normal baseline performance. The
+first request can include one-time JIT or CUDA-graph setup, so benchmark a
+second request in the same process. Add `enforce_eager=True` only when
+diagnosing graph/compile compatibility; it disables those optimizations.
 
 For OpenAI-compatible HTTP serving and more usage patterns:
 **→ [docs/usage.md](docs/usage.md)**
@@ -336,7 +338,7 @@ library and run on the patched `TritonAttention` backend.
 | `turboquant_4bit_nc` | 4.25 | upstream | none | Upstream default |
 | `turboquant_k3v4_nc` | 3.25 / 4.25 | upstream | none | More aggressive K |
 | `turboquant_3bit_nc` | 3.25 | upstream | none | Most aggressive upstream |
-| `isoquant4` | 4.25 | quaternion 4D rotation | none | **Recommended default (ours)** |
+| `isoquant4` | 4.25 | quaternion 4D rotation | none | Quality-first local TQ; offline/memory-first use |
 | `planarquant4` | 4.25 | Givens 2D rotation | none | Same memory, simpler transform |
 | `isoquant3` | 3.25 | quaternion 4D rotation | none | More aggressive |
 | `planarquant3` | 3.25 | Givens 2D rotation | none | More aggressive |

@@ -13,8 +13,7 @@ The simplest way — load a model and call `.generate()`.
 
 ```python
 import os
-# Required env vars on Windows
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+# Keep single-rank Windows initialization on the loopback interface.
 os.environ["VLLM_HOST_IP"] = "127.0.0.1"
 
 # Make sure CUDA + torch DLLs are findable
@@ -24,24 +23,26 @@ os.add_dll_directory(r"C:\path\to\venv\Lib\site-packages\torch\lib")
 from vllm import LLM, SamplingParams
 
 llm = LLM(
-    model=r"E:\models\Qwen3-14B-AWQ-4bit",
+    model=r"E:\models\Qwen2.5-0.5B-Instruct",
     dtype="float16",
-    kv_cache_dtype="auto",          # or one of: isoquant3, isoquant4,
-                                    # planarquant3, planarquant4,
-                                    # turboquant25, turboquant35
-    max_model_len=2048,
-    gpu_memory_utilization=0.85,
-    enforce_eager=True,             # cudagraph capture is slow on Win
-    trust_remote_code=True,
+    kv_cache_dtype="auto",          # Fast baseline; model dtype for KV cache
+    max_model_len=512,
+    gpu_memory_utilization=0.5,
 )
 
-params = SamplingParams(temperature=0.7, max_tokens=200)
+params = SamplingParams(temperature=0.0, max_tokens=32, seed=0)
 outputs = llm.generate(
     ["Explain quantum entanglement to a 10-year-old:"],
     params,
 )
 print(outputs[0].outputs[0].text)
 ```
+
+Measure a second request in the same process so one-time kernel compilation or
+CUDA-graph capture is not counted as steady-state generation. If graph capture
+causes a compatibility problem, add `enforce_eager=True` temporarily; that
+setting disables `torch.compile` and CUDA graphs and therefore lowers
+throughput.
 
 ### Multi-GPU note
 
@@ -75,7 +76,7 @@ launch.bat --model E:\models\Qwen3-14B-AWQ-4bit --port 8000
 if Python, PyTorch, Triton, vLLM, or Triton's Python development files
 are missing.
 
-### Full options
+### Example with explicit overrides
 
 ```bat
 python vllm_launcher.py ^
@@ -85,22 +86,21 @@ python vllm_launcher.py ^
     --gpu-memory-utilization 0.85 ^
     --max-model-len 2048 ^
     --max-num-seqs 64 ^
-    --enforce-eager ^
     --trust-remote-code
 ```
 
 | Flag | Default | Notes |
 |---|---|---|
 | `--model` | (required) | Path to a HuggingFace-format model directory |
-| `--port` | 8000 | HTTP port |
+| `--port` | 8100 | HTTP port |
 | `--host` | 127.0.0.1 | Bind address |
-| `--gpu-memory-utilization` | 0.85 | Fraction of GPU memory to use |
-| `--max-model-len` | 2048 | Maximum context length |
+| `--gpu-memory-utilization` | 0.6 | Fraction of GPU memory to use |
+| `--max-model-len` | 8192 | Maximum context length; lower for small smoke tests |
 | `--max-num-seqs` | 64 | Concurrent request limit |
 | `--max-num-batched-tokens` | (auto) | Tokens per forward pass |
-| `--enforce-eager` | False | Skip CUDAGraph capture (recommended on Windows) |
-| `--gpu-id` | 0 | Which GPU to pin to (multi-GPU systems) |
-| `--enable-prefix-caching` | True | Cache common prompt prefixes |
+| `--enforce-eager` | False | Debug/compatibility option; disables compilation and CUDA graphs |
+| `--gpu-id` | (none) | Which GPU to pin to; otherwise preserve the current CUDA visibility |
+| `--enable-prefix-caching` | (not forced) | Explicitly enable common-prefix reuse; otherwise use vLLM's default |
 | `--task` | "generate" | "generate" or "embed" |
 | `--trust-remote-code` | False | Required for some models |
 
@@ -167,10 +167,9 @@ vLLM v0.24.0 ships an OpenAI-compatible server out of the box at
 ```bat
 vllm serve E:\models\Qwen3-14B-AWQ-4bit ^
     --dtype float16 ^
-    --kv-cache-dtype isoquant3 ^
+    --kv-cache-dtype auto ^
     --max-model-len 2048 ^
-    --gpu-memory-utilization 0.85 ^
-    --enforce-eager
+    --gpu-memory-utilization 0.6
 ```
 
 The `--kv-cache-dtype` flag accepts the 6 Multi-TurboQuant methods,
@@ -190,20 +189,20 @@ For a 24 GB GPU loading a 14B AWQ-4bit model:
 
 | Setting | Recommended | Why |
 |---|---|---|
-| `gpu_memory_utilization` | 0.85 | Leaves headroom for activations and Triton workspace |
+| `gpu_memory_utilization` | 0.6-0.85 | Start lower, then raise when the workload needs more KV capacity |
 | `max_model_len` | 2048-4096 | Larger contexts eat KV cache linearly |
 | `max_num_seqs` | 64-128 | Higher = more parallelism, more KV cache |
-| `enforce_eager` | True | CUDAGraph capture is slow + uses extra memory |
-| `kv_cache_dtype` | `auto` or `isoquant4` | iso4 doubles KV capacity at small quality cost |
+| `enforce_eager` | False | Normal optimized path; enable only to diagnose graph/compile problems |
+| `kv_cache_dtype` | `auto` | Fast baseline; use compressed KV only when capacity matters more than latency |
 
 For longer contexts, drop `max_num_seqs` to give each sequence more KV
 budget. For high concurrency, drop `max_model_len`.
 
 If you see `OutOfMemoryError`:
 1. Lower `gpu_memory_utilization` by 0.1
-2. Set `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`
-3. Switch to a TQ KV cache dtype to halve cache pressure
-4. Drop `max_num_seqs` and `max_model_len`
+2. Drop `max_num_seqs` and `max_model_len`
+3. Close other GPU processes and ensure the Windows pagefile is enabled
+4. Switch to a compressed KV dtype only if its documented throughput cost is acceptable
 
 ---
 
@@ -212,7 +211,7 @@ If you see `OutOfMemoryError`:
 | Method | When to use |
 |---|---|
 | `auto` (fp16) | Default. Best speed, most memory. |
-| `isoquant4` | **Recommended TQ**. Half the memory, near-FP16 quality, no calibration needed. |
+| `isoquant4` | Quality-first local TQ. Half the memory, but the current fallback is for offline/memory-first use. |
 | `planarquant4` | Same as iso4, simpler transform. |
 | `isoquant3` | Aggressive — 3.25 bits, visible quality loss. |
 | `planarquant3` | Same as iso3. |

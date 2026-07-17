@@ -50,11 +50,9 @@ set VLLM_MODEL_PATH=E:\path\to\Qwen3-14B-AWQ-4bit
 set VLLM_PYTHON=E:\vllm-windows-build\venv\Scripts\python.exe
 ```
 
-And on Windows where the pagefile is small or disabled:
-
-```bat
-set PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-```
+Keep the Windows pagefile enabled. Do not set
+`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`; the Windows PyTorch build
+reports that mode as unsupported.
 
 ## test_v19.py — smoke test
 
@@ -141,8 +139,11 @@ real numbers.
 - `test_tq_real.py` and `test_tq_thorough.py` spawn each method in a
   fresh subprocess to make sure GPU state from one run doesn't bleed
   into the next. This is slower but eliminates cross-test interference.
-- All tests use `enforce_eager=True` and `temperature=0.0` so output is
-  deterministic. Output diffs reflect KV math differences, not RNG.
+- The Multi-TurboQuant comparison tests use `enforce_eager=True` to hold
+  graph/compile behavior constant across methods and `temperature=0.0` so
+  output differences reflect KV math rather than RNG. The normal FP16 smoke
+  test keeps vLLM's optimized `enforce_eager=False` default unless
+  `VLLM_ENFORCE_EAGER=1` is set for troubleshooting.
 - The default settings (`max_model_len=512`, `gpu_memory_utilization=0.5`)
   fit comfortably on a single 24 GB RTX 3090 with the 14B AWQ-4bit
   model. Larger models or smaller GPUs will need adjustment.

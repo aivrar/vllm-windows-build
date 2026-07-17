@@ -158,12 +158,15 @@ dist-v8\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
 
 ## Runtime Environment
 
-These are recommended before running models:
+Keep single-rank Windows initialization on the loopback interface:
 
 ```bat
-set PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 set VLLM_HOST_IP=127.0.0.1
 ```
+
+Do not set `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` for this Windows
+build. PyTorch reports that expandable segments are unsupported on this
+platform, so the setting only adds a warning and does not repair an OOM.
 
 For multi-GPU systems, set the CUDA device ordering explicitly:
 

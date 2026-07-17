@@ -109,7 +109,9 @@ In general:
 - The **3-bit / 2-bit** variants have visible noise — outputs may
   diverge from the baseline early.
 - The **4-bit** variants (`isoquant4`, `planarquant4`) stay much closer
-  to the baseline. They're the safe default for most workloads.
+  to the baseline. They are the quality-first choices among the local TQ
+  methods, but their current unfused fallback is intended for offline or
+  memory-constrained workloads rather than latency-sensitive serving.
 - `turboquant35` uses calibrated outlier dimensions (currently the
   fixed "first N dims as outliers" — calibrated metadata via
   `multi_turboquant.calibration` would improve quality further).
