@@ -67,10 +67,16 @@ and Multi-TurboQuant integration.
   eviction and restore, cross-process persistent reuse, and exact-output model
   checks with the local Qwen3-14B AWQ model. A disk restore reused 1,440 prompt
   tokens and produced the same generated token IDs as the baseline.
-- **Scope is intentionally smaller than LMCache** - this adapts the useful
-  local RAM/filesystem tiering ideas to vLLM's own offloading framework; it is
-  not a Windows port of LMCache's remote, P2P, NIXL, GDS, or distributed cache
-  stack.
+- **Scope is intentionally smaller than [LMCache](https://github.com/LMCache/LMCache)** -
+  this adapts the useful local RAM/filesystem tiering ideas to vLLM's own
+  offloading framework; it is not a Windows port of LMCache's remote, P2P,
+  NIXL, GDS, or distributed cache stack.
+
+The Windows tiering work was informed by LMCache's published architecture and
+feature set, but it does not copy or bundle LMCache code. Thanks to the LMCache
+maintainers for making that work public. The design comparison and remaining
+roadmap are documented in
+[LMCache-inspired KV cache expansion](docs/lmcache-inspired-windows-kv-cache.md).
 
 Use `launch.bat --help` or see [docs/usage.md](docs/usage.md#experimental-kv-offload)
 for opt-in examples and limitations.
@@ -231,7 +237,31 @@ Single 24 GB RTX 3090, Qwen3-14B AWQ-4bit, `gpu_memory_utilization=0.5`:
 | `auto` (fp16) | 16,336 | 31.91× | 1.00× |
 | `isoquant3`/`4`, `planarquant3`/`4`, `turboquant25`/`35` | **32,672** | **63.94×** | **2.00×** |
 
-Full benchmarks → [docs/benchmarks.md](docs/benchmarks.md)
+### v0.25.1 KV-offload validation
+
+The final `0.25.1+cu128` wheel was also tested on the same RTX 3090 with
+Qwen3-14B-abliterated-AWQ-4bit. Request times below are focused eager-mode
+correctness measurements, not broad benchmark distributions or performance
+guarantees.
+
+| Validation path | Cold request | Cached/restore request | Cached prompt tokens | Result |
+|---|---:|---:|---:|---|
+| Low-level GPU transfer matrix | — | — | — | **24/24 passed** across both directions, ordinary/shared memory, multiple page sizes, block-size factors, and KV groups |
+| CPU LRU and CPU ARC | — | — | 1,440 / 1,451 | Both policies reproduced the baseline token IDs exactly |
+| Filesystem LRU after forced RAM eviction | 1.359 s | 1.017 s | 1,440 / 1,451 | Exact output |
+| Filesystem ARC after forced RAM eviction | 1.365 s | 0.763 s | 1,440 / 1,451 | Exact output |
+| Persistent LRU cache, new engine process | — | 0.963 s | 1,440 / 1,451 | Exact output |
+| Persistent LRU cache, installed release wheel | — | 0.806 s | 1,440 / 1,451 | Exact output |
+
+The forced-eviction runs grew the filesystem cache from 90 blocks
+(235,929,600 bytes) to 272 blocks (713,031,680 bytes), exceeding the configured
+102-block / 256 MiB RAM tier before restore. That verifies the measured hits
+came from the filesystem tier rather than a surviving RAM entry.
+
+Full compression benchmarks → [docs/benchmarks.md](docs/benchmarks.md)
+
+KV-offload evidence and scope →
+[docs/lmcache-inspired-windows-kv-cache.md](docs/lmcache-inspired-windows-kv-cache.md)
 
 ---
 
@@ -444,6 +474,7 @@ All changes are guarded by `#ifdef _MSC_VER`, `sys.platform == "win32"`,
 | [docs/lmcache-inspired-windows-kv-cache.md](docs/lmcache-inspired-windows-kv-cache.md) | LMCache research, implemented native-Windows KV tiers, test evidence, and roadmap |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | Common errors + fixes |
 | [tests/README.md](tests/README.md) | End-to-end test scripts |
+| [GitHub Wiki](https://github.com/aivrar/vllm-windows-build/wiki) | Browsable installation, usage, architecture, benchmarks, and KV-offload reference |
 
 ---
 
