@@ -7,14 +7,19 @@ import importlib
 import sys
 from pathlib import Path
 
-EXPECTED_VLLM_VERSION = "0.24.0+cu128"
+EXPECTED_VLLM_VERSION = "0.25.1+cu128"
 
 REQUIRED_MODULES = (
     "llguidance",
     "multi_turboquant",
     "xgrammar",
+    "vllm.fs_io_C",
     "vllm.model_executor.models.qwen3_5",
     "vllm.model_executor.models.qwen3_vl",
+    "vllm.v1.kv_offload.cpu.gpu_worker",
+    "vllm.v1.kv_offload.cpu.shared_offload_region",
+    "vllm.v1.kv_offload.file_mapper",
+    "vllm.v1.kv_offload.tiering.fs.io",
     "vllm.vllm_flash_attn.layers.rotary",
     "vllm.vllm_flash_attn.ops.triton.rotary",
 )

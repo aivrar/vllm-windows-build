@@ -2,7 +2,7 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Platform: Windows](https://img.shields.io/badge/Platform-Windows%2010%2F11-blue)
-![vLLM: v0.24.0](https://img.shields.io/badge/vLLM-v0.24.0-orange)
+![vLLM: v0.25.1](https://img.shields.io/badge/vLLM-v0.25.1-orange)
 ![CUDA: 12.8](https://img.shields.io/badge/CUDA-12.8-76B900)
 ![Python: 3.13](https://img.shields.io/badge/Python-3.13-3776AB)
 ![PyTorch: 2.11](https://img.shields.io/badge/PyTorch-2.11.0-EE4C2C)
@@ -11,14 +11,14 @@
 ![Multi-TurboQuant](https://img.shields.io/badge/Multi--TurboQuant-6%20methods-purple)
 ![+ Upstream TurboQuant](https://img.shields.io/badge/+%20Upstream%20TurboQuant-4%20variants-purple)
 
-**Native Windows build of vLLM 0.24.0 - no WSL, no Docker, no Linux VM.**
+**Native Windows build of vLLM 0.25.1 - no WSL, no Docker, no Linux VM.**
 
 > **Latest build (cu128 / Python 3.13 / Blackwell):** updated to
-> **vLLM 0.24.0** with RTX 30-/40-/50-series kernels
+> **vLLM 0.25.1** with RTX 30-/40-/50-series kernels
 > (`TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0`), PyTorch 2.11.0+cu128, CUDA 12.8,
-> the Windows OpenAI API-server fixes carried forward, the Rust frontend
-> binary (`vllm-rs.exe`), and the new Rust tool parser extension packaged
-> on Windows. See [What's new in v0.24.0](#whats-new-in-v0240).
+> the Windows OpenAI API-server fixes, Rust frontend/tool parser, and an
+> opt-in native Windows KV offload path with CPU LRU/ARC plus persistent
+> filesystem tiering. See [What's new in v0.25.1](#whats-new-in-v0251).
 
 Ships with **10 KV cache compression methods**: the 6 Multi-TurboQuant
 methods (`isoquant`/`planarquant`/`turboquant25/35`) plus the 4 new
@@ -28,14 +28,15 @@ upstream TurboQuant variants that landed in v0.19.2rc0 (`turboquant_k8v4`,
 vLLM is the most popular open-source LLM serving engine, but it
 officially only supports Linux. This repo provides a **pre-built wheel**
 (just download and install) plus a complete patchset for compiling vLLM
-v0.24.0 natively on Windows with full CUDA acceleration, Triton support,
+v0.25.1 natively on Windows with full CUDA acceleration, Triton support,
 and Multi-TurboQuant integration.
 
 ## Releases
 
 | Release | vLLM | PyTorch | Triton | KV compression | Download |
 |---|---|---|---|---|---|
-| **v0.24.0-win-cu128 (latest)** | 0.24.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8 - **Python 3.13, Blackwell sm_120, Rust frontend + Rust tool parser included** | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.24.0-win-cu128) |
+| **v0.25.1-win-cu128 (latest)** | 0.25.1 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8; **opt-in CPU/filesystem KV offload, Python 3.13, Blackwell sm_120, Rust frontend + tool parser** | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.25.1-win-cu128) |
+| v0.24.0-win-cu128 | 0.24.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8 - Python 3.13, Blackwell sm_120, Rust frontend + Rust tool parser included | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.24.0-win-cu128) |
 | v0.23.0-win-cu128 | 0.23.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8 - **Python 3.13, Blackwell sm_120, Rust frontend included** | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.23.0-win-cu128) |
 | v0.21.0-win-cu128 | 0.21.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8 — **Python 3.13, Blackwell sm_120** | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.21.0-win-cu128) |
 | v0.21.0-win | 0.21.0 | 2.11.0+cu126 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8 (Python 3.10) | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.21.0-win) |
@@ -43,6 +44,36 @@ and Multi-TurboQuant integration.
 | v0.19.0-win | 0.19.0 | 2.10.0+cu126 | 3.6.0 | Multi-TurboQuant (6 methods) + fp8 | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.19.0-win) |
 | v0.17.1-win | 0.17.1 | 2.10.0+cu126 | 3.6.0 | TurboQuant (2 recipes) | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.17.1-win) |
 | v0.14.2-win | 0.14.2 | 2.9.1+cu126 | n/a | fp8 only | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.14.2-win) |
+
+### What's new in v0.25.1
+
+- **vLLM v0.25.1 base** - carries forward the native Windows CUDA/MSVC,
+  serving, Rust, FlashAttention packaging, and Multi-TurboQuant work.
+- **Native Windows prompt-KV offload** - the launcher now offers opt-in
+  CPU LRU/ARC modes and tiered RAM + filesystem/NVMe LRU/ARC modes. The
+  filesystem tier can reuse matching prompt blocks after a process restart.
+- **Windows tiering fixes** - adds shared-file `mmap` support, binary-safe
+  filesystem I/O, safe cache namespaces for absolute Windows model paths,
+  native DMA for file-backed mmap restores, and a non-Triton Torch block-table
+  fallback. The native `fs_io_C.pyd` helper is included in the wheel.
+- **Safe defaults** - KV offload is disabled by default. Filesystem modes
+  require an explicit cache root and have no automatic disk quota; monitor or
+  clean that directory yourself. `launch.bat` fixes `PYTHONHASHSEED=0` so the
+  same on-disk cache namespace can be found across restarts.
+- **AMD64 dependency metadata fixed** - `llguidance` and `xgrammar` now install
+  through the wheel metadata on Windows, whose machine name is `AMD64`.
+- **Validated on RTX 3090** - the installed final wheel passed a 24-case
+  bidirectional GPU/CPU offload matrix, CPU LRU/ARC reuse, forced filesystem
+  eviction and restore, cross-process persistent reuse, and exact-output model
+  checks with the local Qwen3-14B AWQ model. A disk restore reused 1,440 prompt
+  tokens and produced the same generated token IDs as the baseline.
+- **Scope is intentionally smaller than LMCache** - this adapts the useful
+  local RAM/filesystem tiering ideas to vLLM's own offloading framework; it is
+  not a Windows port of LMCache's remote, P2P, NIXL, GDS, or distributed cache
+  stack.
+
+Use `launch.bat --help` or see [docs/usage.md](docs/usage.md#experimental-kv-offload)
+for opt-in examples and limitations.
 
 ### What's new in v0.24.0
 
@@ -209,12 +240,12 @@ Full benchmarks → [docs/benchmarks.md](docs/benchmarks.md)
 ### Option A — Pre-built wheel (no compiler needed)
 
 Download
-**[vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.24.0-win-cu128)**
+**[vllm-0.25.1+cu128-cp313-cp313-win_amd64.whl](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.25.1-win-cu128)**
 and `multi_turboquant-0.1.0-py3-none-any.whl` from the Releases page, then:
 
 | Artifact | SHA-256 |
 |---|---|
-| `vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl` | `41E930FBCF994E4FD7E5CB1585F8D277AF3FFDBA0AEE7F5DDE5822DD90E6FBA7` |
+| `vllm-0.25.1+cu128-cp313-cp313-win_amd64.whl` | `0C4F9B2E36482523FC7B4C092D711AC49B4265EF9F36A7AEEFFF9A667C875339` |
 | `multi_turboquant-0.1.0-py3-none-any.whl` | `5B310E05904B588539D9A8E3374DFA6C160F025F9C2099BA5C7877C79B2FA149` |
 
 ```batch
@@ -230,10 +261,10 @@ pip install torch==2.11.0 ^
 pip install triton-windows==3.6.0.post26
 
 :: Install the pre-built vLLM wheel
-pip install vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
+pip install vllm-0.25.1+cu128-cp313-cp313-win_amd64.whl
 
-:: Structured-output backends vLLM gates on x86_64 (Windows = AMD64, so pip
-:: skips them and vLLM won't import without these)
+:: Optional repair for environments created from older wheel metadata.
+:: v0.25.1 itself includes the correct Windows AMD64 dependency markers.
 pip install "llguidance>=1.7.0,<1.8.0" "xgrammar>=0.2.0,<1.0.0"
 
 :: Install Multi-TurboQuant for the 6 KV cache compression methods
@@ -243,7 +274,7 @@ pip install multi_turboquant-0.1.0-py3-none-any.whl
 Or just run **`install.bat`** for a fully self-contained, one-click portable
 Python install — it downloads Python 3.13, PyTorch cu128, and the vLLM wheel
 itself (no manual download or folder creation needed). If you already have the
-`.whl` locally, drop it in `dist-v8\` next to `install.bat` and the script uses
+`.whl` locally, drop it in `dist-v9\` next to `install.bat` and the script uses
 that instead of downloading.
 
 Fresh installs use Python 3.13.14. Rerunning `install.bat` repairs an existing
@@ -263,8 +294,8 @@ on the heavy multi-arch CUDA kernels.
 
 ```batch
 git clone https://github.com/vllm-project/vllm.git vllm-source
-cd vllm-source && git checkout v0.24.0 && cd ..
-git apply vllm-windows-v8.patch --directory vllm-source
+cd vllm-source && git checkout v0.25.1 && cd ..
+git apply vllm-windows-v9.patch --directory vllm-source
 build.bat
 ```
 
@@ -274,7 +305,7 @@ CMakeLists.txt applies them automatically to the FetchContent-managed
 `.deps/cutlass-src/` and `.deps/vllm-flash-attn-src/csrc/cutlass` after
 the first configure, so you don't need a separate step.
 
-For the v0.24 Rust frontend, install `protoc` and set
+For the v0.25.1 Rust frontend, install `protoc` and set
 `PROTOC=C:\path\to\protoc.exe` before running the build if it is not already
 on PATH.
 
@@ -326,7 +357,7 @@ For OpenAI-compatible HTTP serving and more usage patterns:
 
 ## KV cache compression: 10 methods (6 ours + 4 upstream)
 
-vLLM v0.24.0 on Windows ships with integrated support for **ten** KV cache
+vLLM v0.25.1 on Windows ships with integrated support for **ten** KV cache
 compression dtypes. The four `turboquant_*` entries are the new upstream
 TurboQuant attention backend (PR #38479, landed in v0.19.2rc0); the six
 others come from our [Multi-TurboQuant](https://github.com/aivrar/multi-turboquant)
@@ -363,10 +394,10 @@ fused Triton kernels and don't pay this cost.  See
 
 ## What's in the patch
 
-`vllm-windows-v8.patch` is a unified diff against `vllm-project/vllm`
-at tag `v0.24.0`. It touches the Windows build/runtime/Rust frontend
-surface plus **3 new files** (the TQ
-dispatch helper plus two CUTLASS-vendor patches):
+`vllm-windows-v9.patch` is a unified diff against `vllm-project/vllm`
+at tag `v0.25.1`. It touches the Windows build/runtime/Rust frontend and
+KV-offload surfaces, and carries the TQ dispatch helper plus two
+CUTLASS-vendor patches:
 
 - **Build system**: CMakeLists, cmake/utils, setup.py, requirements/cuda.txt
   (with `/Usmall` + `/Zc:__cplusplus` for MSVC, Linux-only CUDA deps
@@ -382,8 +413,8 @@ dispatch helper plus two CUTLASS-vendor patches):
 - **Runtime Python**: `fcntl` → `msvcrt`, ZMQ IPC → TCP, fork →
   spawn, NCCL → FakeProcessGroup, custom safetensors reader for small
   pagefile systems, `uvloop` fallback, `VLLM_USE_FLASHINFER_SAMPLER`
-  default-False on Windows, Windows Rust artifact lookup, and optional
-  QuTLASS warning suppression
+  default-False on Windows, Windows Rust artifact lookup, optional QuTLASS
+  warning suppression, and Windows-safe RAM/filesystem KV offload
 - **Multi-TurboQuant integration** (4 + 1 new): 6 new `CacheDType`
   literals, dtype mapping, attention backend dispatch, plus the new
   `vllm/v1/attention/ops/multi_turboquant_kv.py` (295 lines)
@@ -410,6 +441,7 @@ All changes are guarded by `#ifdef _MSC_VER`, `sys.platform == "win32"`,
 | [docs/benchmarks.md](docs/benchmarks.md) | Real numbers, all 6 methods |
 | [docs/build.md](docs/build.md) | Patch internals + iterating on builds |
 | [docs/architecture.md](docs/architecture.md) | How the integration works |
+| [docs/lmcache-inspired-windows-kv-cache.md](docs/lmcache-inspired-windows-kv-cache.md) | LMCache research, implemented native-Windows KV tiers, test evidence, and roadmap |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | Common errors + fixes |
 | [tests/README.md](tests/README.md) | End-to-end test scripts |
 
@@ -436,13 +468,13 @@ fail. See [docs/troubleshooting.md → OSError 1455](docs/troubleshooting.md#ose
 
 ## Tested with
 
-- RTX 3090 (24 GB, SM 8.6, driver 596.36) - v0.24.0 build, wheel install, native import, Rust frontend, and CLI smoke tests
+- RTX 3090 (24 GB, SM 8.6, driver 596.36) - v0.25.1 build, final-wheel install, native imports, GPU offload matrix, and real-model RAM/filesystem cache tests
 - Qwen2.5-0.5B-Instruct (smoke test), Qwen3-14B-abliterated-AWQ-4bit
-- Qwen3.5-9B-abliterated-GPTQ-4bit (text-only)
+- Qwen3.5-9B-abliterated-GPTQ-4bit remains blocked by the upstream text-only Qwen3.5 registry/config path and was not used as release evidence
 - Windows 10 Pro 22H2
 - Visual Studio 2022 Community 17.13 (MSVC 14.43)
 - CUDA Toolkit 12.8
-- Python 3.13.14
+- Python 3.13.11 for the native build/final-wheel tests; portable installer targets Python 3.13.14 (same `cp313` ABI)
 - RTX 50-series (Blackwell sm_120): kernels compiled & verified via `cuobjdump`; runtime confirmation pending community hardware
 
 ### v0.21.0 smoke test (RTX 3090, Qwen3-14B-abliterated-AWQ-4bit)

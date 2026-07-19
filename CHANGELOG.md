@@ -1,5 +1,83 @@
 # Changelog
 
+## v0.25.1-win-cu128 - 2026-07-19
+
+Upstream bump from vLLM 0.24.0 to **vLLM 0.25.1**, targeting CPython
+3.13, CUDA 12.8, PyTorch 2.11.0+cu128, Triton Windows 3.6.0.post26, and
+`TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0`.
+
+### New
+
+- Added `vllm-windows-v9.patch`, generated against upstream tag `v0.25.1`
+  (`752a3a504485790a2e8491cacbb35c137339ad34`) and verified with
+  `git apply --check` against a clean worktree.
+- Added `assemble_wheel_cu128_v0.25.1.py` with fail-fast checks for all native,
+  Rust, FlashAttention, dependency, and KV-offload payloads/fix markers.
+- Added opt-in prompt-KV cache modes to `vllm_launcher.py`: CPU LRU, CPU ARC,
+  RAM + filesystem LRU, and RAM + filesystem ARC. Prefix caching is enabled
+  automatically only when one of these modes is selected.
+- Added a release-grade real-model harness for baseline, RAM offload,
+  forced-filesystem restore, and cross-process persistent reuse.
+
+### Windows KV offload fixes
+
+- Added Windows shared-file mmap support using the system temporary directory,
+  `mmap.ACCESS_WRITE`, and a creator/joiner size-race fix.
+- Added binary-safe filesystem block I/O, an `os.read` fallback for Windows,
+  complete-read validation, and safe error cleanup.
+- Sanitized absolute Windows model paths before forming filesystem cache
+  directories while retaining the full path in the configuration hash.
+- Routed CPU-to-GPU loads from file-backed mmap through native CUDA DMA on
+  Windows. Triton direct host-pointer reads caused an illegal memory access for
+  some grouped block shapes.
+- Added a non-Triton pure-Torch block-table fallback and portable upstream test
+  adjustments.
+- Built and packaged `fs_io_C.pyd`.
+- Added Windows `AMD64` to the `llguidance` and `xgrammar` requirement markers.
+
+### Validated
+
+- Completed the full native build in the separate v2 build tree and assembled
+  a 3,617-file wheel.
+- Installed the exact final wheel outside the source tree and verified runtime
+  and distribution version `0.25.1+cu128`.
+- Passed a 24-case RTX 3090 GPU offload matrix covering both transfer
+  directions, ordinary and shared memory, multiple page sizes,
+  `block_size_factor` 1 and 3, and multiple KV groups.
+- Passed CPU LRU and ARC model tests plus forced filesystem LRU/ARC eviction
+  and restore using `Qwen3-14B-abliterated-AWQ-4bit`. The restored request
+  reused 1,440 cached prompt tokens and produced exactly the baseline token
+  IDs.
+- Verified a new process could reuse the persistent filesystem cache and
+  repeated that check from the final wheel.
+- The observed filesystem-restore times (about 0.76-1.02 seconds versus about
+  1.36 seconds cold in this focused test) are validation evidence, not a broad
+  performance guarantee.
+
+### Safety and scope
+
+- KV offload remains **disabled by default**.
+- Filesystem modes require an explicit cache root and do not impose an
+  automatic disk quota; users must monitor and clean that directory.
+- `launch.bat` sets `PYTHONHASHSEED=0` before Python starts to keep persistent
+  cache keys stable across restarts.
+- This adapts local RAM/filesystem tiering ideas researched from LMCache to
+  vLLM's native offload framework. It does not claim LMCache feature parity;
+  remote cache, P2P, NIXL, GDS, object-store, and distributed tiers are not in
+  this release.
+- The local text-only `Qwen3.5-9B-abliterated-GPTQ-4bit` model remains blocked
+  by the upstream Qwen3.5 registry/config path, so release validation used the
+  supported local Qwen3 AWQ model instead of adding an unmerged workaround.
+
+### Artifacts
+
+- Wheel: `vllm-0.25.1+cu128-cp313-cp313-win_amd64.whl`
+- Size: `293080424` bytes
+- SHA-256:
+  `0C4F9B2E36482523FC7B4C092D711AC49B4265EF9F36A7AEEFFF9A667C875339`
+- Patch SHA-256:
+  `4893BDB35F905237BD0D0D042E365EAFC5B6B4C49809747BE49B42E6D8BF7609`
+
 ## v0.24.0-win-cu128 - 2026-07-01
 
 Upstream bump from vLLM 0.23.0 to **vLLM 0.24.0**, still targeting

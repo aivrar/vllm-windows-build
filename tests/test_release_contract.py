@@ -6,9 +6,9 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-VLLM_SHA256 = "41E930FBCF994E4FD7E5CB1585F8D277AF3FFDBA0AEE7F5DDE5822DD90E6FBA7"
+VLLM_SHA256 = "0C4F9B2E36482523FC7B4C092D711AC49B4265EF9F36A7AEEFFF9A667C875339"
 MTQ_SHA256 = "5B310E05904B588539D9A8E3374DFA6C160F025F9C2099BA5C7877C79B2FA149"
-PATCH_SHA256 = "630ADF8A49430C44195FBDD468D02AD554F9B2936E5EC0AB34E6DFC765C142E2"
+PATCH_SHA256 = "4893BDB35F905237BD0D0D042E365EAFC5B6B4C49809747BE49B42E6D8BF7609"
 
 
 def batch_settings(path: Path) -> dict[str, str]:
@@ -35,8 +35,19 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertEqual(install["MTQ_SHA256"], MTQ_SHA256)
         self.assertEqual(launch["EXPECTED_WHEEL_SHA256"], VLLM_SHA256)
         self.assertEqual(launch["EXPECTED_MTQ_SHA256"], MTQ_SHA256)
-        self.assertEqual(install["WHEEL_SIZE"], "319115760")
+        self.assertEqual(install["WHEEL_SIZE"], "293080424")
         self.assertEqual(install["MTQ_SIZE"], "136429")
+        self.assertIn("v0.25.1-win-cu128", install["WHEEL_URL"])
+        self.assertIn("vllm-0.25.1+cu128-cp313-cp313-win_amd64.whl", install["WHEEL_URL"])
+        self.assertIn("dist-v9", install["WHEEL_FILE"])
+
+        verifier = (ROOT / "verify_install.py").read_text(encoding="utf-8")
+        assembler = (ROOT / "assemble_wheel_cu128_v0.25.1.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('EXPECTED_VLLM_VERSION = "0.25.1+cu128"', verifier)
+        self.assertIn('VERSION = "0.25.1+cu128"', assembler)
+        self.assertIn('ROOT / "dist-v9"', assembler)
 
     def test_installer_is_atomic_and_does_not_parse_hash_stdout(self) -> None:
         script = (ROOT / "install.bat").read_text(encoding="utf-8")
@@ -73,21 +84,58 @@ class ReleaseContractTests(unittest.TestCase):
     def test_build_fails_closed(self) -> None:
         script = (ROOT / "build.bat").read_text(encoding="utf-8")
         self.assertIn("git apply --reverse --check", script)
-        self.assertIn("Source is not based on upstream vLLM v0.24.0", script)
+        self.assertIn("Source is not based on upstream vLLM v0.25.1", script)
         self.assertIn("call :requireArtifact", script)
+        self.assertIn('call :requireArtifact "vllm\\fs_io_C.pyd"', script)
         self.assertNotIn("Continuing anyway", script)
         self.assertNotIn("xcopy", script.lower())
 
     def test_patch_digest(self) -> None:
         from verify_artifact import sha256_file
 
-        self.assertEqual(sha256_file(ROOT / "vllm-windows-v8.patch"), PATCH_SHA256)
+        self.assertEqual(sha256_file(ROOT / "vllm-windows-v9.patch"), PATCH_SHA256)
 
     def test_patch_forces_int64_sampling_seed(self) -> None:
-        patch = (ROOT / "vllm-windows-v8.patch").read_text(encoding="utf-8")
+        patch = (ROOT / "vllm-windows-v9.patch").read_text(encoding="utf-8")
         self.assertIn(
-            "+                _NP_INT64_MIN, _NP_INT64_MAX, dtype=np.int64",
+            "+            seed = np.random.randint("
+            "_NP_INT64_MIN, _NP_INT64_MAX, dtype=np.int64)",
             patch,
+        )
+
+    def test_patch_uses_safe_windows_kv_offload_dma(self) -> None:
+        patch = (ROOT / "vllm-windows-v9.patch").read_text(encoding="utf-8")
+        self.assertIn('+    if sys.platform == "win32":', patch)
+        self.assertIn("+        _copy_blocks_windows", patch)
+        self.assertIn("+        (err,) = cudart.cudaMemcpyAsync(", patch)
+
+    def test_patch_contains_windows_tiered_kv_cache_fixes(self) -> None:
+        patch = (ROOT / "vllm-windows-v9.patch").read_text(encoding="utf-8")
+        markers = (
+            '+    if os.name == "nt" and uses_shared_mmap:',
+            "+def _wait_for_path_size(",
+            '+O_BINARY = getattr(os, "O_BINARY", 0)',
+            "+        safe_model_name = ntpath.basename(model_name) or \"model\"",
+            "+def _compute_slot_mapping_torch(",
+            'platform_machine == "AMD64"',
+        )
+        for marker in markers:
+            with self.subTest(marker=marker):
+                self.assertIn(marker, patch)
+
+    def test_launcher_keeps_kv_offload_opt_in(self) -> None:
+        launcher = (ROOT / "vllm_launcher.py").read_text(encoding="utf-8")
+        self.assertIn('choices=("disabled", "cpu-lru", "cpu-arc", "fs-lru", "fs-arc")', launcher)
+        self.assertIn('default="disabled"', launcher)
+        self.assertIn('"spec_name": "TieringOffloadingSpec"', launcher)
+        self.assertIn('"type": "fs"', launcher)
+        self.assertIn('"offload_prompt_only": True', launcher)
+        self.assertIn('--kv-offload-fs-root is required for fs-lru/fs-arc', launcher)
+        self.assertIn("has no automatic size quota", launcher)
+        launch_batch = (ROOT / "launch.bat").read_text(encoding="utf-8")
+        self.assertIn(
+            'if not defined PYTHONHASHSEED set "PYTHONHASHSEED=0"',
+            launch_batch,
         )
 
     def test_quickstarts_use_fast_reproducible_baseline(self) -> None:

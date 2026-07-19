@@ -2,12 +2,12 @@
 setlocal DisableDelayedExpansion
 
 :: ============================================================
-:: vLLM v0.24.0 Windows Build Script
+:: vLLM v0.25.1 Windows Build Script
 :: Compiles vLLM from patched source with MSVC + CUDA + Ninja
 :: ============================================================
 
 echo.
-echo  vLLM v0.24.0 Windows Build
+echo  vLLM v0.25.1 Windows Build
 echo  ==========================
 echo.
 
@@ -55,7 +55,7 @@ if not defined TORCH_CUDA_ARCH_LIST set TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0
 if not defined MAX_JOBS set MAX_JOBS=2
 
 set "VLLM_TARGET_DEVICE=cuda"
-set "SETUPTOOLS_SCM_PRETEND_VERSION=0.24.0"
+set "SETUPTOOLS_SCM_PRETEND_VERSION=0.25.1"
 if not defined CMAKE_BUILD_TYPE set "CMAKE_BUILD_TYPE=Release"
 set "VLLM_DISABLE_SCCACHE=1"
 
@@ -65,8 +65,8 @@ set "VLLM_DISABLE_SCCACHE=1"
 
 set "SCRIPT_DIR=%~dp0"
 
-if exist "%SCRIPT_DIR%vllm-source-v0.24.0\setup.py" (
-    set "VLLM_SRC=%SCRIPT_DIR%vllm-source-v0.24.0"
+if exist "%SCRIPT_DIR%vllm-source-v0.25.1\setup.py" (
+    set "VLLM_SRC=%SCRIPT_DIR%vllm-source-v0.25.1"
 ) else if exist "%SCRIPT_DIR%vllm-source\setup.py" (
     set "VLLM_SRC=%SCRIPT_DIR%vllm-source"
 ) else if exist "%SCRIPT_DIR%setup.py" (
@@ -74,7 +74,7 @@ if exist "%SCRIPT_DIR%vllm-source-v0.24.0\setup.py" (
 ) else (
     echo [ERROR] Cannot find vLLM source. Clone it into vllm-source\ next to this script:
     echo         git clone https://github.com/vllm-project/vllm.git vllm-source
-    echo         cd vllm-source ^&^& git checkout v0.24.0
+    echo         cd vllm-source ^&^& git checkout v0.25.1
     exit /b 1
 )
 
@@ -102,9 +102,9 @@ if errorlevel 1 (
     exit /b 1
 )
 
-git -C "%VLLM_SRC%" merge-base --is-ancestor ee0da84ab9e04ac7610e28580af62c365e898389 HEAD >nul 2>&1
+git -C "%VLLM_SRC%" merge-base --is-ancestor 752a3a504485790a2e8491cacbb35c137339ad34 HEAD >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Source is not based on upstream vLLM v0.24.0 commit ee0da84ab.
+    echo [ERROR] Source is not based on upstream vLLM v0.25.1 commit 752a3a504.
     echo         Source: %VLLM_SRC%
     exit /b 1
 )
@@ -113,30 +113,30 @@ if errorlevel 1 (
 :: 4. Apply patch
 :: -----------------------------------------------------------
 
-if not exist "%SCRIPT_DIR%vllm-windows-v8.patch" (
-    echo [ERROR] vllm-windows-v8.patch not found next to build.bat.
+if not exist "%SCRIPT_DIR%vllm-windows-v9.patch" (
+    echo [ERROR] vllm-windows-v9.patch not found next to build.bat.
     exit /b 1
 )
 
 pushd "%VLLM_SRC%"
-git apply --check "%SCRIPT_DIR%vllm-windows-v8.patch" >nul 2>&1
+git apply --check "%SCRIPT_DIR%vllm-windows-v9.patch" >nul 2>&1
 if not errorlevel 1 goto :applyPatch
 
-git apply --reverse --check "%SCRIPT_DIR%vllm-windows-v8.patch" >nul 2>&1
+git apply --reverse --check "%SCRIPT_DIR%vllm-windows-v9.patch" >nul 2>&1
 if errorlevel 1 goto :patchConflict
 echo Windows patch is already applied cleanly.
 goto :patchReady
 
 :applyPatch
-echo Applying vllm-windows-v8.patch...
-git apply "%SCRIPT_DIR%vllm-windows-v8.patch"
+echo Applying vllm-windows-v9.patch...
+git apply "%SCRIPT_DIR%vllm-windows-v9.patch"
 if errorlevel 1 goto :patchConflict
 goto :patchReady
 
 :patchConflict
 popd
 echo [ERROR] The Windows patch is partially applied or conflicts with this source tree.
-echo         Use a clean upstream v0.24.0 checkout or restore the fully patched tree.
+echo         Use a clean upstream v0.25.1 checkout or restore the fully patched tree.
 exit /b 1
 
 :patchReady
@@ -190,6 +190,7 @@ call :requireArtifact "vllm\_C_stable_libtorch.pyd" || exit /b 1
 call :requireArtifact "vllm\_moe_C_stable_libtorch.pyd" || exit /b 1
 call :requireArtifact "vllm\_rust_tool_parser.pyd" || exit /b 1
 call :requireArtifact "vllm\cumem_allocator.pyd" || exit /b 1
+call :requireArtifact "vllm\fs_io_C.pyd" || exit /b 1
 call :requireArtifact "vllm\spinloop.pyd" || exit /b 1
 call :requireArtifact "vllm\vllm-rs.exe" || exit /b 1
 call :requireArtifact "vllm\vllm_flash_attn\_vllm_fa2_C.pyd" || exit /b 1

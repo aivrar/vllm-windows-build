@@ -1,4 +1,4 @@
-"""Smoke test: vLLM 0.24.0 on Windows with normal FP16 KV cache.
+"""Smoke test: vLLM 0.25.1 on Windows with normal FP16 KV cache.
 
 Configuration via environment variables (set before running):
     VLLM_MODEL_PATH       Path to a Qwen3 / Llama / similar model.
@@ -35,7 +35,7 @@ if not MODEL:
     sys.exit(1)
 
 print("=" * 60)
-print("vLLM 0.24.0 Windows smoke test (FP16 KV cache)")
+print("vLLM 0.25.1 Windows smoke test (FP16 KV cache)")
 print("=" * 60)
 print(f"Model: {MODEL}")
 print()

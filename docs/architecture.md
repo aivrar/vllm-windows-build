@@ -1,6 +1,6 @@
 # Architecture
 
-How the v0.24.0 Windows build hangs together and what each piece owns.
+How the v0.25.1 Windows build hangs together and what each piece owns.
 
 ## Repository Layout
 
@@ -8,7 +8,7 @@ How the v0.24.0 Windows build hangs together and what each piece owns.
 vllm-windows-build/
   README.md
   VLLM.md
-  vllm-windows-v8.patch
+  vllm-windows-v9.patch
   build.bat
   run_build.bat
   install.bat
@@ -18,18 +18,18 @@ vllm-windows-build/
   expand_zip.ps1
   verify_install.py
   engine_dispatcher.py
-  assemble_wheel_cu128_v0.24.0.py
+  assemble_wheel_cu128_v0.25.1.py
   vllm_launcher.py
-  dist-v8/
-    vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
+  dist-v9/
+    vllm-0.25.1+cu128-cp313-cp313-win_amd64.whl
   docs/
   tests/
 ```
 
 ## Layer 1: Windows Compatibility Patch
 
-`vllm-windows-v8.patch` is a unified diff against upstream
-`vllm-project/vllm` tag `v0.24.0`.
+`vllm-windows-v9.patch` is a unified diff against upstream
+`vllm-project/vllm` tag `v0.25.1`.
 
 Main categories:
 
@@ -43,6 +43,8 @@ Main categories:
 - Rust artifacts: packaging for `vllm-rs.exe` and `_rust_tool_parser.pyd`.
 - Multi-TurboQuant: six local KV-cache compression methods carried
   alongside the four upstream TurboQuant variants.
+- KV offload: Windows-safe DMA, shared mmap, filesystem I/O/cache paths,
+  native `fs_io_C.pyd`, CPU LRU/ARC, and tiered persistent storage.
 
 See [build.md](build.md) for the current build flow.
 
@@ -60,7 +62,7 @@ then validates every ZIP member against wheel RECORD before release.
    `libs\python313.lib`) from the Python NuGet package for Triton's
    runtime CUDA helper compilation.
 3. Installs PyTorch 2.11.0+cu128 and `triton-windows`.
-4. Verifies and installs the v0.24.0+cu128 wheel, the pinned Multi-TurboQuant
+4. Verifies and installs the v0.25.1+cu128 wheel, the pinned Multi-TurboQuant
    wheel, and structured-output backends.
    Artifacts are downloaded through `.part` files and the install marker stores
    both release SHA-256 values only after the full runtime check succeeds.
@@ -96,7 +98,28 @@ and routes each output to its request queue so concurrent streams cannot steal
 or discard another request's output. The installer adds the repository root to
 `python313._pth` so embedded Python can import this launcher module explicitly.
 
-## Layer 4: KV Cache Compression
+## Layer 4: Prompt-KV Offload
+
+`OffloadingConnector` remains the vLLM integration point. The launcher maps
+its opt-in modes onto two native vLLM specs:
+
+- `CPUOffloadingSpec`: a pinned-RAM primary tier with LRU or ARC eviction.
+- `TieringOffloadingSpec`: the same RAM primary tier plus a filesystem
+  secondary tier with independent read- and write-priority worker pools.
+
+The GPU worker transfers blocks through CUDA DMA. On Windows, file-backed mmap
+restores use the native batch-copy route because Triton cannot safely
+dereference that registered host pointer for every payload shape. The scheduler
+and GPU worker share a Windows `mmap.ACCESS_WRITE` mapping in the system temp
+directory. Filesystem blocks use binary mode and a sanitized, hashed namespace
+derived from the complete model/cache configuration.
+
+Offload is disabled by default. Filesystem mode requires an explicit root,
+sets no disk quota, and needs a fixed `PYTHONHASHSEED` before process startup
+for cache filenames to remain reusable across restarts. `launch.bat` sets the
+seed; users still own cache-directory capacity and cleanup.
+
+## Layer 5: KV Cache Compression
 
 The current build exposes ten KV-cache compression dtypes:
 
@@ -117,7 +140,7 @@ the attention call. The memory savings are real; the local methods still
 pay a throughput cost because encode/decode currently run through a
 PyTorch fallback path.
 
-## Layer 5: Windows Safetensors Reader
+## Layer 6: Windows Safetensors Reader
 
 The patch keeps the custom Windows safetensors path for systems with a
 small or disabled pagefile:
@@ -134,3 +157,7 @@ small or disabled pagefile:
   preserving the standard slot width.
 - Add calibrated outlier indices for `turboquant25`/`turboquant35`.
 - Improve multi-GPU support beyond the current single-GPU Windows path.
+- Add an explicit filesystem byte quota/eviction policy before considering the
+  storage tier a general-purpose default.
+- Evaluate remote/distributed tiers separately; this release does not port
+  LMCache P2P, NIXL, GDS, object-store, or remote cache features.

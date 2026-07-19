@@ -1,6 +1,6 @@
 # Multi-TurboQuant KV cache compression
 
-vLLM v0.24.0 on Windows ships with integrated support for ten KV cache
+vLLM v0.25.1 on Windows ships with integrated support for ten KV cache
 compression methods: six local
 [Multi-TurboQuant](https://github.com/aivrar/multi-turboquant)
 methods plus four upstream TurboQuant variants. This page focuses on

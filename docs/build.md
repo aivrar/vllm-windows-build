@@ -1,14 +1,15 @@
 # Build From Source
 
-This page documents the v0.24.0 Windows build flow and how to iterate on
-`vllm-windows-v8.patch`.
+This page documents the v0.25.1 Windows build flow and how to iterate on
+`vllm-windows-v9.patch`.
 
 For install-only usage, see [install.md](install.md).
 
 ## Patch Scope
 
-`vllm-windows-v8.patch` is a unified diff against upstream
-`vllm-project/vllm` tag `v0.24.0` (`ee0da84ab`).
+`vllm-windows-v9.patch` is a unified diff against upstream
+`vllm-project/vllm` tag `v0.25.1`
+(`752a3a504485790a2e8491cacbb35c137339ad34`).
 
 Main categories:
 
@@ -19,6 +20,7 @@ Main categories:
 | Runtime Python | Windows multiprocessing/network/event-loop fixes, safetensors reader, FakeProcessGroup, API server fallbacks |
 | Rust artifacts | Build and package `vllm-rs.exe` and `_rust_tool_parser.pyd` |
 | Multi-TurboQuant | Carry the 6 local KV-cache compression methods alongside upstream TurboQuant variants |
+| KV offload | Native Windows DMA, shared mmap, binary filesystem I/O, safe cache paths, CPU LRU/ARC, and tiered filesystem persistence |
 
 ## Required Toolchain
 
@@ -41,7 +43,7 @@ set TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0
 set VLLM_TARGET_DEVICE=cuda
 set CMAKE_BUILD_TYPE=Release
 set VLLM_DISABLE_SCCACHE=1
-set SETUPTOOLS_SCM_PRETEND_VERSION=0.24.0
+set SETUPTOOLS_SCM_PRETEND_VERSION=0.25.1
 set MAX_JOBS=2
 set PROTOC=C:\path\to\protoc.exe
 ```
@@ -53,8 +55,8 @@ set PROTOC=C:\path\to\protoc.exe
 ```bat
 git clone https://github.com/vllm-project/vllm.git vllm-source
 cd vllm-source
-git checkout v0.24.0
-git apply ..\vllm-windows-v8.patch
+git checkout v0.25.1
+git apply ..\vllm-windows-v9.patch
 cd ..
 ```
 
@@ -63,8 +65,8 @@ cd ..
 `python -m pip install -e . --no-build-isolation -v` drives CMake/Ninja through
 `setup.py`.
 
-`build.bat` accepts either a clean upstream v0.24.0 tree or a tree with the
-complete v8 patch already applied. It stops on a partial/conflicting patch and
+`build.bat` accepts either a clean upstream v0.25.1 tree or a tree with the
+complete v9 patch already applied. It stops on a partial/conflicting patch and
 verifies the Python, PyTorch, CUDA, `protoc`, native, Rust, FlashAttention, and
 third-party payload contract before reporting success.
 
@@ -75,6 +77,7 @@ _C_stable_libtorch.pyd
 _moe_C_stable_libtorch.pyd
 _rust_tool_parser.pyd
 cumem_allocator.pyd
+fs_io_C.pyd
 spinloop.pyd
 vllm_flash_attn\_vllm_fa2_C.pyd
 vllm-rs.exe
@@ -100,26 +103,26 @@ generate it before assembling a wheel:
 
 ```bat
 set VLLM_TARGET_DEVICE=cuda
-set SETUPTOOLS_SCM_PRETEND_VERSION=0.24.0
+set SETUPTOOLS_SCM_PRETEND_VERSION=0.25.1
 python setup.py egg_info
 ```
 
 Confirm `vllm.egg-info\PKG-INFO` contains:
 
 ```text
-Version: 0.24.0+cu128
+Version: 0.25.1+cu128
 ```
 
 ### 4. Assemble Wheel
 
 ```bat
-python assemble_wheel_cu128_v0.24.0.py
+python assemble_wheel_cu128_v0.25.1.py
 ```
 
 Output:
 
 ```text
-dist-v8\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
+dist-v9\vllm-0.25.1+cu128-cp313-cp313-win_amd64.whl
 ```
 
 ### 5. Smoke Test The Wheel
@@ -127,17 +130,17 @@ dist-v8\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
 Validate archive completeness and RECORD before installing:
 
 ```bat
-python tests\test_wheel_contents.py dist-v8\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
+python tests\test_wheel_contents.py dist-v9\vllm-0.25.1+cu128-cp313-cp313-win_amd64.whl
 ```
 
-The assembler and wheel-content test also verify that request-seed generation
-explicitly uses NumPy `int64`, preventing the Windows 32-bit C `long` overflow
-reported in issue #10.
+The assembler and wheel-content test verify request-seed generation, all native
+release payloads, Windows KV-offload DMA/mmap/filesystem markers, the non-Triton
+block-table fallback, AMD64 dependency metadata, ZIP integrity, and RECORD.
 
 Install the wheel from outside the source tree:
 
 ```bat
-python -m pip install --force-reinstall --no-deps dist-v8\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
+python -m pip install --force-reinstall --no-deps dist-v9\vllm-0.25.1+cu128-cp313-cp313-win_amd64.whl
 ```
 
 Run:
@@ -152,7 +155,7 @@ For the issue #7 Qwen3-VL/FlashAttention regression, install the wheel into
 an isolated target and run:
 
 ```bat
-python -m pip install --no-deps --target %TEMP%\vllm-wheel-test dist-v8\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
+python -m pip install --no-deps --target %TEMP%\vllm-wheel-test dist-v9\vllm-0.25.1+cu128-cp313-cp313-win_amd64.whl
 python tests\test_issue7_flash_attn.py --package-root %TEMP%\vllm-wheel-test
 ```
 
@@ -181,18 +184,18 @@ or start from a fresh build temp before rebuilding.
 From the patched vLLM source tree:
 
 ```bat
-git diff --binary v0.24.0..HEAD --output=..\vllm-windows-v8.patch -- .
+git diff --binary v0.25.1..HEAD --output=..\vllm-windows-v9.patch -- .
 ```
 
 Validate against a clean upstream worktree:
 
 ```bat
-git worktree add --detach ..\patch-check-v0.24.0 v0.24.0
-git -C ..\patch-check-v0.24.0 apply --check ..\vllm-windows-v8.patch
+git worktree add --detach ..\patch-check-v0.25.1 v0.25.1
+git -C ..\patch-check-v0.25.1 apply --check ..\vllm-windows-v9.patch
 ```
 
 Also run:
 
 ```bat
-git diff --check v0.24.0..HEAD -- . ":!cutlass-windows.patch" ":!vllm-flash-attn-cutlass-windows.patch"
+git diff --check v0.25.1..HEAD -- . ":!cutlass-windows.patch" ":!vllm-flash-attn-cutlass-windows.patch"
 ```

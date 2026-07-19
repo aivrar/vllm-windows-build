@@ -1,6 +1,6 @@
 @echo off
 :: =====================================================================
-:: vLLM v0.24.0 Windows automated build runner
+:: vLLM v0.25.1 Windows automated build runner
 :: Sets up VS 2022 + venv + env vars, then calls build.bat.
 :: Edit the paths below to match your install.
 :: =====================================================================
@@ -47,7 +47,7 @@ if exist "%VENV_PATH%\Scripts\activate.bat" (
 set "VLLM_TARGET_DEVICE=cuda"
 set "CMAKE_BUILD_TYPE=Release"
 set "VLLM_DISABLE_SCCACHE=1"
-set "SETUPTOOLS_SCM_PRETEND_VERSION=0.24.0"
+set "SETUPTOOLS_SCM_PRETEND_VERSION=0.25.1"
 
 if defined PROTOC if not exist "%PROTOC%" (
     echo [ERROR] PROTOC not found at %PROTOC%

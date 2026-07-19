@@ -11,7 +11,7 @@ REM ============================================================
 REM  Check Python installation
 REM ============================================================
 set "NEEDS_INSTALL=0"
-set "EXPECTED_WHEEL_SHA256=41E930FBCF994E4FD7E5CB1585F8D277AF3FFDBA0AEE7F5DDE5822DD90E6FBA7"
+set "EXPECTED_WHEEL_SHA256=0C4F9B2E36482523FC7B4C092D711AC49B4265EF9F36A7AEEFFF9A667C875339"
 set "EXPECTED_MTQ_SHA256=5B310E05904B588539D9A8E3374DFA6C160F025F9C2099BA5C7877C79B2FA149"
 if not exist "%~dp0python\python.exe" set "NEEDS_INSTALL=1"
 if not exist "%~dp0python\.torch-installed" set "NEEDS_INSTALL=1"
@@ -62,6 +62,7 @@ if exist "%TRITON_NVIDIA_DIR%\bin\ptxas.exe" (
     set "PATH=%TRITON_NVIDIA_DIR%\bin;%PATH%"
 )
 set "VLLM_HOST_IP=127.0.0.1"
+if not defined PYTHONHASHSEED set "PYTHONHASHSEED=0"
 
 REM Suppress tokenizer parallelism warning
 set "TOKENIZERS_PARALLELISM=false"

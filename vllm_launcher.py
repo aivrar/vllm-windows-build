@@ -36,6 +36,7 @@ if sys.platform == "win32":
     sys.modules["uvloop"] = uvloop
 
 from vllm import LLM, SamplingParams
+from vllm.config import KVTransferConfig
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("vllm_launcher")
@@ -741,7 +742,56 @@ def main():
                         help="Allow custom model code (needed for some embedding models like nomic-bert)")
     parser.add_argument("--cpu-offload-gb", type=float, default=0,
                         help="GiB of model weights to offload to CPU (useful for Windows WDDM memory limits)")
+    parser.add_argument(
+        "--kv-offload",
+        choices=("disabled", "cpu-lru", "cpu-arc", "fs-lru", "fs-arc"),
+        default="disabled",
+        help=(
+            "Experimental prompt-KV offload mode (default: disabled). "
+            "CPU modes use pinned RAM; fs modes add a persistent filesystem tier."
+        ),
+    )
+    parser.add_argument(
+        "--kv-offload-cpu-gb",
+        type=float,
+        default=4.0,
+        help=(
+            "GiB for the KV offload RAM tier when --kv-offload is enabled "
+            "(default: 4.0; separate from --cpu-offload-gb model-weight offload)"
+        ),
+    )
+    parser.add_argument(
+        "--kv-offload-fs-root",
+        default=None,
+        help=(
+            "Cache directory required by fs-lru/fs-arc. Files persist across "
+            "runs and have no automatic size quota."
+        ),
+    )
+    parser.add_argument(
+        "--kv-offload-read-threads",
+        type=int,
+        default=4,
+        help="Read-priority filesystem cache threads (default: 4)",
+    )
+    parser.add_argument(
+        "--kv-offload-write-threads",
+        type=int,
+        default=4,
+        help="Write-priority filesystem cache threads (default: 4)",
+    )
     args = parser.parse_args()
+
+    if args.kv_offload != "disabled" and args.kv_offload_cpu_gb <= 0:
+        parser.error("--kv-offload-cpu-gb must be greater than zero")
+    if args.kv_offload_read_threads < 1:
+        parser.error("--kv-offload-read-threads must be at least 1")
+    if args.kv_offload_write_threads < 1:
+        parser.error("--kv-offload-write-threads must be at least 1")
+    if args.kv_offload.startswith("fs-") and not args.kv_offload_fs_root:
+        parser.error("--kv-offload-fs-root is required for fs-lru/fs-arc")
+    if args.kv_offload_fs_root and not args.kv_offload.startswith("fs-"):
+        parser.error("--kv-offload-fs-root is only valid with fs-lru/fs-arc")
 
     # Interactive model selection if --model not provided
     if args.model is None:
@@ -773,7 +823,7 @@ def main():
         llm_kwargs["enforce_eager"] = True
     if args.max_model_len:
         llm_kwargs["max_model_len"] = args.max_model_len
-    if args.enable_prefix_caching:
+    if args.enable_prefix_caching or args.kv_offload != "disabled":
         llm_kwargs["enable_prefix_caching"] = True
     if args.num_scheduler_steps > 1:
         llm_kwargs["num_scheduler_steps"] = args.num_scheduler_steps
@@ -783,6 +833,53 @@ def main():
         llm_kwargs["trust_remote_code"] = True
     if args.cpu_offload_gb > 0:
         llm_kwargs["cpu_offload_gb"] = args.cpu_offload_gb
+    if args.kv_offload != "disabled":
+        policy = args.kv_offload.rsplit("-", maxsplit=1)[1]
+        extra_config = {
+            "cpu_bytes_to_use": int(args.kv_offload_cpu_gb * (1 << 30)),
+            "eviction_policy": policy,
+            "offload_prompt_only": True,
+        }
+        if args.kv_offload.startswith("fs-"):
+            fs_root = Path(args.kv_offload_fs_root).expanduser().resolve()
+            if fs_root.exists() and not fs_root.is_dir():
+                parser.error(f"--kv-offload-fs-root is not a directory: {fs_root}")
+            extra_config.update(
+                {
+                    "spec_name": "TieringOffloadingSpec",
+                    "secondary_tiers": [
+                        {
+                            "type": "fs",
+                            "root_dir": str(fs_root),
+                            "n_read_threads": args.kv_offload_read_threads,
+                            "n_write_threads": args.kv_offload_write_threads,
+                        }
+                    ],
+                }
+            )
+            if os.environ.get("PYTHONHASHSEED") != "0":
+                logger.warning(
+                    "Filesystem KV cache is enabled without PYTHONHASHSEED=0 "
+                    "at process start. In-process reuse still works, but cache "
+                    "entries may not be reusable after a restart. launch.bat "
+                    "sets the required value automatically."
+                )
+            logger.warning(
+                "Filesystem KV cache root %s has no automatic size quota; "
+                "monitor and clean it explicitly.",
+                fs_root,
+            )
+        llm_kwargs["kv_transfer_config"] = KVTransferConfig(
+            kv_connector="OffloadingConnector",
+            kv_role="kv_both",
+            kv_connector_extra_config=extra_config,
+        )
+        logger.info(
+            "Experimental KV offload enabled: mode=%s, RAM tier=%.2f GiB; "
+            "prefix caching enabled",
+            args.kv_offload,
+            args.kv_offload_cpu_gb,
+        )
 
     llm = LLM(**llm_kwargs)
     elapsed = time.time() - start

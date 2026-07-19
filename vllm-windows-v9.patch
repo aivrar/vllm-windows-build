@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 36b8e66f2..0d478b7e5 100644
+index 48c0270e2..20671f72f 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -76,7 +76,7 @@ set(TORCH_SUPPORTED_VERSION_ROCM "2.11.0")
@@ -28,7 +28,7 @@ index 36b8e66f2..0d478b7e5 100644
  #
  # Import torch cmake configuration.
  # Torch also imports CUDA (and partially HIP) languages with some customizations,
-@@ -241,9 +251,56 @@ endif()
+@@ -256,9 +266,56 @@ endif()
  # Set CUDA include flags for CXX compiler.
  #
  if(VLLM_GPU_LANG STREQUAL "CUDA")
@@ -87,7 +87,7 @@ index 36b8e66f2..0d478b7e5 100644
    endif()
  endif()
  
-@@ -394,6 +451,13 @@ if(VLLM_GPU_LANG STREQUAL "CUDA" OR VLLM_GPU_LANG STREQUAL "HIP")
+@@ -416,6 +473,13 @@ if(VLLM_GPU_LANG STREQUAL "CUDA" OR VLLM_GPU_LANG STREQUAL "HIP")
          "9.0a;10.0a;10.1a;10.3a;12.0a;12.1a" "${CUDA_ARCHS}")
      endif()
  
@@ -101,7 +101,7 @@ index 36b8e66f2..0d478b7e5 100644
      if(COOPERATIVE_TOPK_ARCHS)
        list(APPEND VLLM_GPU_FLAGS "-DVLLM_ENABLE_COOPERATIVE_TOPK=1")
  
-@@ -433,6 +497,30 @@ if(VLLM_GPU_LANG STREQUAL "CUDA" OR VLLM_GPU_LANG STREQUAL "HIP")
+@@ -455,13 +519,44 @@ if(VLLM_GPU_LANG STREQUAL "CUDA" OR VLLM_GPU_LANG STREQUAL "HIP")
      endif()
      FetchContent_MakeAvailable(cutlass)
  
@@ -130,9 +130,7 @@ index 36b8e66f2..0d478b7e5 100644
 +    endif()
 +
      list(APPEND VLLM_STABLE_EXT_SRC
-       "csrc/libtorch_stable/cuda_view.cu"
-       "csrc/libtorch_stable/cuda_utils_kernels.cu"
-@@ -440,8 +528,15 @@ if(VLLM_GPU_LANG STREQUAL "CUDA" OR VLLM_GPU_LANG STREQUAL "HIP")
+       "csrc/libtorch_stable/cutlass_extensions/common.cpp"
        "csrc/libtorch_stable/quantization/w8a8/cutlass/scaled_mm_entry.cu"
        "csrc/libtorch_stable/quantization/fp4/nvfp4_quant_entry.cu"
        "csrc/libtorch_stable/quantization/fp4/nvfp4_scaled_mm_entry.cu"
@@ -150,7 +148,7 @@ index 36b8e66f2..0d478b7e5 100644
  
      #
      # Machete kernels
-@@ -655,6 +750,12 @@ if(VLLM_GPU_LANG STREQUAL "CUDA" OR VLLM_GPU_LANG STREQUAL "HIP")
+@@ -675,6 +770,12 @@ if(VLLM_GPU_LANG STREQUAL "CUDA" OR VLLM_GPU_LANG STREQUAL "HIP")
          set_source_files_properties(${MARLIN_SRCS}
            PROPERTIES COMPILE_FLAGS "-static-global-template-stub=false")
        endif()
@@ -163,7 +161,7 @@ index 36b8e66f2..0d478b7e5 100644
        list(APPEND VLLM_STABLE_EXT_SRC "${MARLIN_SRCS}")
  
        message(STATUS "Building Marlin kernels for archs: ${MARLIN_OTHER_ARCHS}")
-@@ -1063,6 +1164,7 @@ if(VLLM_GPU_LANG STREQUAL "CUDA" OR VLLM_GPU_LANG STREQUAL "HIP")
+@@ -1083,6 +1184,7 @@ if(VLLM_GPU_LANG STREQUAL "CUDA" OR VLLM_GPU_LANG STREQUAL "HIP")
      COMPILE_FLAGS ${VLLM_GPU_FLAGS}
      ARCHITECTURES ${VLLM_GPU_ARCHES}
      INCLUDE_DIRECTORIES ${CUTLASS_INCLUDE_DIR} ${CUTLASS_TOOLS_UTIL_INCLUDE_DIR}
@@ -171,7 +169,7 @@ index 36b8e66f2..0d478b7e5 100644
      USE_SABI 3
      WITH_SOABI)
  
-@@ -1293,6 +1395,7 @@ define_extension_target(
+@@ -1308,6 +1410,7 @@ define_extension_target(
    ARCHITECTURES ${VLLM_GPU_ARCHES}
    INCLUDE_DIRECTORIES ${CUTLASS_INCLUDE_DIR}
    INCLUDE_DIRECTORIES ${CUTLASS_TOOLS_UTIL_INCLUDE_DIR}
@@ -179,7 +177,7 @@ index 36b8e66f2..0d478b7e5 100644
    USE_SABI 3
    WITH_SOABI)
  
-@@ -1383,11 +1486,20 @@ endif()
+@@ -1393,11 +1496,20 @@ endif()
  
  # For CUDA we also build and ship some external projects.
  if (VLLM_GPU_LANG STREQUAL "CUDA")
@@ -205,7 +203,7 @@ index 36b8e66f2..0d478b7e5 100644
 +  include(cmake/external_projects/vllm_flash_attn.cmake)
  endif ()
 diff --git a/cmake/external_projects/vllm_flash_attn.cmake b/cmake/external_projects/vllm_flash_attn.cmake
-index ea7ac544b..fa3aaceed 100644
+index 728f5e247..131c2f109 100644
 --- a/cmake/external_projects/vllm_flash_attn.cmake
 +++ b/cmake/external_projects/vllm_flash_attn.cmake
 @@ -57,6 +57,36 @@ install(CODE "set(CMAKE_INSTALL_PREFIX \"\${CMAKE_INSTALL_PREFIX}/vllm/\")" ALL_
@@ -259,7 +257,7 @@ index e3e766541..12b16d3a4 100644
    find_package(Python COMPONENTS Interpreter Development.Module Development.SABIModule)
    if (NOT Python_FOUND)
 diff --git a/csrc/cpu/activation.cpp b/csrc/cpu/activation.cpp
-index 039b8d5c3..5b8d700d6 100644
+index 2f06813a1..7574955a1 100644
 --- a/csrc/cpu/activation.cpp
 +++ b/csrc/cpu/activation.cpp
 @@ -68,14 +68,14 @@ FORCE_INLINE vec_op::FP32Vec8 gelu_quick_act(const vec_op::FP32Vec8& x) {
@@ -280,10 +278,10 @@ index 039b8d5c3..5b8d700d6 100644
    const vec_op::FP32Vec8 w3(0.044715);
    const vec_op::FP32Vec8 x_3 = x * x * x;
 diff --git a/csrc/cpu/cpu_fused_moe.cpp b/csrc/cpu/cpu_fused_moe.cpp
-index c0d92bde7..dfd5e821d 100644
+index 07b0aaf86..495844f70 100644
 --- a/csrc/cpu/cpu_fused_moe.cpp
 +++ b/csrc/cpu/cpu_fused_moe.cpp
-@@ -124,7 +124,7 @@ void gelu_and_mul(float* __restrict__ input, scalar_t* __restrict__ output,
+@@ -144,7 +144,7 @@ void gelu_and_mul(float* __restrict__ input, scalar_t* __restrict__ output,
    float* __restrict__ gate = input;
    float* __restrict__ up = input + dim;
    vec_op::FP32Vec16 one_vec(1.0);
@@ -293,7 +291,7 @@ index c0d92bde7..dfd5e821d 100644
    alignas(64) float temp[16];
  
 diff --git a/csrc/cumem_allocator.cpp b/csrc/cumem_allocator.cpp
-index 73333f712..1f04e1918 100644
+index 2329d51a1..52a5bffe3 100644
 --- a/csrc/cumem_allocator.cpp
 +++ b/csrc/cumem_allocator.cpp
 @@ -1,3 +1,7 @@
@@ -304,6 +302,40 @@ index 73333f712..1f04e1918 100644
  // A CUDAPluggableAllocator based on cumem* APIs.
  // Important: allocation size, CUdeviceptr and CUmemGenericAllocationHandle*
  // need to be unsigned long long
+diff --git a/csrc/fs_io.cpp b/csrc/fs_io.cpp
+index fdf3e614e..ecdb0fa53 100644
+--- a/csrc/fs_io.cpp
++++ b/csrc/fs_io.cpp
+@@ -3,8 +3,8 @@
+ 
+ #include <Python.h>
+ 
+-#include <unistd.h>
+-
++#include <filesystem>
++#include <system_error>
+ #include <vector>
+ 
+ extern "C" {
+@@ -12,14 +12,16 @@ extern "C" {
+ static void _batch_lookup(const std::vector<const char*>& paths,
+                           std::vector<int>& exists_flags) {
+   for (size_t i = 0; i < paths.size(); i++) {
+-    exists_flags[i] = (access(paths[i], F_OK) == 0) ? 1 : 0;
++    std::error_code error;
++    const auto path = std::filesystem::u8path(paths[i]);
++    exists_flags[i] = std::filesystem::exists(path, error) ? 1 : 0;
+   }
+ }
+ 
+ /// @brief Check file existence for a batch of paths.
+ /// @param paths list[str] – absolute paths to check.
+ /// @return list[bool] – True if the corresponding path exists, False otherwise.
+-/// @note Releases the GIL for the entire batch. File existence via access(2).
++/// @note Releases the GIL for the entire batch.
+ static PyObject* batch_lookup(PyObject* /*self*/, PyObject* args) {
+   PyObject* path_list;
+   if (!PyArg_ParseTuple(args, "O!", &PyList_Type, &path_list)) {
 diff --git a/csrc/libtorch_stable/activation_kernels.cu b/csrc/libtorch_stable/activation_kernels.cu
 index e1dc01346..274450d53 100644
 --- a/csrc/libtorch_stable/activation_kernels.cu
@@ -394,6 +426,20 @@ index 1f62c37ba..44a58e500 100644
      correction_factor = ::exp2f(softmax_scale_log2 * (row_max - row_max_new));
      row_max = row_max_new;
  
+diff --git a/csrc/libtorch_stable/cache_kernels.cu b/csrc/libtorch_stable/cache_kernels.cu
+index a1ac81cb1..8c7a4124e 100644
+--- a/csrc/libtorch_stable/cache_kernels.cu
++++ b/csrc/libtorch_stable/cache_kernels.cu
+@@ -107,7 +107,8 @@ void swap_blocks_batch(const torch::stable::Tensor& src_ptrs,
+   // and CUdeviceptr/void*/size_t are all 8 bytes on 64-bit platforms, so we
+   // reinterpret_cast the tensor data directly to avoid copies.
+   static_assert(sizeof(size_t) == sizeof(int64_t));
+-#if !defined(USE_ROCM) && defined(CUDA_VERSION) && CUDA_VERSION >= 12080
++#if !defined(USE_ROCM) && !defined(_WIN32) && defined(CUDA_VERSION) && \
++    CUDA_VERSION >= 12080
+   static_assert(sizeof(CUdeviceptr) == sizeof(int64_t));
+   // Resolve cuMemcpyBatchAsync at runtime via cuGetProcAddress so that
+   // binaries compiled with CUDA 12.8+ still work on older drivers, and
 diff --git a/csrc/libtorch_stable/core/math.hpp b/csrc/libtorch_stable/core/math.hpp
 index 6764e1fd6..c6345f72f 100644
 --- a/csrc/libtorch_stable/core/math.hpp
@@ -414,7 +460,7 @@ index 6764e1fd6..c6345f72f 100644
  
  template <typename A, typename B>
 diff --git a/csrc/libtorch_stable/fused_qknorm_rope_kernel.cu b/csrc/libtorch_stable/fused_qknorm_rope_kernel.cu
-index c9b7ee9e4..782a2b9ae 100644
+index a8e6d32a1..b1cc2d71a 100644
 --- a/csrc/libtorch_stable/fused_qknorm_rope_kernel.cu
 +++ b/csrc/libtorch_stable/fused_qknorm_rope_kernel.cu
 @@ -18,6 +18,9 @@
@@ -523,10 +569,10 @@ index c17b06a79..80ed2390b 100644
  
  template<typename input_t, typename weight_t, typename state_t>
 diff --git a/csrc/libtorch_stable/moe/grouped_topk_kernels.cu b/csrc/libtorch_stable/moe/grouped_topk_kernels.cu
-index a28edf3a5..ebf01080c 100644
+index da9ef44d0..c22892535 100644
 --- a/csrc/libtorch_stable/moe/grouped_topk_kernels.cu
 +++ b/csrc/libtorch_stable/moe/grouped_topk_kernels.cu
-@@ -688,11 +688,11 @@ __global__ void grouped_topk_fused_small_expert_count_kernel(
+@@ -689,11 +689,11 @@ __global__ void grouped_topk_fused_small_expert_count_kernel(
  #endif
    // declare shared memory structure
    // number of experts is bounded by number of threads
@@ -541,7 +587,7 @@ index a28edf3a5..ebf01080c 100644
  
    // needed for warp reduce
    auto block = cg::this_thread_block();
-@@ -799,10 +799,8 @@ __global__ void grouped_topk_fused_small_expert_count_kernel(
+@@ -800,10 +800,8 @@ __global__ void grouped_topk_fused_small_expert_count_kernel(
  
      int constexpr NumExpertWarps = (MaxNumExperts - 1) / MaxNumExpertsUnit + 1;
      int constexpr NumInterTopK = NumExpertWarps * MaxNumTopExperts;
@@ -583,7 +629,7 @@ index 64b47b607..2ea35849d 100644
                  kernel_template2 = (
                      "Marlin<{{a_type_id}}, {{b_type_id}}, {{c_type_id}}, "
 diff --git a/csrc/libtorch_stable/moe/topk_softplus_sqrt_kernels.cu b/csrc/libtorch_stable/moe/topk_softplus_sqrt_kernels.cu
-index 7efe13b4d..4c6954e9f 100644
+index 095a76678..bd56425d6 100644
 --- a/csrc/libtorch_stable/moe/topk_softplus_sqrt_kernels.cu
 +++ b/csrc/libtorch_stable/moe/topk_softplus_sqrt_kernels.cu
 @@ -478,11 +478,11 @@ void topkGatingSoftplusSqrtLauncherHelper(
@@ -890,7 +936,7 @@ index b32a7bd27..3d514d94c 100644
  
      // Apply scale upper bound if provided
 diff --git a/csrc/libtorch_stable/quantization/fused_kernels/layernorm_utils.cuh b/csrc/libtorch_stable/quantization/fused_kernels/layernorm_utils.cuh
-index 290abedcf..d6d4ea9d5 100644
+index 0139cfbc9..39cb21597 100644
 --- a/csrc/libtorch_stable/quantization/fused_kernels/layernorm_utils.cuh
 +++ b/csrc/libtorch_stable/quantization/fused_kernels/layernorm_utils.cuh
 @@ -80,7 +80,7 @@ __device__ void compute_dynamic_per_token_scales(
@@ -966,7 +1012,7 @@ index 2a0384798..02202c47b 100644
                  kernel_template2 = (
                      "Marlin<{{a_type_id}}, {{b_type_id}}, {{c_type_id}}, "
 diff --git a/csrc/libtorch_stable/quantization/w8a8/fp8/common.cu b/csrc/libtorch_stable/quantization/w8a8/fp8/common.cu
-index d02fc2296..71a8e37b4 100644
+index 86696e2f7..51bda5abd 100644
 --- a/csrc/libtorch_stable/quantization/w8a8/fp8/common.cu
 +++ b/csrc/libtorch_stable/quantization/w8a8/fp8/common.cu
 @@ -110,7 +110,7 @@ __global__ void segmented_max_reduction_strided(
@@ -988,27 +1034,27 @@ index d02fc2296..71a8e37b4 100644
      scale[token_idx] = token_scale;
    }
 diff --git a/csrc/libtorch_stable/torch_bindings.cpp b/csrc/libtorch_stable/torch_bindings.cpp
-index 1be7217ce..6a50fa721 100644
+index 66a93a5ba..cd0c2e31f 100644
 --- a/csrc/libtorch_stable/torch_bindings.cpp
 +++ b/csrc/libtorch_stable/torch_bindings.cpp
-@@ -448,7 +448,7 @@ STABLE_TORCH_LIBRARY_FRAGMENT(_C, ops) {
+@@ -447,7 +447,7 @@ STABLE_TORCH_LIBRARY_FRAGMENT(_C, ops) {
        "Tensor fp8_scale, Tensor q_fp8_scale_inv, float eps, "
        "int cache_block_size) -> ()");
  
 -#ifndef USE_ROCM
 +#if !defined(USE_ROCM) && !defined(_WIN32)
    ops.def(
-       "minimax_allreduce_rms("
-       "Tensor input, Tensor norm_weight, Tensor workspace, "
-@@ -704,7 +704,7 @@ STABLE_TORCH_LIBRARY_IMPL(_C, CUDA, ops) {
+       "minimax_allreduce_rms_qk("
+       "Tensor qkv, Tensor norm_weight_q, Tensor norm_weight_k, "
+@@ -672,7 +672,7 @@ STABLE_TORCH_LIBRARY_IMPL(_C, CUDA, ops) {
    ops.impl(
        "fused_deepseek_v4_qnorm_rope_kv_rope_full_cache_fp8_insert",
        TORCH_BOX(&fused_deepseek_v4_qnorm_rope_kv_rope_full_cache_fp8_insert));
 -#ifndef USE_ROCM
 +#if !defined(USE_ROCM) && !defined(_WIN32)
-   ops.impl("minimax_allreduce_rms", TORCH_BOX(&minimax_allreduce_rms));
    ops.impl("minimax_allreduce_rms_qk", TORCH_BOX(&minimax_allreduce_rms_qk));
  #endif
+   ops.impl("fused_minimax_m3_qknorm_rope_kv_insert",
 diff --git a/csrc/libtorch_stable/torch_utils.h b/csrc/libtorch_stable/torch_utils.h
 index f02346739..af252f804 100644
 --- a/csrc/libtorch_stable/torch_utils.h
@@ -1219,45 +1265,61 @@ index 000000000..f29e2c19f
 +   dim3
 +   get_block_shape() {
 +     return dim3(MaxThreadsPerBlock, 1, 1);
+diff --git a/requirements/common.txt b/requirements/common.txt
+index 1652480c2..a55a5ac18 100644
+--- a/requirements/common.txt
++++ b/requirements/common.txt
+@@ -21,12 +21,12 @@ pillow  # Required for image processing
+ prometheus-fastapi-instrumentator >= 8.0.0 # v8 unblocks starlette >= 1.0
+ tiktoken >= 0.6.0  # Required for DBRX tokenizer
+ lm-format-enforcer == 0.11.3
+-llguidance >= 1.7.0, < 1.8.0; platform_machine == "x86_64" or platform_machine == "arm64" or platform_machine == "aarch64" or platform_machine == "ppc64le"
++llguidance >= 1.7.0, < 1.8.0; platform_machine == "x86_64" or platform_machine == "AMD64" or platform_machine == "arm64" or platform_machine == "aarch64" or platform_machine == "ppc64le"
+ outlines_core == 0.2.14
+ # required for outlines backend disk cache
+ diskcache == 5.6.3
+ lark == 1.2.2
+-xgrammar >= 0.2.1, < 1.0.0; platform_machine == "x86_64" or platform_machine == "aarch64" or platform_machine == "arm64" or platform_machine == "s390x" or platform_machine == "ppc64le"
++xgrammar >= 0.2.1, < 1.0.0; platform_machine == "x86_64" or platform_machine == "AMD64" or platform_machine == "aarch64" or platform_machine == "arm64" or platform_machine == "s390x" or platform_machine == "ppc64le"
+ typing_extensions >= 4.10
+ filelock >= 3.16.1 # need to contain https://github.com/tox-dev/filelock/pull/317
+ partial-json-parser # used for parsing partial JSON outputs
 diff --git a/requirements/cuda.txt b/requirements/cuda.txt
-index 19a1f63dd..226d8f263 100644
+index 116aca3c7..45c7a1eb7 100644
 --- a/requirements/cuda.txt
 +++ b/requirements/cuda.txt
-@@ -9,21 +9,23 @@ torchaudio==2.11.0
- # These must be updated alongside torch
- torchvision==0.26.0 # Required for phi3v processor. See https://github.com/pytorch/vision?tab=readme-ov-file#installation for corresponding version
+@@ -11,22 +11,22 @@ torchvision==0.26.0 # Required for phi3v processor. See https://github.com/pytor
+ torchcodec >= 0.14
+ PyNvVideoCodec==2.0.4
  # FlashInfer should be updated together with the Dockerfile
--flashinfer-python==0.6.12
--flashinfer-cubin==0.6.12
+-flashinfer-python==0.6.13
+-flashinfer-cubin==0.6.13
 -apache-tvm-ffi==0.1.9
 -tilelang==0.1.9
 -nvidia-cudnn-frontend>=1.19.1
-+# flashinfer-python==0.6.12  # Removed for Windows build (no Windows wheel)
-+# flashinfer-cubin==0.6.12  # Removed for Windows build (no Windows wheel)
-+# apache-tvm-ffi==0.1.9  # Removed for Windows build (flashinfer dep)
-+# tilelang==0.1.9  # Removed for Windows build (no Windows wheel)
-+# nvidia-cudnn-frontend>=1.19.1  # Removed for Windows build (flashinfer dep)
- 
--# Required for faster safetensors model loading
++flashinfer-python==0.6.13; platform_system == "Linux"
++flashinfer-cubin==0.6.13; platform_system == "Linux"
++apache-tvm-ffi==0.1.9; platform_system == "Linux"
++tilelang==0.1.9; platform_system == "Linux"
++nvidia-cudnn-frontend>=1.19.1; platform_system == "Linux"
+ # Required for LLM_NVTX_SCOPES_FOR_PROFILING=1
+ nvtx==0.2.15
+ # Required for faster safetensors model loading
 -fastsafetensors >= 0.3.2
-+# Required for faster safetensors model loading on Linux (uses io_uring).
-+# The Windows build uses its own numpy-mmap-based safetensors reader in
-+# vllm/model_executor/model_loader/weight_utils.py.
-+# fastsafetensors >= 0.3.2  # Removed for Windows build (Linux-only, io_uring)
++fastsafetensors >= 0.3.2; platform_system == "Linux"
  
  # QuACK and Cutlass DSL for FA4 (cute-DSL implementation)
 -nvidia-cutlass-dsl[cu13]==4.5.2
 -quack-kernels>=0.3.3
-+# nvidia-cutlass-dsl[cu13]==4.5.2  # Removed for Windows build (no Windows wheel)
-+# quack-kernels>=0.3.3  # Removed for Windows build (no Windows wheel)
++nvidia-cutlass-dsl[cu13]==4.5.2; platform_system == "Linux"
++quack-kernels>=0.3.3; platform_system == "Linux"
  
  # Tokenspeed_MLA for faster mla with spec decode
--tokenspeed-mla==0.1.2
-+# tokenspeed-mla==0.1.2  # Removed for Windows build (no Windows wheel)
+ tokenspeed-mla==0.1.2; platform_system == "Linux"
  
  # Humming kernels for quantization gemm
--humming-kernels[cu13]==0.1.6
-+# humming-kernels[cu13]==0.1.6  # Removed for Windows build (no Windows wheel)
+-humming-kernels[cu13]==0.1.10
++humming-kernels[cu13]==0.1.10; platform_system == "Linux"
 diff --git a/rust/src/cmd/src/main.rs b/rust/src/cmd/src/main.rs
 index c015319ed..77439334f 100644
 --- a/rust/src/cmd/src/main.rs
@@ -1421,36 +1483,79 @@ index 0a506244d..c24381aec 100644
  #[cfg(test)]
  mod tests {
      use expect_test::expect;
+diff --git a/rust/src/server/Cargo.toml b/rust/src/server/Cargo.toml
+index f3e03863d..cfd14a9e1 100644
+--- a/rust/src/server/Cargo.toml
++++ b/rust/src/server/Cargo.toml
+@@ -18,7 +18,6 @@ indexmap.workspace = true
+ itertools.workspace = true
+ libc.workspace = true
+ llm-multimodal.workspace = true
+-openssl.workspace = true
+ prost.workspace = true
+ prost-types.workspace = true
+ rmpv.workspace = true
+@@ -29,9 +28,7 @@ sha2.workspace = true
+ socket2.workspace = true
+ subtle.workspace = true
+ thiserror-ext.workspace = true
+-tls-listener.workspace = true
+ tokio.workspace = true
+-tokio-openssl.workspace = true
+ tokio-stream.workspace = true
+ tokio-util.workspace = true
+ tonic.workspace = true
+@@ -49,6 +46,16 @@ vllm-llm.workspace = true
+ vllm-metrics.workspace = true
+ vllm-text.workspace = true
+ 
++[target.'cfg(not(windows))'.dependencies]
++openssl.workspace = true
++tls-listener.workspace = true
++tokio-openssl.workspace = true
++
++[target.'cfg(windows)'.dependencies]
++openssl = { workspace = true, features = ["vendored"] }
++tls-listener.workspace = true
++tokio-openssl.workspace = true
++
+ [build-dependencies]
+ tonic-prost-build.workspace = true
+ 
 diff --git a/rust/src/server/src/listener.rs b/rust/src/server/src/listener.rs
-index b7b715b0e..5cb919850 100644
+index e61484398..1ec0e6cbf 100644
 --- a/rust/src/server/src/listener.rs
 +++ b/rust/src/server/src/listener.rs
-@@ -5,12 +5,23 @@
+@@ -5,17 +5,26 @@
  //! `axum::serve(...)` through a single type.
  
  use std::io::Result;
+-use std::net::{SocketAddr, TcpListener as StdTcpListener};
 +#[cfg(windows)]
 +use std::io::{Error, ErrorKind};
++use std::net::SocketAddr;
 +#[cfg(unix)]
- use std::net::TcpListener as StdTcpListener;
++use std::net::TcpListener as StdTcpListener;
 +#[cfg(unix)]
  use std::os::fd::{FromRawFd, IntoRawFd, OwnedFd};
 +#[cfg(unix)]
  use std::os::unix::net::UnixListener as StdUnixListener;
+ use std::pin::Pin;
+ use std::task::{Context, Poll, ready};
  
+ use auto_enums::enum_derive;
+ use openssl::ssl::SslContext;
 +#[cfg(unix)]
  use socket2::Socket;
+ use tls_listener::{AsyncAccept, AsyncListener};
 -use tokio::net::{TcpListener, TcpStream, UnixListener, UnixStream};
-+use tokio::net::TcpListener;
-+use tokio::net::TcpStream;
++use tokio::net::{TcpListener, TcpStream};
 +#[cfg(unix)]
-+use tokio::net::UnixListener;
-+#[cfg(unix)]
-+use tokio::net::UnixStream;
- use tokio_util::either::Either;
++use tokio::net::{UnixListener, UnixStream};
+ use tonic::transport::server::{Connected, TcpConnectInfo};
+ use tracing::trace;
  
- use crate::HttpListenerMode;
-@@ -20,6 +31,7 @@ use crate::HttpListenerMode;
+@@ -26,22 +35,33 @@ use crate::{HttpListenerMode, tls};
  #[derive(Debug)]
  pub enum Listener {
      Tcp(TcpListener),
@@ -1458,7 +1563,33 @@ index b7b715b0e..5cb919850 100644
      Unix(UnixListener),
  }
  
-@@ -33,7 +45,7 @@ impl Listener {
+ /// Runtime listener I/O type which is either a TCP stream or a Unix-domain stream.
+ #[derive(Debug)]
++#[cfg(unix)]
+ #[enum_derive(tokio1::AsyncRead, tokio1::AsyncWrite)]
+ pub enum ListenerIo {
+     Tcp(TcpStream),
+     Unix(UnixStream),
+ }
+ 
++/// Runtime listener I/O type for Windows, where only TCP streams are supported.
++#[derive(Debug)]
++#[cfg(windows)]
++#[enum_derive(tokio1::AsyncRead, tokio1::AsyncWrite)]
++pub enum ListenerIo {
++    Tcp(TcpStream),
++}
++
+ /// Runtime listener address type which is either a TCP address or a Unix-domain address.
+ #[derive(Debug)]
+ #[allow(dead_code)]
+ pub enum ListenerAddr {
+     Tcp(SocketAddr),
++    #[cfg(unix)]
+     Unix(tokio::net::unix::SocketAddr),
+ }
+ 
+@@ -55,7 +75,7 @@ impl Listener {
              HttpListenerMode::BindTcp { host, port } => {
                  Ok(Self::Tcp(TcpListener::bind((host.as_str(), *port)).await?))
              }
@@ -1467,15 +1598,15 @@ index b7b715b0e..5cb919850 100644
              HttpListenerMode::InheritedFd { fd } => Self::from_inherited_fd(*fd),
          }
      }
-@@ -43,6 +55,7 @@ impl Listener {
-     pub fn local_addr(&self) -> Result<String> {
+@@ -65,6 +85,7 @@ impl Listener {
+     pub fn local_addr_display(&self) -> Result<String> {
          match self {
              Self::Tcp(listener) => Ok(listener.local_addr()?.to_string()),
 +            #[cfg(unix)]
              Self::Unix(listener) => Ok(match listener.local_addr()?.as_pathname() {
                  Some(path) => format!("unix:{}", path.display()),
                  None => "unix:<unnamed>".to_string(),
-@@ -50,6 +63,20 @@ impl Listener {
+@@ -72,6 +93,20 @@ impl Listener {
          }
      }
  
@@ -1496,11 +1627,10 @@ index b7b715b0e..5cb919850 100644
      fn from_inherited_fd(fd: i32) -> Result<Self> {
          // SAFETY: We trust the caller to only pass valid listener fds, and we only use
          // this fd once to create a single listener.
-@@ -70,12 +97,26 @@ impl Listener {
-             Ok(Self::Tcp(TcpListener::from_std(std_listener)?))
+@@ -93,9 +128,18 @@ impl Listener {
          }
      }
-+
+ 
 +    #[cfg(windows)]
 +    fn from_inherited_fd(_fd: i32) -> Result<Self> {
 +        Err(Error::new(
@@ -1508,36 +1638,39 @@ index b7b715b0e..5cb919850 100644
 +            "inherited listener file descriptors are not supported by the Rust frontend on Windows",
 +        ))
 +    }
- }
- 
- /// Allow the unified listener to plug directly into `axum::serve(...)`.
- impl axum::serve::Listener for Listener {
-+    #[cfg(unix)]
-     type Addr = Either<std::net::SocketAddr, tokio::net::unix::SocketAddr>;
-+    #[cfg(windows)]
-+    type Addr = Either<std::net::SocketAddr, std::net::SocketAddr>;
-+    #[cfg(unix)]
-     type Io = Either<TcpStream, UnixStream>;
-+    #[cfg(windows)]
-+    type Io = Either<TcpStream, TcpStream>;
- 
-     async fn accept(&mut self) -> (Self::Io, Self::Addr) {
++
+     fn local_addr(&self) -> Result<ListenerAddr> {
          match self {
-@@ -83,6 +124,7 @@ impl axum::serve::Listener for Listener {
-                 let (io, addr) = listener.accept().await;
-                 (Either::Left(io), Either::Left(addr))
+             Self::Tcp(listener) => listener.local_addr().map(ListenerAddr::Tcp),
++            #[cfg(unix)]
+             Self::Unix(listener) => listener.local_addr().map(ListenerAddr::Unix),
+         }
+     }
+@@ -108,6 +152,7 @@ impl Connected for ListenerIo {
+     fn connect_info(&self) -> TcpConnectInfo {
+         match self {
+             Self::Tcp(stream) => stream.connect_info(),
++            #[cfg(unix)]
+             Self::Unix(_) => TcpConnectInfo {
+                 local_addr: None,
+                 remote_addr: None,
+@@ -138,6 +183,7 @@ impl axum::serve::Listener for Listener {
+                     ListenerAddr::Tcp(addr),
+                 )
              }
 +            #[cfg(unix)]
              Self::Unix(listener) => {
-                 let (io, addr) = listener.accept().await;
-                 (Either::Right(io), Either::Right(addr))
-@@ -93,12 +135,13 @@ impl axum::serve::Listener for Listener {
-     fn local_addr(&self) -> Result<Self::Addr> {
-         match self {
-             Self::Tcp(listener) => listener.local_addr().map(Either::Left),
+                 let (io, addr) = axum::serve::Listener::accept(listener).await;
+                 (ListenerIo::Unix(io), ListenerAddr::Unix(addr))
+@@ -168,6 +214,7 @@ impl AsyncAccept for Listener {
+                     ListenerAddr::Tcp(addr),
+                 )))
+             }
 +            #[cfg(unix)]
-             Self::Unix(listener) => listener.local_addr().map(Either::Right),
-         }
+             Self::Unix(listener) => {
+                 let (io, addr) = ready!(listener.poll_accept(cx))?;
+                 Poll::Ready(Ok((ListenerIo::Unix(io), ListenerAddr::Unix(addr))))
+@@ -270,7 +317,7 @@ impl futures::Stream for MaybeTlsListener {
      }
  }
  
@@ -1547,7 +1680,7 @@ index b7b715b0e..5cb919850 100644
      use std::net::{Ipv4Addr, SocketAddrV4};
      use std::os::fd::IntoRawFd;
 diff --git a/setup.py b/setup.py
-index ad9aed07a..2679f99a7 100644
+index b305fb1b0..e32ac3f3e 100644
 --- a/setup.py
 +++ b/setup.py
 @@ -34,10 +34,13 @@ def load_module_from_path(module_name, path):
@@ -1702,7 +1835,7 @@ index ad9aed07a..2679f99a7 100644
                  for module_name in missing_rust_extensions
              )
  
-@@ -782,7 +806,7 @@ class precompiled_wheel_utils:
+@@ -783,7 +807,7 @@ class precompiled_wheel_utils:
                          }
                      )
                  if extract_rust_frontend:
@@ -1711,7 +1844,7 @@ index ad9aed07a..2679f99a7 100644
  
                  flash_attn_regex = re.compile(
                      r"vllm/vllm_flash_attn/(?:[^/.][^/]*/)*(?!\.)[^/]*\.py"
-@@ -1110,10 +1134,12 @@ if _is_hip():
+@@ -1112,10 +1136,12 @@ if _is_hip():
  
  if _is_cuda():
      ext_modules.append(CMakeExtension(name="vllm.vllm_flash_attn._vllm_fa2_C"))
@@ -1727,7 +1860,7 @@ index ad9aed07a..2679f99a7 100644
          ext_modules.append(CMakeExtension(name="vllm.vllm_flash_attn._vllm_fa3_C"))
      # FA4 CuteDSL - Python-only component for FA4's cute DSL support
      # Optional since this doesn't produce a .so file, just copies Python files
-@@ -1135,8 +1161,9 @@ if _is_cuda():
+@@ -1137,8 +1163,9 @@ if _is_cuda():
      ):
          # DeepGEMM requires CUDA 12.3+ (SM90/SM100)
          # Optional since it won't build on unsupported architectures
@@ -1739,7 +1872,7 @@ index ad9aed07a..2679f99a7 100644
      # fmha_sm100 is a Python/CuTe-DSL package installed into vllm.third_party.
      ext_modules.append(CMakeExtension(name="vllm.fmha_sm100", optional=True))
  
-@@ -1205,7 +1232,7 @@ if USE_PRECOMPILED_RUST_FRONTEND:
+@@ -1207,7 +1234,7 @@ if USE_PRECOMPILED_RUST_FRONTEND:
  # If the rust frontend binary is already present in the source tree (e.g.,
  # pre-built in a separate Docker build stage), ship it as-is.
  if PRECOMPILED_RUST_FRONTEND_PATH.exists():
@@ -1748,6 +1881,187 @@ index ad9aed07a..2679f99a7 100644
  for rust_extension_path in get_precompiled_rust_extension_paths():
      add_vllm_package_data(rust_extension_path.name)
  
+diff --git a/tests/v1/kv_offload/cpu/test_shared_offload_region.py b/tests/v1/kv_offload/cpu/test_shared_offload_region.py
+index f69fcf9a7..50f2447b7 100644
+--- a/tests/v1/kv_offload/cpu/test_shared_offload_region.py
++++ b/tests/v1/kv_offload/cpu/test_shared_offload_region.py
+@@ -5,6 +5,7 @@
+ import contextlib
+ import mmap
+ import os
++import tempfile
+ import threading
+ import time
+ import uuid
+@@ -486,7 +487,8 @@ def test_multiprocess_race_construct_and_write(iid):
+         assert r["error"] is None, f"rank {rank}: {r['error']}"
+ 
+     # Read the raw file while all workers still hold it open.
+-    mmap_path = f"/dev/shm/vllm_offload_{iid}.mmap"
++    mmap_root = tempfile.gettempdir() if os.name == "nt" else "/dev/shm"
++    mmap_path = os.path.join(mmap_root, f"vllm_offload_{iid}.mmap")
+     with open(mmap_path, "rb") as f:
+         raw = f.read()
+ 
+diff --git a/tests/v1/kv_offload/test_file_mapper.py b/tests/v1/kv_offload/test_file_mapper.py
+index 6f6e0d661..11a33d6a4 100644
+--- a/tests/v1/kv_offload/test_file_mapper.py
++++ b/tests/v1/kv_offload/test_file_mapper.py
+@@ -137,6 +137,19 @@ def test_get_config_file_path():
+     assert config_path == f"{fm.base_path}/config.json"
+ 
+ 
++def test_windows_absolute_model_path_uses_safe_bounded_component():
++    model_name = r"E:\models\Qwen3.5-9B:abliterated?GPTQ*4bit" + "-very-long-name" * 8
++    fm = make_mapper_from_offloading_spec(model_name=model_name)
++    component = fm.base_path.rsplit("/", maxsplit=1)[1]
++    readable_name, separator, digest = component.rpartition("_")
++
++    assert separator == "_"
++    assert readable_name.startswith("Qwen3.5-9B_abliterated_GPTQ_4bit")
++    assert len(readable_name) <= 64
++    assert not any(char in readable_name for char in '<>:"/\\|?*')
++    assert len(digest) == 12
++
++
+ # ---------------------------------------------------------------------------
+ # parallel_agnostic: honored only for a single non-MLA full-attention group
+ # ---------------------------------------------------------------------------
+diff --git a/tests/v1/kv_offload/tiering/test_fs_tier.py b/tests/v1/kv_offload/tiering/test_fs_tier.py
+index 680a95847..6293c8eb5 100644
+--- a/tests/v1/kv_offload/tiering/test_fs_tier.py
++++ b/tests/v1/kv_offload/tiering/test_fs_tier.py
+@@ -210,17 +210,19 @@ def test_store_then_load_roundtrip(fs_tier):
+     ]
+ 
+ 
+-def test_invalid_path_raises_at_construction():
++def test_invalid_path_raises_at_construction(tmp_path):
+     """Construction must fail immediately when the config file cannot be written."""
+     tensor = _page_aligned_zero_tensor(32, _BLOCK_ELEMENTS)
+     mock_view = memoryview(tensor.numpy())
++    not_a_directory = tmp_path / "not_a_directory"
++    not_a_directory.write_bytes(b"file")
+ 
+     with pytest.raises(OSError):
+         FileSystemTierManager(
+             offloading_spec=_MOCK_OFFLOADING_SPEC,
+             primary_kv_view=mock_view,
+             tier_type="fs",
+-            root_dir="/dev/null/invalid_path",
++            root_dir=str(not_a_directory / "invalid_path"),
+         )
+ 
+ 
+diff --git a/tests/v1/worker/test_block_table_fallback.py b/tests/v1/worker/test_block_table_fallback.py
+new file mode 100644
+index 000000000..912b47f8d
+--- /dev/null
++++ b/tests/v1/worker/test_block_table_fallback.py
+@@ -0,0 +1,103 @@
++# SPDX-License-Identifier: Apache-2.0
++# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
++
++import pytest
++import torch
++
++from vllm.triton_utils import HAS_TRITON
++from vllm.v1.attention.backends.utils import PAD_SLOT_ID
++from vllm.v1.worker.block_table import BlockTable, _compute_slot_mapping_torch
++
++
++def test_compute_slot_mapping_torch_multiple_requests_and_padding():
++    query_start_loc = torch.tensor([0, 3, 5], dtype=torch.int32)
++    positions = torch.tensor([0, 1, 5, 2, 7], dtype=torch.int64)
++    block_table = torch.tensor(
++        [
++            [5, 7, 0, 0],
++            [10, 11, 0, 0],
++        ],
++        dtype=torch.int32,
++    )
++    slot_mapping = torch.empty(8, dtype=torch.int64)
++
++    _compute_slot_mapping_torch(
++        num_tokens=5,
++        max_num_tokens=8,
++        num_reqs=2,
++        query_start_loc=query_start_loc,
++        positions=positions,
++        block_table=block_table,
++        block_size=4,
++        slot_mapping=slot_mapping,
++        total_cp_world_size=1,
++        total_cp_rank=0,
++        cp_kv_cache_interleave_size=1,
++        pad_id=PAD_SLOT_ID,
++    )
++
++    assert torch.equal(
++        slot_mapping,
++        torch.tensor([20, 21, 29, 42, 47, -1, -1, -1], dtype=torch.int64),
++    )
++
++
++def test_compute_slot_mapping_torch_context_parallel_interleave():
++    query_start_loc = torch.tensor([0, 8], dtype=torch.int32)
++    positions = torch.arange(8, dtype=torch.int64)
++    block_table = torch.tensor([[3, 4]], dtype=torch.int32)
++
++    results = []
++    for rank in range(2):
++        slot_mapping = torch.empty(8, dtype=torch.int64)
++        _compute_slot_mapping_torch(
++            num_tokens=8,
++            max_num_tokens=8,
++            num_reqs=1,
++            query_start_loc=query_start_loc,
++            positions=positions,
++            block_table=block_table,
++            block_size=4,
++            slot_mapping=slot_mapping,
++            total_cp_world_size=2,
++            total_cp_rank=rank,
++            cp_kv_cache_interleave_size=2,
++            pad_id=PAD_SLOT_ID,
++        )
++        results.append(slot_mapping)
++
++    assert torch.equal(results[0], torch.tensor([12, 13, -1, -1, 14, 15, -1, -1]))
++    assert torch.equal(results[1], torch.tensor([-1, -1, 12, 13, -1, -1, 14, 15]))
++
++
++@pytest.mark.skipif(
++    HAS_TRITON or not torch.cuda.is_available(),
++    reason="requires CUDA without Triton",
++)
++def test_block_table_uses_torch_fallback_on_cuda():
++    device = torch.device("cuda")
++    block_table = BlockTable(
++        block_size=4,
++        max_num_reqs=2,
++        max_num_blocks_per_req=4,
++        max_num_batched_tokens=8,
++        pin_memory=False,
++        device=device,
++        kernel_block_size=4,
++        cp_kv_cache_interleave_size=1,
++    )
++    block_table.add_row([5, 7], 0)
++    block_table.add_row([10, 11], 1)
++    block_table.commit_block_table(2)
++
++    block_table.compute_slot_mapping(
++        2,
++        torch.tensor([0, 3, 5], dtype=torch.int32, device=device),
++        torch.tensor([0, 1, 5, 2, 7], dtype=torch.int64, device=device),
++    )
++    torch.cuda.synchronize()
++
++    assert torch.equal(
++        block_table.slot_mapping.gpu.cpu(),
++        torch.tensor([20, 21, 29, 42, 47, -1, -1, -1], dtype=torch.int64),
++    )
 diff --git a/vllm-flash-attn-cutlass-windows.patch b/vllm-flash-attn-cutlass-windows.patch
 new file mode 100644
 index 000000000..b721e0939
@@ -1824,7 +2138,7 @@ index 000000000..b721e0939
 +   get_block_shape() {
 +     return dim3(MaxThreadsPerBlock, 1, 1);
 diff --git a/vllm/benchmarks/throughput.py b/vllm/benchmarks/throughput.py
-index 1cf60461d..e9b1f80f5 100644
+index f6264f955..635278e88 100644
 --- a/vllm/benchmarks/throughput.py
 +++ b/vllm/benchmarks/throughput.py
 @@ -11,7 +11,10 @@ import warnings
@@ -1840,10 +2154,10 @@ index 1cf60461d..e9b1f80f5 100644
  from transformers import AutoModelForCausalLM, PreTrainedTokenizerBase
  
 diff --git a/vllm/config/cache.py b/vllm/config/cache.py
-index 9b96c6451..389b7d1c3 100644
+index 70a58004f..5b50df07e 100644
 --- a/vllm/config/cache.py
 +++ b/vllm/config/cache.py
-@@ -32,6 +32,13 @@ CacheDType = Literal[
+@@ -33,6 +33,13 @@ CacheDType = Literal[
      "int8_per_token_head",
      "fp8_per_token_head",
      "nvfp4",
@@ -1857,7 +2171,7 @@ index 9b96c6451..389b7d1c3 100644
  ]
  MambaDType = Literal["auto", "float32", "float16", "bfloat16"]
  MambaCacheMode = Literal["all", "align", "none"]
-@@ -283,4 +290,9 @@ class CacheConfig:
+@@ -290,4 +297,9 @@ class CacheConfig:
                  "scaling factor",
                  str(cache_dtype),
              )
@@ -1868,7 +2182,7 @@ index 9b96c6451..389b7d1c3 100644
 +            )
          return cache_dtype
 diff --git a/vllm/distributed/parallel_state.py b/vllm/distributed/parallel_state.py
-index 11b9e24e8..253cf0e5f 100644
+index 162ed03d2..be15f36ba 100644
 --- a/vllm/distributed/parallel_state.py
 +++ b/vllm/distributed/parallel_state.py
 @@ -25,7 +25,10 @@ If you only need to use the distributed environment without model/pipeline
@@ -1900,7 +2214,7 @@ index 11b9e24e8..253cf0e5f 100644
  @dataclass
  class GraphCaptureContext:
      stream: torch.cuda.Stream
-@@ -429,7 +443,7 @@ class GroupCoordinator:
+@@ -442,7 +456,7 @@ class GroupCoordinator:
                  # processes through the CPU.
                  with suppress_stdout():
                      cpu_group = torch.distributed.new_group(
@@ -1909,7 +2223,7 @@ index 11b9e24e8..253cf0e5f 100644
                      )
                  if self.rank in ranks:
                      self.ranks = ranks
-@@ -1599,13 +1613,11 @@ def init_distributed_environment(
+@@ -1618,13 +1632,11 @@ def init_distributed_environment(
          )
          if not torch.distributed.is_backend_available(backend):
              logger.warning(
@@ -1926,7 +2240,7 @@ index 11b9e24e8..253cf0e5f 100644
          if envs.VLLM_DISTRIBUTED_USE_SPLIT_GROUP:
              # split_group needs local_rank early to compute device_id for
              # the eager init. local_rank is not available in torch
-@@ -1626,16 +1638,21 @@ def init_distributed_environment(
+@@ -1645,16 +1657,21 @@ def init_distributed_environment(
              )
          else:
              # this backend is used for WORLD
@@ -1951,7 +2265,7 @@ index 11b9e24e8..253cf0e5f 100644
              if _node_count(tp_pp_cpu_group) > 1:
                  # NOTE(yongji): StatelessGroupCoordinator uses data_parallel_master_ip
 diff --git a/vllm/entrypoints/cli/launch.py b/vllm/entrypoints/cli/launch.py
-index 50e46d81c..118b15d93 100644
+index d13a0c67c..20fdd26b4 100644
 --- a/vllm/entrypoints/cli/launch.py
 +++ b/vllm/entrypoints/cli/launch.py
 @@ -4,7 +4,15 @@
@@ -1972,7 +2286,7 @@ index 50e46d81c..118b15d93 100644
  from vllm import envs
  from vllm.config import VllmConfig
 diff --git a/vllm/entrypoints/cli/serve.py b/vllm/entrypoints/cli/serve.py
-index 8491e9821..97737693a 100644
+index d5e9b2bc8..9a488e8ff 100644
 --- a/vllm/entrypoints/cli/serve.py
 +++ b/vllm/entrypoints/cli/serve.py
 @@ -5,7 +5,15 @@ import argparse
@@ -2041,7 +2355,7 @@ index 08a3ab58c..16ef1aeba 100644
      async def handle_shutdown() -> None:
          await shutdown_event.wait()
 diff --git a/vllm/entrypoints/openai/api_server.py b/vllm/entrypoints/openai/api_server.py
-index a16f52218..147b70cdc 100644
+index 71dc508a3..64102ce44 100644
 --- a/vllm/entrypoints/openai/api_server.py
 +++ b/vllm/entrypoints/openai/api_server.py
 @@ -15,7 +15,16 @@ from collections.abc import AsyncIterator
@@ -2062,16 +2376,16 @@ index a16f52218..147b70cdc 100644
  from fastapi import FastAPI, HTTPException
  from fastapi.exceptions import RequestValidationError
  from fastapi.middleware.cors import CORSMiddleware
-@@ -486,13 +495,16 @@ def create_server_socket(addr: tuple[str, int]) -> socket.socket:
+@@ -520,7 +529,7 @@ def create_server_socket(
  
      sock = socket.socket(family=family, type=socket.SOCK_STREAM)
      sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
--    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-+    if hasattr(socket, 'SO_REUSEPORT'):
-+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+-    if reuse_port:
++    if reuse_port and hasattr(socket, "SO_REUSEPORT"):
+         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
      sock.bind(addr)
  
-     return sock
+@@ -528,6 +537,8 @@ def create_server_socket(
  
  
  def create_server_unix_socket(path: str) -> socket.socket:
@@ -2081,33 +2395,40 @@ index a16f52218..147b70cdc 100644
      sock.bind(path)
      return sock
 diff --git a/vllm/entrypoints/openai/dp_supervisor.py b/vllm/entrypoints/openai/dp_supervisor.py
-index 73b10a04e..4462bd0bb 100644
+index f55f11f81..7c6169b61 100644
 --- a/vllm/entrypoints/openai/dp_supervisor.py
 +++ b/vllm/entrypoints/openai/dp_supervisor.py
-@@ -19,9 +19,17 @@ from multiprocessing.process import BaseProcess
+@@ -19,9 +19,13 @@ from multiprocessing.process import BaseProcess
  import aiohttp
  import psutil
  import uvicorn
 -import uvloop
+ from fastapi import FastAPI, Response
+ 
 +try:
 +    import uvloop
 +except ImportError:  # Windows: uvloop is Unix-only; asyncio.run has same signature
 +    import asyncio as uvloop
- from fastapi import FastAPI, Response
- 
-+if os.name == "nt":
-+    # pyzmq relies on add_reader; ProactorEventLoop does not implement it.
-+    if hasattr(uvloop, "WindowsSelectorEventLoopPolicy"):
-+        uvloop.set_event_loop_policy(uvloop.WindowsSelectorEventLoopPolicy())
 +
+ import vllm.envs as envs
  from vllm.logger import init_logger
  from vllm.utils.system_utils import (
-     decorate_logs,
+@@ -30,6 +34,10 @@ from vllm.utils.system_utils import (
+     set_process_title,
+ )
+ 
++if os.name == "nt" and hasattr(uvloop, "WindowsSelectorEventLoopPolicy"):
++    # pyzmq relies on add_reader; ProactorEventLoop does not implement it.
++    uvloop.set_event_loop_policy(uvloop.WindowsSelectorEventLoopPolicy())
++
+ logger = init_logger(__name__)
+ 
+ CHILD_EXIT_GRACE_S = 5.0
 diff --git a/vllm/envs.py b/vllm/envs.py
-index 27a85bb3d..d8e9ee7f7 100755
+index 13a19b86c..d77a03389 100755
 --- a/vllm/envs.py
 +++ b/vllm/envs.py
-@@ -540,13 +540,19 @@ def _resolve_rust_frontend_path() -> str | None:
+@@ -545,13 +545,19 @@ def _resolve_rust_frontend_path() -> str | None:
  
      if raw.lower() in ("auto", "1", "true"):
          pkg_dir = os.path.dirname(os.path.abspath(__file__))
@@ -2131,7 +2452,7 @@ index 27a85bb3d..d8e9ee7f7 100755
              "Build with setuptools-rust or set the path explicitly."
          )
      return raw
-@@ -796,7 +802,11 @@ environment_variables: dict[str, Callable[[], Any]] = {
+@@ -808,7 +814,11 @@ environment_variables: dict[str, Callable[[], Any]] = {
      "VLLM_USE_FLASHINFER_SAMPLER": lambda: (
          bool(int(os.environ["VLLM_USE_FLASHINFER_SAMPLER"]))
          if "VLLM_USE_FLASHINFER_SAMPLER" in os.environ
@@ -2145,13 +2466,13 @@ index 27a85bb3d..d8e9ee7f7 100755
      # Pipeline stage partition strategy
      "VLLM_PP_LAYER_PARTITION": lambda: os.getenv("VLLM_PP_LAYER_PARTITION", None),
 diff --git a/vllm/model_executor/layers/sparse_attn_indexer.py b/vllm/model_executor/layers/sparse_attn_indexer.py
-index fe2b268cd..e0b946ed2 100644
+index ceb52e5d3..f2ab7dded 100644
 --- a/vllm/model_executor/layers/sparse_attn_indexer.py
 +++ b/vllm/model_executor/layers/sparse_attn_indexer.py
-@@ -340,6 +340,7 @@ def sparse_attn_indexer(
-             and num_rows <= 32
+@@ -579,6 +579,7 @@ def sparse_attn_indexer(
              and logits.stride(0) % 4 == 0  # TMA 16-byte alignment
              and current_platform.has_device_capability(90)
+             and not current_platform.is_device_capability_family(120)
 +            and hasattr(torch.ops._C, "cooperative_topk")
          )
          use_persistent_topk = current_platform.is_cuda() and topk_tokens in (
@@ -2362,52 +2683,6 @@ index 47c6c02be..4360206cc 100644
  
  
  def multi_thread_safetensors_weights_iterator(
-diff --git a/vllm/platforms/cuda.py b/vllm/platforms/cuda.py
-index dabe6058e..068c534f5 100644
---- a/vllm/platforms/cuda.py
-+++ b/vllm/platforms/cuda.py
-@@ -8,6 +8,7 @@ from __future__ import annotations
- 
- import os
- import platform
-+import sys
- from collections.abc import Callable
- from datetime import timedelta
- from functools import cache, lru_cache, wraps
-@@ -39,10 +40,17 @@ else:
- 
- logger = init_logger(__name__)
- 
--try:
--    import vllm._qutlass_C  # noqa: F401
--except ImportError as e:
--    logger.warning("Failed to import from vllm._qutlass_C: %r", e)
-+
-+def _import_optional_qutlass() -> None:
-+    try:
-+        import vllm._qutlass_C  # noqa: F401
-+    except ImportError as e:
-+        if sys.platform == "win32" and getattr(e, "name", "") == "vllm._qutlass_C":
-+            return
-+        logger.warning("Failed to import from vllm._qutlass_C: %r", e)
-+
-+
-+_import_optional_qutlass()
- 
- _P = ParamSpec("_P")
- _R = TypeVar("_R")
-@@ -224,10 +232,7 @@ class CudaPlatformBase(Platform):
-             import vllm._moe_C_stable_libtorch  # noqa: F401
-         except ImportError as e:
-             logger.warning("Failed to import from vllm._moe_C_stable_libtorch: %r", e)
--        try:
--            import vllm._qutlass_C  # noqa: F401
--        except ImportError as e:
--            logger.warning("Failed to import from vllm._qutlass_C: %r", e)
-+        _import_optional_qutlass()
- 
-     @property
-     def supported_dtypes(self) -> list[torch.dtype]:
 diff --git a/vllm/utils/network_utils.py b/vllm/utils/network_utils.py
 index cf3141a0c..f35f7b2be 100644
 --- a/vllm/utils/network_utils.py
@@ -2473,10 +2748,10 @@ index 7f56f972a..eaa65cea2 100644
  
  # Resource utilities
 diff --git a/vllm/utils/torch_utils.py b/vllm/utils/torch_utils.py
-index 9269fbb44..a79f41b37 100644
+index cf821a54b..412b30619 100644
 --- a/vllm/utils/torch_utils.py
 +++ b/vllm/utils/torch_utils.py
-@@ -48,6 +48,16 @@ STR_DTYPE_TO_TORCH_DTYPE = {
+@@ -49,6 +49,16 @@ STR_DTYPE_TO_TORCH_DTYPE = {
      "turboquant_k3v4_nc": torch.uint8,
      "turboquant_3bit_nc": torch.uint8,
      "nvfp4": torch.uint8,
@@ -2494,10 +2769,10 @@ index 9269fbb44..a79f41b37 100644
  
  TORCH_DTYPE_TO_NUMPY_DTYPE = {
 diff --git a/vllm/v1/attention/backends/triton_attn.py b/vllm/v1/attention/backends/triton_attn.py
-index 714c63ae3..6615f7b25 100644
+index 6ba0c9453..cbf36958a 100644
 --- a/vllm/v1/attention/backends/triton_attn.py
 +++ b/vllm/v1/attention/backends/triton_attn.py
-@@ -40,6 +40,11 @@ from vllm.v1.attention.ops.triton_reshape_and_cache_flash import (
+@@ -41,6 +41,11 @@ from vllm.v1.attention.ops.triton_reshape_and_cache_flash import (
      triton_reshape_and_cache_flash_per_token_head_quant,
  )
  from vllm.v1.attention.ops.triton_unified_attention import unified_attention
@@ -2509,8 +2784,8 @@ index 714c63ae3..6615f7b25 100644
  from vllm.v1.kv_cache_interface import (
      AttentionSpec,
      KVQuantMode,
-@@ -260,6 +265,13 @@ class TritonAttentionBackend(AttentionBackend):
-         "fp8_e5m2",
+@@ -284,6 +289,13 @@ class TritonAttentionBackend(AttentionBackend):
+         "int4_per_token_head",
          "int8_per_token_head",
          "fp8_per_token_head",
 +        # Multi-TurboQuant KV cache compression methods (Windows build)
@@ -2523,7 +2798,7 @@ index 714c63ae3..6615f7b25 100644
      ]
  
      @staticmethod
-@@ -631,6 +643,18 @@ class TritonAttentionImpl(AttentionImpl):
+@@ -657,6 +669,18 @@ class TritonAttentionImpl(AttentionImpl):
          max_seqlen_k = attn_metadata.max_seq_len
          block_table = attn_metadata.block_table
  
@@ -2542,7 +2817,7 @@ index 714c63ae3..6615f7b25 100644
          seq_threshold_3D = attn_metadata.seq_threshold_3D
          num_par_softmax_segments = attn_metadata.num_par_softmax_segments
          softmax_segm_output = attn_metadata.softmax_segm_output
-@@ -733,6 +757,19 @@ class TritonAttentionImpl(AttentionImpl):
+@@ -775,6 +799,19 @@ class TritonAttentionImpl(AttentionImpl):
              # For encoder attention,
              # we use direct Q, K, V tensors without caching
              return
@@ -2864,7 +3139,7 @@ index 000000000..3730256b7
 +
 +    return key_decoded, value_decoded, new_block_table
 diff --git a/vllm/v1/engine/core_client.py b/vllm/v1/engine/core_client.py
-index d5cf1050c..f26bcfba8 100644
+index bcb441e75..67561e975 100644
 --- a/vllm/v1/engine/core_client.py
 +++ b/vllm/v1/engine/core_client.py
 @@ -100,6 +100,10 @@ class EngineCoreClient(ABC):
@@ -2928,6 +3203,262 @@ index 093f06547..e436f6e4b 100644
              if any(conn_pending):
                  logger.debug(
                      "Waiting for %d local, %d remote core engine proc(s) to connect.",
+diff --git a/vllm/v1/kv_offload/cpu/gpu_worker.py b/vllm/v1/kv_offload/cpu/gpu_worker.py
+index c8b9915a1..55683daac 100644
+--- a/vllm/v1/kv_offload/cpu/gpu_worker.py
++++ b/vllm/v1/kv_offload/cpu/gpu_worker.py
+@@ -1,6 +1,7 @@
+ # SPDX-License-Identifier: Apache-2.0
+ # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+ import functools
++import os
+ import time
+ from collections import deque
+ from dataclasses import dataclass
+@@ -35,11 +36,19 @@ logger = init_logger(__name__)
+ def _select_swap_blocks_fn(
+     kv_cache_groups_data_refs: list[list[CanonicalKVCacheRef]],
+     gpu_to_cpu: bool,
++    uses_shared_mmap: bool = False,
+ ):
+     """Resolve the swap_blocks function for a handler at init time."""
+     # GPU->CPU is bandwidth-bound; the dedicated copy engine beats Triton.
+     if gpu_to_cpu:
+         return ops.swap_blocks_batch
++    # Triton kernels dereference host pointers directly. On Windows, a pointer
++    # returned for cudaHostRegister'd file-backed mmap memory is not guaranteed
++    # to be a valid device virtual address, even though cudaMemcpyAsync can use
++    # it as registered host memory. Route mmap restores through native DMA to
++    # avoid an illegal device access for small payloads.
++    if os.name == "nt" and uses_shared_mmap:
++        return ops.swap_blocks_batch
+     # Fall back to the C++ DMA path on platforms where Triton isn't usable
+     # (e.g. ROCm builds without Triton) or where GPU kernels cannot directly
+     # dereference CPU pointers (XPU lacks CUDA's unified virtual address space,
+@@ -179,6 +188,7 @@ class SingleDirectionOffloadingHandler:
+         kv_cache_groups_data_refs: list[list[CanonicalKVCacheRef]],
+         gpu_to_cpu: bool,
+         mmap_region: SharedOffloadRegion | None = None,
++        uses_shared_mmap: bool = False,
+     ):
+         """
+         Initialize a SingleDirectionOffloadingHandler.
+@@ -216,7 +226,9 @@ class SingleDirectionOffloadingHandler:
+         self.gpu_to_cpu: bool = gpu_to_cpu
+         self.kv_cache_groups_data_refs = kv_cache_groups_data_refs
+         self._swap_blocks_batch = _select_swap_blocks_fn(
+-            kv_cache_groups_data_refs, gpu_to_cpu
++            kv_cache_groups_data_refs,
++            gpu_to_cpu,
++            uses_shared_mmap=uses_shared_mmap,
+         )
+ 
+         # GPU blocks may be smaller
+@@ -522,6 +534,7 @@ class CPUOffloadingWorker(OffloadingWorker):
+             kv_cache_groups_data_refs=kv_caches.group_data_refs,
+             gpu_to_cpu=True,
+             mmap_region=mmap_region,
++            uses_shared_mmap=mmap_region is not None,
+         )
+ 
+         self._load_handler = SingleDirectionOffloadingHandler(
+@@ -530,6 +543,7 @@ class CPUOffloadingWorker(OffloadingWorker):
+             block_size_factor=block_size_factor,
+             kv_cache_groups_data_refs=kv_caches.group_data_refs,
+             gpu_to_cpu=False,
++            uses_shared_mmap=mmap_region is not None,
+         )
+ 
+     def submit_store(
+diff --git a/vllm/v1/kv_offload/cpu/shared_offload_region.py b/vllm/v1/kv_offload/cpu/shared_offload_region.py
+index d5400e0ca..ce5c2a911 100644
+--- a/vllm/v1/kv_offload/cpu/shared_offload_region.py
++++ b/vllm/v1/kv_offload/cpu/shared_offload_region.py
+@@ -2,6 +2,7 @@
+ # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+ import mmap
+ import os
++import tempfile
+ import time
+ 
+ import torch
+@@ -25,6 +26,27 @@ def _wait_for_file_size(fd: int, expected_size: int, timeout: float = 30.0) -> N
+         time.sleep(0.005)
+ 
+ 
++def _wait_for_path_size(path: str, expected_size: int, timeout: float = 30.0) -> None:
++    """Wait for a creator to resize a file before opening it on Windows.
++
++    Opening the zero-length file from another Windows process can prevent the
++    creator from resizing it. Polling by path keeps joiners from acquiring a
++    file handle until initialization is complete.
++    """
++    deadline = time.monotonic() + timeout
++    while True:
++        try:
++            if os.path.getsize(path) >= expected_size:
++                return
++        except FileNotFoundError:
++            pass
++        if time.monotonic() > deadline:
++            raise TimeoutError(
++                f"Timed out waiting for mmap file {path} to reach {expected_size} bytes"
++            )
++        time.sleep(0.005)
++
++
+ class SharedOffloadRegion:
+     """
+     Single mmap-backed memory region shared across all workers for a
+@@ -33,7 +55,8 @@ class SharedOffloadRegion:
+     the rest open the existing file and wait until it reaches the expected
+     size.  Each worker then mmap()s the full file.
+ 
+-    File path: /dev/shm/vllm_offload_{instance_id}.mmap
++    On POSIX the file lives under ``/dev/shm``. On Windows it lives in the
++    system temporary directory.
+     """
+ 
+     BLOCK_SIZE_ALIGNMENT: int = mmap.PAGESIZE
+@@ -53,7 +76,8 @@ class SharedOffloadRegion:
+         self._row_stride = kv_bytes_per_block
+         self.total_size_bytes = self.num_blocks * self._row_stride
+ 
+-        self.mmap_path = f"/dev/shm/vllm_offload_{instance_id}.mmap"
++        mmap_root = tempfile.gettempdir() if os.name == "nt" else "/dev/shm"
++        self.mmap_path = os.path.join(mmap_root, f"vllm_offload_{instance_id}.mmap")
+         self._creator = False  # set True only if this worker creates the file
+         self.rank = rank
+         if rank is not None:
+@@ -74,20 +98,30 @@ class SharedOffloadRegion:
+                 self.total_size_bytes / 1e9,
+             )
+         except FileExistsError:
++            if os.name == "nt":
++                _wait_for_path_size(self.mmap_path, self.total_size_bytes)
+             self.fd = os.open(self.mmap_path, os.O_RDWR)
+-            _wait_for_file_size(self.fd, self.total_size_bytes)
++            if os.name != "nt":
++                _wait_for_file_size(self.fd, self.total_size_bytes)
+             logger.info("Opened existing mmap file %s", self.mmap_path)
+ 
+-        self.mmap_obj: mmap.mmap | None = mmap.mmap(
+-            self.fd,
+-            self.total_size_bytes,
+-            flags=mmap.MAP_SHARED,
+-            prot=mmap.PROT_READ | mmap.PROT_WRITE,
+-        )
++        if os.name == "nt":
++            self.mmap_obj = mmap.mmap(
++                self.fd, self.total_size_bytes, access=mmap.ACCESS_WRITE
++            )
++        else:
++            self.mmap_obj = mmap.mmap(
++                self.fd,
++                self.total_size_bytes,
++                flags=mmap.MAP_SHARED,
++                prot=mmap.PROT_READ | mmap.PROT_WRITE,
++            )
+ 
+         # MADV_POPULATE_WRITE was added in Linux 5.14 (value 23).
+         _MADV_POPULATE_WRITE = getattr(mmap, "MADV_POPULATE_WRITE", 23)
+-        if rank is not None:
++        if os.name == "nt":
++            logger.debug("Skipping mmap madvise on Windows")
++        elif rank is not None:
+             # Populate only this worker's pages (one slot per block row).
+             worker_offset = rank * cpu_page_size
+             _t0 = time.perf_counter()
+diff --git a/vllm/v1/kv_offload/file_mapper.py b/vllm/v1/kv_offload/file_mapper.py
+index d8fadb099..5c4c8396a 100644
+--- a/vllm/v1/kv_offload/file_mapper.py
++++ b/vllm/v1/kv_offload/file_mapper.py
+@@ -3,6 +3,8 @@
+ 
+ import hashlib
+ import json
++import ntpath
++import re
+ 
+ from vllm.v1.kv_cache_interface import FullAttentionSpec, MLAAttentionSpec
+ from vllm.v1.kv_offload.base import (
+@@ -14,6 +16,8 @@ from vllm.v1.kv_offload.base import (
+ 
+ _BASE_PATH_HASH_LEN = 12
+ _CONFIG_FILENAME = "config.json"
++_INVALID_PATH_COMPONENT_CHARS = re.compile(r'[\x00-\x1f<>:"/\\|?*]+')
++_MAX_MODEL_COMPONENT_LEN = 64
+ 
+ 
+ class FileMapper:
+@@ -129,11 +133,16 @@ class FileMapper:
+     def _compute_base_path(root_dir: str, fields: dict) -> str:
+         """
+         Layout: <root_dir>/<safe_model_name>_<sha256-prefix>/.
+-        safe_model_name replaces '/' with '_' so HuggingFace IDs don't nest.
++        The readable model component is sanitized and bounded; the hash still
++        includes the complete model identifier or local path.
+         """
+         canonical = json.dumps(fields, sort_keys=True, separators=(",", ":"))
+         digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()[
+             :_BASE_PATH_HASH_LEN
+         ]
+-        safe_model_name = fields["model_name"].replace("/", "_")
++        model_name = str(fields["model_name"]).rstrip("/\\")
++        safe_model_name = ntpath.basename(model_name) or "model"
++        safe_model_name = _INVALID_PATH_COMPONENT_CHARS.sub("_", safe_model_name)
++        safe_model_name = safe_model_name.rstrip(" .") or "model"
++        safe_model_name = safe_model_name[:_MAX_MODEL_COMPONENT_LEN]
+         return f"{root_dir}/{safe_model_name}_{digest}"
+diff --git a/vllm/v1/kv_offload/tiering/fs/io.py b/vllm/v1/kv_offload/tiering/fs/io.py
+index c5a82a73c..26cea1b4e 100644
+--- a/vllm/v1/kv_offload/tiering/fs/io.py
++++ b/vllm/v1/kv_offload/tiering/fs/io.py
+@@ -10,6 +10,8 @@ logger = logging.getLogger(__name__)
+ 
+ # O_DIRECT is Linux-specific and not available on macOS
+ O_DIRECT = getattr(os, "O_DIRECT", 0)
++# O_BINARY prevents Windows CRT text-mode translation and Ctrl-Z EOF handling.
++O_BINARY = getattr(os, "O_BINARY", 0)
+ 
+ # Thread-local storage for unique temporary file suffixes
+ _thread_local = threading.local()
+@@ -52,7 +54,7 @@ def store_block(
+     try:
+         fd = os.open(
+             tmp_path,
+-            os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_TRUNC | O_DIRECT,
++            os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_TRUNC | O_DIRECT | O_BINARY,
+             0o644,
+         )
+         try:
+@@ -84,11 +86,24 @@ def load_block(
+     fd: int | None = None
+     view_slice = view.cast("B")[offset : offset + block_size]
+     try:
+-        fd = os.open(source_path, os.O_RDONLY | O_DIRECT)
+-        bytes_read = os.readv(fd, [view_slice])
++        fd = os.open(source_path, os.O_RDONLY | O_DIRECT | O_BINARY)
++        if hasattr(os, "readv"):
++            bytes_read = os.readv(fd, [view_slice])
++        else:
++            bytes_read = 0
++            while bytes_read < block_size:
++                data = os.read(fd, block_size - bytes_read)
++                if not data:
++                    break
++                next_offset = bytes_read + len(data)
++                view_slice[bytes_read:next_offset] = data
++                bytes_read = next_offset
+         if bytes_read < block_size:
+             raise OSError(f"Short read: expected {block_size} bytes, read {bytes_read}")
+     except Exception:
++        if fd is not None:
++            os.close(fd)
++            fd = None
+         try:
+             os.remove(source_path)
+         except OSError as cleanup_exc:
 diff --git a/vllm/v1/simple_kv_offload/cuda_mem_ops.py b/vllm/v1/simple_kv_offload/cuda_mem_ops.py
 index 69b1677e0..cbcc09efc 100644
 --- a/vllm/v1/simple_kv_offload/cuda_mem_ops.py
@@ -3027,7 +3558,7 @@ index 69b1677e0..cbcc09efc 100644
      # hipamd/src/hip_memory.cpp:2819-2822); CUDA uses one attrs entry so
      # srcAccessOrder is honored. attrs / attrsIdxs are ignored when
 diff --git a/vllm/v1/utils.py b/vllm/v1/utils.py
-index 71ade9c86..9fbfb4c5d 100644
+index b485d838f..8e4dd1e66 100644
 --- a/vllm/v1/utils.py
 +++ b/vllm/v1/utils.py
 @@ -23,7 +23,10 @@ from typing import (
@@ -3042,14 +3573,106 @@ index 71ade9c86..9fbfb4c5d 100644
  from torch.autograd.profiler import record_function
  
  import vllm.envs as envs
+diff --git a/vllm/v1/worker/block_table.py b/vllm/v1/worker/block_table.py
+index d9c041ba0..4d049cbe6 100644
+--- a/vllm/v1/worker/block_table.py
++++ b/vllm/v1/worker/block_table.py
+@@ -6,7 +6,7 @@ import torch
+ 
+ from vllm.distributed import get_dcp_group, get_pcp_group
+ from vllm.logger import init_logger
+-from vllm.triton_utils import tl, triton
++from vllm.triton_utils import HAS_TRITON, tl, triton
+ from vllm.utils.math_utils import cdiv
+ from vllm.v1.attention.backends.utils import PAD_SLOT_ID
+ from vllm.v1.utils import CpuGpuBuffer
+@@ -147,6 +147,23 @@ class BlockTable:
+         num_tokens = positions.shape[0]
+         total_cp_world_size = self.pcp_world_size * self.dcp_world_size
+         total_cp_rank = self.pcp_rank * self.dcp_world_size + self.dcp_rank
++        if not HAS_TRITON and self.device.type != "cpu":
++            _compute_slot_mapping_torch(
++                num_tokens=num_tokens,
++                max_num_tokens=self.max_num_batched_tokens,
++                num_reqs=num_reqs,
++                query_start_loc=query_start_loc,
++                positions=positions,
++                block_table=self.block_table.gpu,
++                block_size=self.block_size,
++                slot_mapping=self.slot_mapping.gpu,
++                total_cp_world_size=total_cp_world_size,
++                total_cp_rank=total_cp_rank,
++                cp_kv_cache_interleave_size=self.cp_kv_cache_interleave_size,
++                pad_id=PAD_SLOT_ID,
++            )
++            return
++
+         _compute_slot_mapping_kernel[(num_reqs + 1,)](
+             num_tokens,
+             self.max_num_batched_tokens,
+@@ -322,6 +339,52 @@ class MultiGroupBlockTable:
+         return self.block_tables[idx]
+ 
+ 
++def _compute_slot_mapping_torch(
++    *,
++    num_tokens: int,
++    max_num_tokens: int,
++    num_reqs: int,
++    query_start_loc: torch.Tensor,
++    positions: torch.Tensor,
++    block_table: torch.Tensor,
++    block_size: int,
++    slot_mapping: torch.Tensor,
++    total_cp_world_size: int,
++    total_cp_rank: int,
++    cp_kv_cache_interleave_size: int,
++    pad_id: int,
++) -> None:
++    """Torch fallback for CUDA builds where Triton is unavailable."""
++    if num_tokens < max_num_tokens:
++        slot_mapping[num_tokens:max_num_tokens].fill_(pad_id)
++    if num_tokens == 0:
++        return
++
++    token_indices = torch.arange(num_tokens, device=positions.device)
++    request_indices = torch.searchsorted(
++        query_start_loc[1 : num_reqs + 1], token_indices, right=True
++    )
++
++    virtual_block_size = block_size * total_cp_world_size
++    block_indices = positions // virtual_block_size
++    block_numbers = block_table[request_indices, block_indices].to(torch.int64)
++
++    virtual_block_offsets = positions - block_indices * virtual_block_size
++    is_local = (
++        virtual_block_offsets // cp_kv_cache_interleave_size
++    ) % total_cp_world_size == total_cp_rank
++    local_block_offsets = (
++        virtual_block_offsets // (total_cp_world_size * cp_kv_cache_interleave_size)
++    ) * cp_kv_cache_interleave_size + (
++        virtual_block_offsets % cp_kv_cache_interleave_size
++    )
++
++    slot_ids = block_numbers * block_size + local_block_offsets
++    slot_mapping[:num_tokens].copy_(
++        torch.where(is_local, slot_ids, torch.full_like(slot_ids, pad_id))
++    )
++
++
+ @triton.jit(do_not_specialize=["num_tokens", "max_num_tokens"])
+ def _compute_slot_mapping_kernel(
+     num_tokens,
 diff --git a/vllm/v1/worker/gpu/sample/states.py b/vllm/v1/worker/gpu/sample/states.py
-index fe4dee6a6..c25fbdf5f 100644
+index fe4dee6a6..fcc2dfdb3 100644
 --- a/vllm/v1/worker/gpu/sample/states.py
 +++ b/vllm/v1/worker/gpu/sample/states.py
-@@ -52,3 +52,5 @@ class SamplingStates:
+@@ -50,7 +50,7 @@ class SamplingStates:
+         seed = sampling_params.seed
+         self.seeds_set[req_idx] = seed is not None
          if seed is None:
 -            seed = np.random.randint(_NP_INT64_MIN, _NP_INT64_MAX)
-+            seed = np.random.randint(
-+                _NP_INT64_MIN, _NP_INT64_MAX, dtype=np.int64
-+            )
++            seed = np.random.randint(_NP_INT64_MIN, _NP_INT64_MAX, dtype=np.int64)
          self.seeds.np[req_idx] = seed
+ 
+         num_logprobs = sampling_params.logprobs

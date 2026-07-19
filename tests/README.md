@@ -3,12 +3,13 @@
 Before publishing a rebuilt wheel, validate its complete ZIP payload and RECORD:
 
 ```powershell
-python tests/test_wheel_contents.py dist-v8/vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
+python tests/test_wheel_contents.py dist-v9/vllm-0.25.1+cu128-cp313-cp313-win_amd64.whl
 ```
 
-This check includes the generated FlashAttention rotary and CuteDSL modules that
-are not stored directly in the upstream vLLM source tree. It also rejects a
-wheel missing issue #10's explicit NumPy `int64` request-seed fix.
+This check includes the generated FlashAttention rotary and CuteDSL modules,
+native/Rust extensions, issue #10's explicit NumPy `int64` request-seed fix,
+and the Windows DMA/mmap/filesystem/block-table fixes required by tiered KV
+offload. It also validates ZIP integrity and every wheel RECORD entry.
 
 Run the installer/hash and concurrent engine-dispatch regressions with:
 
@@ -39,7 +40,8 @@ isolated `pip --target` installation with:
 python tests/test_issue7_flash_attn.py --package-root $env:TEMP\vllm-issue7-wheeltest
 ```
 
-End-to-end test scripts for the Windows vLLM 0.24.0 build with Multi-TurboQuant.
+End-to-end test scripts for the Windows vLLM 0.25.1 build with
+Multi-TurboQuant and experimental native KV offload.
 
 ## Setup
 
@@ -53,6 +55,68 @@ set VLLM_PYTHON=E:\vllm-windows-build\venv\Scripts\python.exe
 Keep the Windows pagefile enabled. Do not set
 `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`; the Windows PyTorch build
 reports that mode as unsupported.
+
+## test_windows_kv_offload.py - real-model RAM offload
+
+Run the baseline and offload modes in separate processes. The test generates a
+deterministic long prompt, clears the GPU prefix cache, and requires the
+offload run to restore cached tokens from pinned system RAM without changing
+the generated token IDs.
+
+This legacy focused test exercises `SimpleCPUOffloadConnector`. Prefer the
+v0.25.1 tiering harness below for release validation.
+
+```bat
+set VLLM_MODEL_PATH=E:\vllm-windows-build-v2\models\Qwen3-14B-abliterated-AWQ-4bit
+set CUDA_VISIBLE_DEVICES=0
+
+%VLLM_PYTHON% tests\test_windows_kv_offload.py --mode baseline
+%VLLM_PYTHON% tests\test_windows_kv_offload.py --mode offload
+```
+
+`CUDA_VISIBLE_DEVICES` uses CUDA's ordinal order, which can differ from
+`nvidia-smi` numbering on mixed-GPU machines. Confirm the `Visible GPU` line
+before relying on a result.
+
+## test_windows_kv_tiering.py - v0.25.1 release matrix
+
+This is the main real-model harness for `OffloadingConnector`. It requires the
+installed `0.25.1+cu128` wheel, exactly one visible RTX 3090, and a local
+Hugging Face model. Run each mode in a fresh process.
+
+```bat
+set VLLM_PYTHON=E:\vllm-windows-build-v2\venv313\Scripts\python.exe
+set VLLM_MODEL_PATH=E:\vllm-windows-build-v2\models\Qwen3-14B-abliterated-AWQ-4bit
+set CUDA_DEVICE_ORDER=PCI_BUS_ID
+set CUDA_VISIBLE_DEVICES=GPU-36feccef-50ef-2eaf-5c0c-5448e28a4d8a
+
+%VLLM_PYTHON% tests\test_windows_kv_tiering.py --model "%VLLM_MODEL_PATH%" --mode baseline
+%VLLM_PYTHON% tests\test_windows_kv_tiering.py --model "%VLLM_MODEL_PATH%" --mode cpu-lru
+%VLLM_PYTHON% tests\test_windows_kv_tiering.py --model "%VLLM_MODEL_PATH%" --mode cpu-arc
+```
+
+The UUID above records the release machine; replace it with the target 3090's
+UUID from `nvidia-smi -L`. For filesystem tests, set the hash seed before
+Python starts and use a fresh dedicated directory:
+
+```bat
+set PYTHONHASHSEED=0
+%VLLM_PYTHON% tests\test_windows_kv_tiering.py ^
+    --model "%VLLM_MODEL_PATH%" --mode fs-lru ^
+    --cpu-cache-mib 512 --fs-root E:\vllm-kv-test\lru ^
+    --result-json E:\vllm-kv-test\fs-lru.json
+
+%VLLM_PYTHON% tests\test_windows_kv_tiering.py ^
+    --model "%VLLM_MODEL_PATH%" --mode fs-lru ^
+    --cpu-cache-mib 512 --fs-root E:\vllm-kv-test\lru ^
+    --reuse-existing-cache --reference-json E:\vllm-kv-test\fs-lru.json
+```
+
+The release run passed CPU LRU/ARC, forced filesystem LRU/ARC restore, and a
+fresh-process persistent restore. The forced restore reused 1,440 prompt
+tokens and required exact generated token IDs; the final wheel repeated the
+persistent check successfully. Filesystem cache directories have no automatic
+quota and should be removed after disposable test runs.
 
 ## test_v19.py — smoke test
 

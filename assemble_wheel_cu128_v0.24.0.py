@@ -48,6 +48,7 @@ REQUIRED_FILES = [
     "LICENSE",
 ]
 REQUIRED_ARCHIVE_FILES = {
+    "vllm/v1/simple_kv_offload/cuda_mem_ops.py",
     "vllm/v1/worker/gpu/sample/states.py",
     "vllm/vllm_flash_attn/layers/__init__.py",
     "vllm/vllm_flash_attn/layers/rotary.py",
@@ -70,6 +71,9 @@ REQUIRED_NONEMPTY_FILES = {
 
 SAMPLING_STATES = "vllm/v1/worker/gpu/sample/states.py"
 INT64_SEED_FIX = b"_NP_INT64_MIN, _NP_INT64_MAX, dtype=np.int64"
+KV_OFFLOAD_DMA = "vllm/v1/simple_kv_offload/cuda_mem_ops.py"
+WINDOWS_KV_OFFLOAD_FIX = b'if sys.platform == "win32":\n        _copy_blocks_windows'
+WINDOWS_KV_OFFLOAD_COPY = b"(err,) = cudart.cudaMemcpyAsync("
 
 
 def digest(data: bytes) -> str:
@@ -185,6 +189,20 @@ def validate_source() -> list[str]:
             "the wheel would fail on Windows"
         )
 
+    kv_offload_dma = SRC / KV_OFFLOAD_DMA
+    if not kv_offload_dma.is_file():
+        errors.append(f"missing Windows KV-offload source: {kv_offload_dma}")
+    else:
+        kv_offload_data = kv_offload_dma.read_bytes()
+        if (
+            WINDOWS_KV_OFFLOAD_FIX not in kv_offload_data
+            or WINDOWS_KV_OFFLOAD_COPY not in kv_offload_data
+        ):
+            errors.append(
+                "simple KV offload does not contain the Windows "
+                "cudaMemcpyAsync fallback"
+            )
+
     metadata_path = SRC / "vllm.egg-info" / "PKG-INFO"
     if metadata_path.is_file():
         metadata = BytesParser().parsebytes(metadata_path.read_bytes())
@@ -214,6 +232,12 @@ def validate_wheel(path: Path) -> None:
 
         if INT64_SEED_FIX not in wheel.read(SAMPLING_STATES):
             raise ValueError("wheel is missing the Windows int64 sampling-seed fix")
+        kv_offload_data = wheel.read(KV_OFFLOAD_DMA)
+        if (
+            WINDOWS_KV_OFFLOAD_FIX not in kv_offload_data
+            or WINDOWS_KV_OFFLOAD_COPY not in kv_offload_data
+        ):
+            raise ValueError("wheel is missing the Windows KV-offload DMA fallback")
 
         cute_files = [
             name

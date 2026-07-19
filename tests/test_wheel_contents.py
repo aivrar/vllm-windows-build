@@ -29,7 +29,19 @@ REQUIRED_RELEASE_FILES = REQUIRED_FLASH_ATTN_FILES | {
     "vllm/_moe_C_stable_libtorch.pyd",
     "vllm/_rust_tool_parser.pyd",
     "vllm/cumem_allocator.pyd",
+    "vllm/fs_io_C.pyd",
     "vllm/spinloop.pyd",
+    "vllm/distributed/kv_transfer/kv_connector/v1/offloading_connector.py",
+    "vllm/v1/kv_offload/cpu/gpu_worker.py",
+    "vllm/v1/kv_offload/cpu/policies/arc.py",
+    "vllm/v1/kv_offload/cpu/policies/lru.py",
+    "vllm/v1/kv_offload/cpu/shared_offload_region.py",
+    "vllm/v1/kv_offload/file_mapper.py",
+    "vllm/v1/kv_offload/tiering/fs/io.py",
+    "vllm/v1/kv_offload/tiering/fs/manager.py",
+    "vllm/v1/kv_offload/tiering/spec.py",
+    "vllm/v1/simple_kv_offload/cuda_mem_ops.py",
+    "vllm/v1/worker/block_table.py",
     "vllm/v1/worker/gpu/sample/states.py",
     "vllm/vllm-rs.exe",
 }
@@ -43,6 +55,14 @@ REQUIRED_NONEMPTY_FILES = REQUIRED_RELEASE_FILES - {
 
 SAMPLING_STATES = "vllm/v1/worker/gpu/sample/states.py"
 INT64_SEED_FIX = b"_NP_INT64_MIN, _NP_INT64_MAX, dtype=np.int64"
+KV_OFFLOAD_DMA = "vllm/v1/simple_kv_offload/cuda_mem_ops.py"
+WINDOWS_KV_OFFLOAD_FIX = b'if sys.platform == "win32":\n        _copy_blocks_windows'
+WINDOWS_KV_OFFLOAD_COPY = b"(err,) = cudart.cudaMemcpyAsync("
+GPU_WORKER = "vllm/v1/kv_offload/cpu/gpu_worker.py"
+SHARED_REGION = "vllm/v1/kv_offload/cpu/shared_offload_region.py"
+FILE_MAPPER = "vllm/v1/kv_offload/file_mapper.py"
+FS_IO = "vllm/v1/kv_offload/tiering/fs/io.py"
+BLOCK_TABLE = "vllm/v1/worker/block_table.py"
 
 
 def sha256_record(data: bytes) -> str:
@@ -66,12 +86,36 @@ def validate_wheel(wheel_path: Path) -> None:
         assert INT64_SEED_FIX in wheel.read(SAMPLING_STATES), (
             "wheel is missing the Windows int64 sampling-seed fix"
         )
+        kv_offload_data = wheel.read(KV_OFFLOAD_DMA).replace(b"\r\n", b"\n")
+        assert WINDOWS_KV_OFFLOAD_FIX in kv_offload_data, (
+            "wheel is missing the Windows KV-offload DMA fallback"
+        )
+        assert WINDOWS_KV_OFFLOAD_COPY in kv_offload_data, (
+            "wheel is missing the Windows cudaMemcpyAsync implementation"
+        )
+        assert b'if os.name == "nt" and uses_shared_mmap:' in wheel.read(GPU_WORKER)
+        shared_region = wheel.read(SHARED_REGION)
+        assert b'tempfile.gettempdir() if os.name == "nt" else "/dev/shm"' in shared_region
+        assert b"access=mmap.ACCESS_WRITE" in shared_region
+        assert b"def _wait_for_path_size(" in shared_region
+        file_mapper = wheel.read(FILE_MAPPER)
+        assert b"safe_model_name = ntpath.basename(model_name)" in file_mapper
+        fs_io = wheel.read(FS_IO)
+        assert b'O_BINARY = getattr(os, "O_BINARY", 0)' in fs_io
+        assert b'if hasattr(os, "readv"):' in fs_io
+        block_table = wheel.read(BLOCK_TABLE)
+        assert b"def _compute_slot_mapping_torch(" in block_table
+        assert b'if not HAS_TRITON and self.device.type != "cpu":' in block_table
 
         metadata_names = [name for name in names if name.endswith(".dist-info/METADATA")]
         assert len(metadata_names) == 1, f"expected one METADATA, found {metadata_names}"
         metadata = BytesParser().parsebytes(wheel.read(metadata_names[0]))
         assert metadata.get("Name", "").lower() == "vllm"
-        assert metadata.get("Version") == "0.24.0+cu128"
+        assert metadata.get("Version") == "0.25.1+cu128"
+        metadata_data = wheel.read(metadata_names[0])
+        assert b'platform_machine == "AMD64"' in metadata_data, (
+            "wheel metadata does not install AMD64 structured-output dependencies"
+        )
 
         cute_files = [
             name

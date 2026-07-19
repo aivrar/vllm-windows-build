@@ -1,4 +1,4 @@
-# vLLM v0.24.0 Windows Quick Reference
+# vLLM v0.25.1 Windows Quick Reference
 
 A condensed page for getting a model running fast. For full documentation
 see [docs/](docs/).
@@ -11,7 +11,7 @@ install.bat
 
 This downloads embedded Python 3.13.14, installs PyTorch 2.11.0+cu128,
 triton-windows, structured-output backends, Multi-TurboQuant, and the
-v0.24.0 wheel. It is self-contained in this directory.
+v0.25.1 wheel. It is self-contained in this directory.
 
 ## One-Line Run
 
@@ -20,6 +20,12 @@ launch.bat --model E:\models\Qwen3-14B-AWQ-4bit --port 8000
 ```
 
 Starts an OpenAI-compatible server at `http://127.0.0.1:8000`.
+
+KV offload is opt-in. For example, add `--kv-offload cpu-arc
+--kv-offload-cpu-gb 8`, or add `--kv-offload fs-lru
+--kv-offload-fs-root E:\vllm-kv-cache` for persistent filesystem tiering.
+Filesystem caches have no automatic disk quota; see
+[docs/usage.md](docs/usage.md#experimental-kv-offload).
 
 ## Hello World
 
@@ -99,12 +105,12 @@ python\Scripts\vllm.exe serve --help
 Expected version:
 
 ```text
-0.24.0+cu128
+0.25.1+cu128
 ```
 
 ## Environment
 
-- vLLM 0.24.0+cu128
+- vLLM 0.25.1+cu128
 - PyTorch 2.11.0+cu128
 - Triton 3.6.0.post26 via triton-windows
 - Python 3.13.14

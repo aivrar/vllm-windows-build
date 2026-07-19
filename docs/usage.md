@@ -1,6 +1,6 @@
 # Usage
 
-How to actually run vLLM v0.24.0 on Windows after installing it. Three
+How to actually run vLLM v0.25.1 on Windows after installing it. Three
 modes covered: **(A)** Python embedding, **(B)** OpenAI-compatible HTTP
 server via `vllm_launcher.py`, **(C)** the raw `vllm serve` upstream
 CLI.
@@ -103,6 +103,61 @@ python vllm_launcher.py ^
 | `--enable-prefix-caching` | (not forced) | Explicitly enable common-prefix reuse; otherwise use vLLM's default |
 | `--task` | "generate" | "generate" or "embed" |
 | `--trust-remote-code` | False | Required for some models |
+| `--cpu-offload-gb` | 0 | Model-weight CPU offload; unrelated to the KV-cache options below |
+| `--kv-offload` | disabled | Opt-in prompt-KV mode: `cpu-lru`, `cpu-arc`, `fs-lru`, or `fs-arc` |
+| `--kv-offload-cpu-gb` | 4.0 | Pinned-RAM capacity used only when KV offload is enabled |
+| `--kv-offload-fs-root` | (none) | Required explicit directory for `fs-lru`/`fs-arc` |
+| `--kv-offload-read-threads` | 4 | Read-priority threads for a filesystem tier |
+| `--kv-offload-write-threads` | 4 | Write-priority threads for a filesystem tier |
+
+### Experimental KV offload
+
+KV offload is disabled by default. It supplements vLLM's GPU prefix cache by
+keeping evicted prompt KV blocks in system RAM, or in RAM backed by a larger
+filesystem/NVMe tier. Enabling any mode also enables prefix caching.
+
+CPU-only ARC example:
+
+```bat
+launch.bat --model E:\models\Qwen3-14B-AWQ-4bit ^
+    --kv-offload cpu-arc ^
+    --kv-offload-cpu-gb 8
+```
+
+Persistent RAM + filesystem LRU example:
+
+```bat
+launch.bat --model E:\models\Qwen3-14B-AWQ-4bit ^
+    --kv-offload fs-lru ^
+    --kv-offload-cpu-gb 4 ^
+    --kv-offload-fs-root E:\vllm-kv-cache
+```
+
+`launch.bat` sets `PYTHONHASHSEED=0` before Python starts so identical prompts
+can find the same filesystem entries after a restart. If invoking Python
+directly, set it yourself first:
+
+```bat
+set PYTHONHASHSEED=0
+python vllm_launcher.py --model E:\models\Qwen3-14B-AWQ-4bit --kv-offload fs-arc --kv-offload-fs-root E:\vllm-kv-cache
+```
+
+Important limits:
+
+- The filesystem tier has no automatic byte quota or cleanup policy. Choose a
+  dedicated directory, monitor its size, and delete it when you want to clear
+  the persistent cache.
+- `--kv-offload-cpu-gb` controls the KV cache's pinned-RAM tier.
+  `--cpu-offload-gb` controls model weights; the two settings are independent.
+- This release offloads prompt blocks only. Benefits depend on repeated long
+  prefixes and available RAM/storage bandwidth; it does not make uncached
+  generation faster.
+- This is an experimental local vLLM tiering path, not the complete LMCache
+  feature set. Remote/distributed cache, P2P, NIXL, GDS, and object-store modes
+  are not supported by this Windows release.
+
+See [lmcache-inspired-windows-kv-cache.md](lmcache-inspired-windows-kv-cache.md)
+for the design history, validation evidence, and remaining roadmap.
 
 ### Endpoints
 
@@ -161,7 +216,7 @@ Then load-balance with nginx or your own router.
 
 ## (C) Upstream `vllm serve`
 
-vLLM v0.24.0 ships an OpenAI-compatible server out of the box at
+vLLM v0.25.1 ships an OpenAI-compatible server out of the box at
 `vllm serve`. It works on Windows after the patches are applied:
 
 ```bat

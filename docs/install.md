@@ -1,4 +1,4 @@
-# Install vLLM v0.24.0 on Windows
+# Install vLLM v0.25.1 on Windows
 
 Two paths:
 
@@ -73,13 +73,13 @@ pip install torch==2.11.0 torchaudio==2.11.0 torchvision==0.26.0 ^
 pip install triton-windows==3.6.0.post26
 pip install "llguidance>=1.7.0,<1.8.0" "xgrammar>=0.2.0,<1.0.0"
 pip install multi_turboquant-0.1.0-py3-none-any.whl
-pip install dist-v8\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
+pip install dist-v9\vllm-0.25.1+cu128-cp313-cp313-win_amd64.whl
 ```
 
 Or download the wheel from the latest GitHub release:
 
 ```text
-https://github.com/aivrar/vllm-windows-build/releases/tag/v0.24.0-win-cu128
+https://github.com/aivrar/vllm-windows-build/releases/tag/v0.25.1-win-cu128
 ```
 
 ### Verify
@@ -93,7 +93,7 @@ vllm serve --help
 Expected version:
 
 ```text
-0.24.0+cu128
+0.25.1+cu128
 ```
 
 ## Build From Source
@@ -108,7 +108,7 @@ Expected version:
 | PyTorch | 2.11.0+cu128 |
 | Ninja | Available in the venv or on PATH |
 | Rust | Current stable MSVC toolchain |
-| protoc | Required for v0.24 Rust frontend/tool parser |
+| protoc | Required for v0.25.1 Rust frontend/tool parser |
 | RAM | 32 GB minimum, 64 GB recommended |
 | Disk | 30 GB+ |
 
@@ -117,8 +117,8 @@ Expected version:
 ```bat
 git clone https://github.com/vllm-project/vllm.git vllm-source
 cd vllm-source
-git checkout v0.24.0
-git apply ..\vllm-windows-v8.patch
+git checkout v0.25.1
+git apply ..\vllm-windows-v9.patch
 cd ..
 ```
 
@@ -136,7 +136,7 @@ Important defaults:
 set TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0
 set MAX_JOBS=2
 set VLLM_DISABLE_SCCACHE=1
-set SETUPTOOLS_SCM_PRETEND_VERSION=0.24.0
+set SETUPTOOLS_SCM_PRETEND_VERSION=0.25.1
 ```
 
 Keep `MAX_JOBS=2`. Higher parallelism has repeatedly produced MSVC
@@ -147,13 +147,13 @@ compiler crashes on the heavy multi-arch CUDA translation units.
 After the editable install succeeds and `vllm.egg-info` exists:
 
 ```bat
-python assemble_wheel_cu128_v0.24.0.py
+python assemble_wheel_cu128_v0.25.1.py
 ```
 
 Output:
 
 ```text
-dist-v8\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
+dist-v9\vllm-0.25.1+cu128-cp313-cp313-win_amd64.whl
 ```
 
 ## Runtime Environment

@@ -1,8 +1,34 @@
 # Troubleshooting
 
-Common errors when building or running vLLM v0.24.0 on Windows.
+Common errors when building or running vLLM v0.25.1 on Windows.
 
 ## Runtime errors
+
+### Filesystem KV cache is growing or is not reused after a restart
+
+The experimental `fs-lru`/`fs-arc` tier has no automatic disk quota. Point
+`--kv-offload-fs-root` at a dedicated directory, monitor it, and remove that
+directory when you want to clear the persistent blocks.
+
+Cross-process reuse also requires `PYTHONHASHSEED=0` to be present before the
+Python process starts. `launch.bat` sets it automatically. For a direct launch:
+
+```bat
+set PYTHONHASHSEED=0
+python vllm_launcher.py --model E:\models\Qwen3-14B-AWQ-4bit --kv-offload fs-lru --kv-offload-fs-root E:\vllm-kv-cache
+```
+
+The model identifier, tensor/cache configuration, and block size participate
+in the cache namespace. A changed configuration correctly creates a different
+namespace rather than reusing incompatible data.
+
+### Illegal memory access while loading offloaded KV blocks
+
+Install the current v0.25.1 wheel. The v9 patch routes Windows restores from
+file-backed mmap through native CUDA DMA; the earlier Triton host-pointer route
+could fault for some grouped block shapes. If the problem persists, verify the
+installed wheel hash and run `python verify_install.py` before collecting a
+minimal reproduction.
 
 ### `ValueError: low is out of bounds for int32` during request sampling
 
@@ -66,11 +92,11 @@ rejecting a valid wheel.
 
 Pull the latest repository and rerun `install.bat`. Hashing now runs through
 `verify_artifact.py`, reports size and SHA-256 directly, and replaces stale or
-truncated wheels automatically. The current wheel is exactly 319,115,760 bytes
+truncated wheels automatically. The current wheel is exactly 293,080,424 bytes
 with SHA-256:
 
 ```text
-41E930FBCF994E4FD7E5CB1585F8D277AF3FFDBA0AEE7F5DDE5822DD90E6FBA7
+0C4F9B2E36482523FC7B4C092D711AC49B4265EF9F36A7AEEFFF9A667C875339
 ```
 
 ### `Failed to find Python libs` / `Python.h not found`
@@ -116,11 +142,11 @@ implementation.
 
 Pull the latest repository and rerun `install.bat`; it force-reinstalls the
 corrected wheel even though its version is unchanged. For a manual install,
-force-reinstall the wheel currently attached to `v0.24.0-win-cu128`. The
-corrected wheel SHA256 is:
+force-reinstall the wheel attached to the current `v0.25.1-win-cu128` release.
+Its SHA256 is:
 
 ```text
-41E930FBCF994E4FD7E5CB1585F8D277AF3FFDBA0AEE7F5DDE5822DD90E6FBA7
+0C4F9B2E36482523FC7B4C092D711AC49B4265EF9F36A7AEEFFF9A667C875339
 ```
 
 Verify the repaired import with:
@@ -167,7 +193,7 @@ allocation.
 problem by using `numpy.memmap` (file-backed, no commit charge) plus
 chunked GPU streaming. It's already enabled — if you're seeing this
 error you may have an older patched build. Re-apply
-`vllm-windows-v8.patch`.
+`vllm-windows-v9.patch`.
 
 ### `torch.OutOfMemoryError: CUDA out of memory. ... X GiB is free` <a id="oom-with-free-gpu"></a>
 
@@ -190,14 +216,14 @@ Then lower vLLM's reservation and concurrency settings:
 
 ### `ValueError: not enough values to unpack (expected 2, got 1)` in `torch.unique`
 
-You're running a mismatched PyTorch + vLLM combo. The v0.24 wheel in
+You're running a mismatched PyTorch + vLLM combo. The v0.25.1 wheel in
 this repo expects Python 3.13 and PyTorch 2.11.0+cu128. Reinstall with
 `install.bat`, or in a manual venv reinstall:
 
 ```bat
 pip install torch==2.11.0 torchaudio==2.11.0 torchvision==0.26.0 ^
     --index-url https://download.pytorch.org/whl/cu128
-pip install --force-reinstall dist-v8\vllm-0.24.0+cu128-cp313-cp313-win_amd64.whl
+pip install --force-reinstall dist-v9\vllm-0.25.1+cu128-cp313-cp313-win_amd64.whl
 ```
 
 ### `pyo3_runtime.PanicException: Python API call failed`
@@ -228,12 +254,12 @@ Then re-run `build.bat`.
 ### `cl : error C2018: unknown character 'or' / 'and' / 'not'`
 
 MSVC doesn't accept `or` / `and` / `not` as keywords by default. The
-patch fixes every known instance - make sure `vllm-windows-v8.patch`
+patch fixes every known instance - make sure `vllm-windows-v9.patch`
 applied cleanly:
 
 ```bat
 cd vllm-source
-git apply --check ..\vllm-windows-v8.patch
+git apply --check ..\vllm-windows-v9.patch
 ```
 
 If the check fails, the patch is partially applied or the source has
@@ -241,9 +267,9 @@ been modified. Reset:
 
 ```bat
 cd vllm-source
-git checkout v0.24.0
-git reset --hard v0.24.0
-git apply ..\vllm-windows-v8.patch
+git checkout v0.25.1
+git reset --hard v0.25.1
+git apply ..\vllm-windows-v9.patch
 ```
 
 ### `nvcc fatal: Unsupported gpu architecture 'compute_120'`
