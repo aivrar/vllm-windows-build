@@ -162,8 +162,8 @@ implementation.
 
 Pull the latest repository and rerun `install.bat`; it force-reinstalls the
 corrected wheel even though its version is unchanged. For a manual install,
-force-reinstall the wheel attached to the `v0.26.0-win-cu128` candidate release
-after its assets are uploaded. Until then, use the locally built wheel in
+force-reinstall the wheel attached to the published `v0.26.0-win-cu128`
+candidate release. You can also use the locally built wheel in
 `E:\vllm-windows-build-v2\dist-v0.26.0`. Its SHA256 is:
 
 ```text

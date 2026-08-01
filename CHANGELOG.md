@@ -45,8 +45,8 @@ separate Transformers/vLLM config-compatibility issue.
 - Size: `389473142` bytes
 - SHA-256:
   `a9fd2e5752d885a03c28aaa25472b9cdbe8685b4d3ed1a7ce3999803f0179658`
-- The v0.26.0 release URL is prepared as `v0.26.0-win-cu128`; the asset will be
-  linked by the installer after the release upload.
+- The v0.26.0 prerelease is published as `v0.26.0-win-cu128` with both wheel
+  assets attached; the installer points to that release.
 
 ### Scope and credit
 

@@ -2,7 +2,7 @@
 
 > **v0.26.0 candidate:** The new SM 7.5/8.6/8.9/12.0 wheel and RTX 20xx
 > launcher profile are documented in [the candidate build record](docs/v0.26.0-build-candidate.md).
-> The release page is prepared, but its assets are not public until upload.
+> The prerelease is published with both wheels attached.
 
 A condensed page for getting a model running fast. For full documentation
 see [docs/](docs/).

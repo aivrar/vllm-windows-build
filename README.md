@@ -24,8 +24,9 @@ request on the RTX 3090. Its SHA-256 is:
 a9fd2e5752d885a03c28aaa25472b9cdbe8685b4d3ed1a7ce3999803f0179658
 ```
 
-The release asset is prepared as `v0.26.0-win-cu128`; the installer and
-download links will become live with the release upload. For RTX 20xx users,
+The candidate release is now published as
+[`v0.26.0-win-cu128`](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.26.0-win-cu128),
+with both wheels attached. For RTX 20xx users,
 the launcher now provides `--turing-compat`,
 which selects `TRITON_ATTN`, float16 KV cache, 32-token blocks, and eager mode.
 See [the Turing usage notes](docs/usage.md#rtx-20xx--turing-sm-75) and
@@ -337,9 +338,9 @@ Download
 and `multi_turboquant-0.1.0-py3-none-any.whl` from the candidate release page,
 then:
 
-> The v0.26.0 release page is prepared but the assets are not public until the
-> release is uploaded. Until then, install the locally built wheel from
-> `E:\vllm-windows-build-v2\dist-v0.26.0` or use the previous stable release.
+> The v0.26.0 candidate is a prerelease. Download the wheel from the release
+> page above, or install the locally built copy from
+> `E:\vllm-windows-build-v2\dist-v0.26.0`.
 
 | Artifact | SHA-256 |
 |---|---|
