@@ -116,7 +116,7 @@ python vllm_launcher.py ^
 
 ### RTX 20xx / Turing (SM 7.5)
 
-The v0.26.0 build-candidate Windows wheel contains CUDA code for SM 7.5, but
+The v0.26.0 Windows release wheel contains CUDA code for SM 7.5, but
 some newer attention and CUDA-graph paths are not available on Turing. If the
 integrated launcher reports an unsupported architecture, start with its
 compatibility profile:

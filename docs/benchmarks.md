@@ -2,7 +2,7 @@
 
 This page preserves the original v0.19.0/cu126 Multi-TurboQuant benchmark
 run. It is useful for understanding the local TQ memory/throughput tradeoff,
-but it is not a v0.26.0 performance claim. The current v0.26.0 candidate has
+but it is not a v0.26.0 performance claim. The current v0.26.0 release has
 passed native-import and HTTP serving smoke tests on RTX 3090/3060; no broad
 throughput benchmark was run for this rebuild. For current install
 requirements, see [install.md](install.md).

@@ -2,7 +2,7 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Platform: Windows](https://img.shields.io/badge/Platform-Windows%2010%2F11-blue)
-![vLLM: v0.26.0 candidate](https://img.shields.io/badge/vLLM-v0.26.0%20candidate-orange)
+![vLLM: v0.26.0](https://img.shields.io/badge/vLLM-v0.26.0-orange)
 ![CUDA: 12.8](https://img.shields.io/badge/CUDA-12.8-76B900)
 ![Python: 3.13](https://img.shields.io/badge/Python-3.13-3776AB)
 ![PyTorch: 2.11](https://img.shields.io/badge/PyTorch-2.11.0-EE4C2C)
@@ -11,7 +11,7 @@
 ![Multi-TurboQuant](https://img.shields.io/badge/Multi--TurboQuant-6%20methods-purple)
 ![+ Upstream TurboQuant](https://img.shields.io/badge/+%20Upstream%20TurboQuant-4%20variants-purple)
 
-## v0.26.0 build candidate
+## v0.26.0 Windows release
 
 The new native Windows **vLLM 0.26.0 + CUDA 12.8 / Python 3.13** wheel has
 been built and validated in `E:\vllm-windows-build-v2`. It includes kernels for
@@ -24,13 +24,13 @@ request on the RTX 3090. Its SHA-256 is:
 a9fd2e5752d885a03c28aaa25472b9cdbe8685b4d3ed1a7ce3999803f0179658
 ```
 
-The candidate release is now published as
+The release is published as
 [`v0.26.0-win-cu128`](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.26.0-win-cu128),
 with both wheels attached. For RTX 20xx users,
 the launcher now provides `--turing-compat`,
 which selects `TRITON_ATTN`, float16 KV cache, 32-token blocks, and eager mode.
 See [the Turing usage notes](docs/usage.md#rtx-20xx--turing-sm-75) and
-[the full candidate build record](docs/v0.26.0-build-candidate.md), plus
+[the full release build record](docs/v0.26.0-build-candidate.md), plus
 [issue #14](https://github.com/aivrar/vllm-windows-build/issues/14).
 
 **Native Windows build of vLLM 0.26.0 - no WSL, no Docker, no Linux VM.**
@@ -56,8 +56,8 @@ acceleration, Triton support, and Multi-TurboQuant integration.
 
 | Release | vLLM | PyTorch | Triton | KV compression | Download |
 |---|---|---|---|---|---|
-| **v0.26.0-win-cu128 (candidate)** | 0.26.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8; **SM 7.5/8.6/8.9/12.0, Turing profile, CPU/filesystem KV offload, Rust frontend + tool parser** | [Release page](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.26.0-win-cu128) |
-| v0.25.1-win-cu128 (previous stable) | 0.25.1 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant + upstream TurboQuant + fp8; CPU/filesystem KV offload, SM 8.6/8.9/12.0 | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.25.1-win-cu128) |
+| **v0.26.0-win-cu128 (latest)** | 0.26.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8; **SM 7.5/8.6/8.9/12.0, Turing profile, CPU/filesystem KV offload, Rust frontend + tool parser** | [Release page](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.26.0-win-cu128) |
+| v0.25.1-win-cu128 (previous release) | 0.25.1 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant + upstream TurboQuant + fp8; CPU/filesystem KV offload, SM 8.6/8.9/12.0 | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.25.1-win-cu128) |
 | v0.24.0-win-cu128 | 0.24.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8 - Python 3.13, Blackwell sm_120, Rust frontend + Rust tool parser included | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.24.0-win-cu128) |
 | v0.23.0-win-cu128 | 0.23.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8 - **Python 3.13, Blackwell sm_120, Rust frontend included** | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.23.0-win-cu128) |
 | v0.21.0-win-cu128 | 0.21.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8 — **Python 3.13, Blackwell sm_120** | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.21.0-win-cu128) |
@@ -86,7 +86,7 @@ acceleration, Triton support, and Multi-TurboQuant integration.
   checkpoint still require confirmation; 11-GB cards may need lower context
   and sequence limits.
 
-See the [v0.26.0 candidate build record](docs/v0.26.0-build-candidate.md) for
+See the [v0.26.0 release build record](docs/v0.26.0-build-candidate.md) for
 the wheel hash, test commands, and release scope.
 
 ### What's new in v0.25.1 (previous stable)
@@ -283,7 +283,7 @@ Single 24 GB RTX 3090, Qwen3-14B AWQ-4bit, `gpu_memory_utilization=0.5`:
 
 ### v0.26.0 GPU validation
 
-The v0.26.0 candidate wheel was validated after installation from
+The v0.26.0 release wheel was validated after installation from
 `E:\vllm-windows-build-v2\dist-v0.26.0` (389,473,142 bytes; SHA-256
 `a9fd2e5752d885a03c28aaa25472b9cdbe8685b4d3ed1a7ce3999803f0179658`). The
 native payload includes SM 7.5, 8.6, 8.9, and 12.0 code, the Rust frontend
@@ -335,11 +335,11 @@ KV-offload evidence and scope →
 
 Download
 **[vllm-0.26.0+cu128-cp313-cp313-win_amd64.whl](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.26.0-win-cu128)**
-and `multi_turboquant-0.1.0-py3-none-any.whl` from the candidate release page,
+and `multi_turboquant-0.1.0-py3-none-any.whl` from the release page,
 then:
 
-> The v0.26.0 candidate is a prerelease. Download the wheel from the release
-> page above, or install the locally built copy from
+> Download the v0.26.0 wheel from the release page above, or install the local
+> copy from
 > `E:\vllm-windows-build-v2\dist-v0.26.0`.
 
 | Artifact | SHA-256 |
@@ -400,7 +400,7 @@ The reproducible v0.26.0 build is maintained in the separate build workspace
 `build_cu128_py313_v0.26.0.bat` script for the native compile, then package the
 already-built tree with `VLLM_USE_LOCAL_PRECOMPILED=1`. The exact environment,
 source commit, and output contract are recorded in
-[the candidate build record](docs/v0.26.0-build-candidate.md).
+[the release build record](docs/v0.26.0-build-candidate.md).
 
 The historical v0.25.1 patch also drops `cutlass-windows.patch` and
 `vllm-flash-attn-cutlass-windows.patch` into `vllm-source/`. The build's
@@ -497,7 +497,7 @@ fused Triton kernels and don't pay this cost.  See
 
 ## What's in the patch
 
-The v0.26.0 source tree carries the Windows changes listed in the candidate
+The v0.26.0 source tree carries the Windows changes listed in the release
 build record. The historical `vllm-windows-v9.patch` remains a unified diff
 against `vllm-project/vllm` at tag `v0.25.1`; it documents the previous release
 and is not the v0.26.0 source snapshot. The current changes touch the Windows
@@ -575,8 +575,8 @@ fail. See [docs/troubleshooting.md → OSError 1455](docs/troubleshooting.md#ose
 
 ## Tested with
 
-- RTX 3090 (24 GB, SM 8.6, driver 596.36) - v0.26.0 candidate wheel, native imports, and direct Qwen3-14B HTTP serving; prior v0.25.1 wheel also has the GPU offload matrix and real-model RAM/filesystem cache tests
-- RTX 3060 (12 GB, SM 8.6) - v0.26.0 candidate wheel through the integrated launcher and Turing-compatible profile
+- RTX 3090 (24 GB, SM 8.6, driver 596.36) - v0.26.0 release wheel, native imports, and direct Qwen3-14B HTTP serving; prior v0.25.1 wheel also has the GPU offload matrix and real-model RAM/filesystem cache tests
+- RTX 3060 (12 GB, SM 8.6) - v0.26.0 release wheel through the integrated launcher and Turing-compatible profile
 - Qwen2.5-0.5B-Instruct (smoke test), Qwen3-14B-abliterated-AWQ-4bit
 - Qwen3.5-9B-abliterated-GPTQ-4bit remains blocked by the upstream text-only Qwen3.5 registry/config path and was not used as release evidence
 - Windows 10 Pro 22H2

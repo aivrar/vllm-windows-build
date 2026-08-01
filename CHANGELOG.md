@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.26.0-win-cu128 - 2026-07-31 (build candidate)
+## v0.26.0-win-cu128 - 2026-07-31
 
 Upstream bump to **vLLM 0.26.0**, targeting CPython 3.13, CUDA 12.8,
 PyTorch 2.11.0+cu128, Triton Windows 3.6.0.post26, and
@@ -45,7 +45,7 @@ separate Transformers/vLLM config-compatibility issue.
 - Size: `389473142` bytes
 - SHA-256:
   `a9fd2e5752d885a03c28aaa25472b9cdbe8685b4d3ed1a7ce3999803f0179658`
-- The v0.26.0 prerelease is published as `v0.26.0-win-cu128` with both wheel
+- The v0.26.0 release is published as `v0.26.0-win-cu128` with both wheel
   assets attached; the installer points to that release.
 
 ### Scope and credit

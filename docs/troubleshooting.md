@@ -6,7 +6,7 @@ Common errors when building or running the native Windows vLLM releases.
 
 ### RTX 20xx / SM 7.5 reports an unsupported architecture or stalls during startup
 
-The v0.26.0 build-candidate wheel includes SM 7.5 code, so this message does
+The v0.26.0 release wheel includes SM 7.5 code, so this message does
 not by itself mean that an RTX 2080/2080 Ti is excluded. Turing cannot use every
 newer attention backend or CUDA-graph path. Start with the compatibility profile
 and small resource limits:
@@ -44,7 +44,7 @@ namespace rather than reusing incompatible data.
 
 ### Illegal memory access while loading offloaded KV blocks
 
-Install the current v0.26.0 candidate wheel. The Windows patch routes restores from
+Install the current v0.26.0 release wheel. The Windows patch routes restores from
 file-backed mmap through native CUDA DMA; the earlier Triton host-pointer route
 could fault for some grouped block shapes. If the problem persists, verify the
 installed wheel hash and run `python verify_install.py` before collecting a
@@ -163,7 +163,7 @@ implementation.
 Pull the latest repository and rerun `install.bat`; it force-reinstalls the
 corrected wheel even though its version is unchanged. For a manual install,
 force-reinstall the wheel attached to the published `v0.26.0-win-cu128`
-candidate release. You can also use the locally built wheel in
+release. You can also use the locally built wheel in
 `E:\vllm-windows-build-v2\dist-v0.26.0`. Its SHA256 is:
 
 ```text
@@ -237,7 +237,7 @@ Then lower vLLM's reservation and concurrency settings:
 
 ### `ValueError: not enough values to unpack (expected 2, got 1)` in `torch.unique`
 
-You're running a mismatched PyTorch + vLLM combo. The v0.26.0 candidate wheel
+You're running a mismatched PyTorch + vLLM combo. The v0.26.0 release wheel
 in this repo expects Python 3.13 and PyTorch 2.11.0+cu128. Reinstall with
 `install.bat`, or in a manual venv reinstall:
 

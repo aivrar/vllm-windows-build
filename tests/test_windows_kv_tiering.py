@@ -1,4 +1,4 @@
-"""Real-model validation for the vLLM 0.26.0 Windows KV offloading candidate.
+"""Real-model validation for the vLLM 0.26.0 Windows KV offloading release.
 
 Run one mode per process so CUDA, model, and cache state cannot leak between
 comparisons. The caller should expose only the intended GPU.

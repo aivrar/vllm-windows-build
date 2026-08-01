@@ -1,8 +1,8 @@
 # vLLM v0.26.0 Windows Quick Reference
 
-> **v0.26.0 candidate:** The new SM 7.5/8.6/8.9/12.0 wheel and RTX 20xx
-> launcher profile are documented in [the candidate build record](docs/v0.26.0-build-candidate.md).
-> The prerelease is published with both wheels attached.
+> **v0.26.0 release:** The new SM 7.5/8.6/8.9/12.0 wheel and RTX 20xx
+> launcher profile are documented in [the release build record](docs/v0.26.0-build-candidate.md).
+> The release is published with both wheels attached.
 
 A condensed page for getting a model running fast. For full documentation
 see [docs/](docs/).
@@ -15,7 +15,7 @@ install.bat
 
 This downloads embedded Python 3.13.14, installs PyTorch 2.11.0+cu128,
 triton-windows, structured-output backends, Multi-TurboQuant, and the
-v0.26.0 candidate wheel. It is self-contained in this directory.
+v0.26.0 wheel. It is self-contained in this directory.
 
 ## One-Line Run
 
@@ -114,7 +114,7 @@ Expected version:
 
 ## Environment
 
-- vLLM 0.26.0+cu128 (candidate; SM 7.5/8.6/8.9/12.0)
+- vLLM 0.26.0+cu128 (SM 7.5/8.6/8.9/12.0)
 - PyTorch 2.11.0+cu128
 - Triton 3.6.0.post26 via triton-windows
 - Python 3.13.14

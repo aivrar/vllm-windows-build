@@ -1,6 +1,6 @@
 # Build From Source
 
-The current build candidate is vLLM 0.26.0. The native compile and wheel
+The current release build is vLLM 0.26.0. The native compile and wheel
 assembly live in `E:\vllm-windows-build-v2`; this repository contains the
 installer, launcher, validation contract, and release documentation. The
 older v0.25.1 patch workflow is retained below as historical reference.

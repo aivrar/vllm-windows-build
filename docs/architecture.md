@@ -1,6 +1,6 @@
 # Architecture
 
-How the v0.26.0 Windows build candidate hangs together and what each piece
+How the v0.26.0 Windows release hangs together and what each piece
 owns. The v0.25.1 patch and release layout mentioned below are historical;
 the current native source and wheel are produced in
 `E:\vllm-windows-build-v2`.

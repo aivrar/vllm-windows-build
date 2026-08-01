@@ -1,7 +1,7 @@
 # Install vLLM v0.26.0 on Windows
 
-> v0.26.0 is the current build candidate with native SM 7.5/8.6/8.9/12.0
-> kernels. Its prerelease page is public with both wheels attached. You can
+> v0.26.0 is the current release with native SM 7.5/8.6/8.9/12.0
+> kernels. Its release page is public with both wheels attached. You can
 > also use the locally built copy in `E:\vllm-windows-build-v2\dist-v0.26.0`.
 
 Two paths:
@@ -124,7 +124,7 @@ git -C vllm-source-v0.26.0 describe --tags --always
 ```
 
 The v2 tree contains the native Windows changes and compiled artifacts used by
-the candidate. Do not apply the historical `vllm-windows-v9.patch` to it.
+the release. Do not apply the historical `vllm-windows-v9.patch` to it.
 
 ### Build
 

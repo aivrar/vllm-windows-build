@@ -40,7 +40,7 @@ isolated `pip --target` installation with:
 python tests/test_issue7_flash_attn.py --package-root $env:TEMP\vllm-issue7-wheeltest
 ```
 
-End-to-end test scripts for the Windows vLLM 0.26.0 build candidate with
+End-to-end test scripts for the Windows vLLM 0.26.0 release with
 Multi-TurboQuant and experimental native KV offload.
 
 ## Setup
@@ -78,7 +78,7 @@ set CUDA_VISIBLE_DEVICES=0
 `nvidia-smi` numbering on mixed-GPU machines. Confirm the `Visible GPU` line
 before relying on a result.
 
-## test_windows_kv_tiering.py - v0.26.0 release-candidate matrix
+## test_windows_kv_tiering.py - v0.26.0 release matrix
 
 This is the main real-model harness for `OffloadingConnector`. It requires the
 installed `0.26.0+cu128` wheel, exactly one visible RTX 3090, and a local
