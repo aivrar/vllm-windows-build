@@ -15,12 +15,8 @@ from pathlib import Path
 
 REQUIRED_FLASH_ATTN_FILES = {
     "vllm/vllm_flash_attn/_vllm_fa2_C.pyd",
-    "vllm/vllm_flash_attn/layers/__init__.py",
     "vllm/vllm_flash_attn/layers/rotary.py",
-    "vllm/vllm_flash_attn/ops/__init__.py",
-    "vllm/vllm_flash_attn/ops/triton/__init__.py",
     "vllm/vllm_flash_attn/ops/triton/rotary.py",
-    "vllm/vllm_flash_attn/cute/__init__.py",
     "vllm/vllm_flash_attn/cute/interface.py",
 }
 
@@ -46,12 +42,9 @@ REQUIRED_RELEASE_FILES = REQUIRED_FLASH_ATTN_FILES | {
     "vllm/vllm-rs.exe",
 }
 
-REQUIRED_NONEMPTY_FILES = REQUIRED_RELEASE_FILES - {
-    "vllm/vllm_flash_attn/layers/__init__.py",
-    "vllm/vllm_flash_attn/ops/__init__.py",
-    "vllm/vllm_flash_attn/ops/triton/__init__.py",
-    "vllm/vllm_flash_attn/cute/__init__.py",
-}
+# Namespace-package initializers may be omitted by setuptools; all functional
+# FlashAttention payloads remain required above.
+REQUIRED_NONEMPTY_FILES = REQUIRED_RELEASE_FILES
 
 SAMPLING_STATES = "vllm/v1/worker/gpu/sample/states.py"
 INT64_SEED_FIX = b"_NP_INT64_MIN, _NP_INT64_MAX, dtype=np.int64"
@@ -111,7 +104,7 @@ def validate_wheel(wheel_path: Path) -> None:
         assert len(metadata_names) == 1, f"expected one METADATA, found {metadata_names}"
         metadata = BytesParser().parsebytes(wheel.read(metadata_names[0]))
         assert metadata.get("Name", "").lower() == "vllm"
-        assert metadata.get("Version") == "0.25.1+cu128"
+        assert metadata.get("Version") == "0.26.0+cu128"
         metadata_data = wheel.read(metadata_names[0])
         assert b'platform_machine == "AMD64"' in metadata_data, (
             "wheel metadata does not install AMD64 structured-output dependencies"

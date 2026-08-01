@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-VLLM_SHA256 = "0C4F9B2E36482523FC7B4C092D711AC49B4265EF9F36A7AEEFFF9A667C875339"
+VLLM_SHA256 = "A9FD2E5752D885A03C28AAA25472B9CDBE8685B4D3ED1A7CE3999803F0179658"
 MTQ_SHA256 = "5B310E05904B588539D9A8E3374DFA6C160F025F9C2099BA5C7877C79B2FA149"
 PATCH_SHA256 = "4893BDB35F905237BD0D0D042E365EAFC5B6B4C49809747BE49B42E6D8BF7609"
 
@@ -35,19 +35,19 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertEqual(install["MTQ_SHA256"], MTQ_SHA256)
         self.assertEqual(launch["EXPECTED_WHEEL_SHA256"], VLLM_SHA256)
         self.assertEqual(launch["EXPECTED_MTQ_SHA256"], MTQ_SHA256)
-        self.assertEqual(install["WHEEL_SIZE"], "293080424")
+        self.assertEqual(install["WHEEL_SIZE"], "389473142")
         self.assertEqual(install["MTQ_SIZE"], "136429")
-        self.assertIn("v0.25.1-win-cu128", install["WHEEL_URL"])
-        self.assertIn("vllm-0.25.1+cu128-cp313-cp313-win_amd64.whl", install["WHEEL_URL"])
-        self.assertIn("dist-v9", install["WHEEL_FILE"])
+        self.assertIn("v0.26.0-win-cu128", install["WHEEL_URL"])
+        self.assertIn("vllm-0.26.0+cu128-cp313-cp313-win_amd64.whl", install["WHEEL_URL"])
+        self.assertIn("dist-v0.26.0", install["WHEEL_FILE"])
 
         verifier = (ROOT / "verify_install.py").read_text(encoding="utf-8")
-        assembler = (ROOT / "assemble_wheel_cu128_v0.25.1.py").read_text(
+        candidate = (ROOT / "docs" / "v0.26.0-build-candidate.md").read_text(
             encoding="utf-8"
         )
-        self.assertIn('EXPECTED_VLLM_VERSION = "0.25.1+cu128"', verifier)
-        self.assertIn('VERSION = "0.25.1+cu128"', assembler)
-        self.assertIn('ROOT / "dist-v9"', assembler)
+        self.assertIn('EXPECTED_VLLM_VERSION = "0.26.0+cu128"', verifier)
+        self.assertIn("vllm-0.26.0+cu128-cp313-cp313-win_amd64.whl", candidate)
+        self.assertIn("a9fd2e5752d885a03c28aaa25472b9cdbe8685b4d3ed1a7ce3999803f0179658", candidate)
 
     def test_installer_is_atomic_and_does_not_parse_hash_stdout(self) -> None:
         script = (ROOT / "install.bat").read_text(encoding="utf-8")
@@ -137,6 +137,24 @@ class ReleaseContractTests(unittest.TestCase):
             'if not defined PYTHONHASHSEED set "PYTHONHASHSEED=0"',
             launch_batch,
         )
+
+    def test_turing_compatibility_controls_are_forwarded(self) -> None:
+        launcher = (ROOT / "vllm_launcher.py").read_text(encoding="utf-8")
+        for flag in (
+            'parser.add_argument("--attention-backend", default=None,',
+            'parser.add_argument("--kv-cache-dtype", default=None,',
+            'parser.add_argument("--block-size", type=int, default=None,',
+            'parser.add_argument("--turing-compat", action="store_true",',
+        ):
+            self.assertIn(flag, launcher)
+        self.assertIn('args.attention_backend = args.attention_backend or "TRITON_ATTN"', launcher)
+        self.assertIn('args.kv_cache_dtype = args.kv_cache_dtype or "float16"', launcher)
+        self.assertIn('args.block_size = args.block_size or 32', launcher)
+        self.assertIn('AttentionConfig(backend=args.attention_backend)', launcher)
+        self.assertIn('llm_kwargs["kv_cache_dtype"] = args.kv_cache_dtype', launcher)
+        self.assertIn('llm_kwargs["block_size"] = args.block_size', launcher)
+        self.assertIn('llm_kwargs["tensor_parallel_size"] = args.tensor_parallel_size', launcher)
+        self.assertIn('set "PYTHONUTF8=1"', (ROOT / "launch.bat").read_text(encoding="utf-8"))
 
     def test_quickstarts_use_fast_reproducible_baseline(self) -> None:
         sections = {

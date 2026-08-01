@@ -1,9 +1,44 @@
 # Build From Source
 
-This page documents the v0.25.1 Windows build flow and how to iterate on
-`vllm-windows-v9.patch`.
+The current build candidate is vLLM 0.26.0. The native compile and wheel
+assembly live in `E:\vllm-windows-build-v2`; this repository contains the
+installer, launcher, validation contract, and release documentation. The
+older v0.25.1 patch workflow is retained below as historical reference.
+
+## Current v0.26.0 build (v2 workspace)
+
+The v2 tree is based on upstream v0.26.0 and compiles CUDA targets
+`7.5;8.6;8.9;12.0` with Python 3.13, PyTorch 2.11.0+cu128, and CUDA 12.8.
+Run the checked-in build script from a developer command prompt:
+
+```bat
+cd /d E:\vllm-windows-build-v2
+build_cu128_py313_v0.26.0.bat
+```
+
+After the native editable build completes, assemble the wheel from the same
+tree without downloading a Linux precompiled package:
+
+```bat
+cd /d E:\vllm-windows-build-v2\vllm-source-v0.26.0
+set VLLM_USE_LOCAL_PRECOMPILED=1
+python -m pip wheel . --no-build-isolation --no-deps --wheel-dir E:\vllm-windows-build-v2\dist-v0.26.0
+```
+
+Expected output:
+
+```text
+E:\vllm-windows-build-v2\dist-v0.26.0\vllm-0.26.0+cu128-cp313-cp313-win_amd64.whl
+SHA-256: a9fd2e5752d885a03c28aaa25472b9cdbe8685b4d3ed1a7ce3999803f0179658
+```
+
+Run `python tests\test_wheel_contents.py` against that file before release.
+The complete source snapshot, native changes, exact build log, and GPU
+validation are recorded in [v0.26.0-build-candidate.md](v0.26.0-build-candidate.md).
 
 For install-only usage, see [install.md](install.md).
+
+## Historical v0.25.1 patch workflow
 
 ## Patch Scope
 

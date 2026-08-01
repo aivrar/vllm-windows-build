@@ -1,5 +1,61 @@
 # Changelog
 
+## v0.26.0-win-cu128 - 2026-07-31 (build candidate)
+
+Upstream bump to **vLLM 0.26.0**, targeting CPython 3.13, CUDA 12.8,
+PyTorch 2.11.0+cu128, Triton Windows 3.6.0.post26, and
+`TORCH_CUDA_ARCH_LIST=7.5;8.6;8.9;12.0`.
+
+### New and fixed
+
+- Added native SM 7.5 coverage for RTX 20xx/Turing while retaining RTX 30xx,
+  RTX 40xx, and Blackwell targets.
+- Added `--turing-compat` to the Windows launcher. It selects `TRITON_ATTN`,
+  a float16 KV cache, 32-token KV blocks, and eager execution for Turing
+  compatibility. The individual `--attention-backend`, `--kv-cache-dtype`, and
+  `--block-size` options are also forwarded to `LLM`.
+- Set deterministic Windows GPU numbering (`CUDA_DEVICE_ORDER=PCI_BUS_ID`) and
+  UTF-8 console encoding in `launch.bat`.
+- Fixed the Windows hybrid-KV block-table fallback and skipped the Linux-only
+  CuTe FA4 target on Windows.
+- Fixed Rust mock-engine IPC polling so the v0.26 source builds on Windows
+  without `tokio::net::UnixStream`.
+- Added local precompiled-extension reuse for wheel assembly after the native
+  CUDA build, without downloading an upstream Linux precompiled wheel.
+
+### Validated
+
+- Native wheel imports, Rust frontend/tool parser payloads, and `vllm.exe
+  --help` all pass.
+- Direct `vllm serve` returned HTTP 200 for local Qwen3-14B AWQ on the RTX 3090.
+- The integrated Windows launcher returned HTTP 200 on the RTX 3060 using the
+  new compatibility profile.
+- The release-contract, launcher, Windows-runtime, bootstrap, artifact, and
+  dispatcher tests pass: **23 passed, 19 subtests**.
+
+These GPU checks validate the packaged v0.26 path on Ampere hardware. They do
+not replace a final run on the reporter's RTX 2080 Ti. An 11-GB Turing card may
+still require lower `--max-model-len` and `--max-num-seqs`; a 65K context request
+is not guaranteed to fit. The local Qwen3.5-9B GPTQ checkpoint also remains a
+separate Transformers/vLLM config-compatibility issue.
+
+### Artifacts
+
+- Wheel: `vllm-0.26.0+cu128-cp313-cp313-win_amd64.whl`
+- Size: `389473142` bytes
+- SHA-256:
+  `a9fd2e5752d885a03c28aaa25472b9cdbe8685b4d3ed1a7ce3999803f0179658`
+- The v0.26.0 release URL is prepared as `v0.26.0-win-cu128`; the asset will be
+  linked by the installer after the release upload.
+
+### Scope and credit
+
+The local CPU/filesystem KV tiering remains an independent adaptation of vLLM's
+offloading framework informed by [LMCache](https://github.com/LMCache/LMCache).
+It does not copy or bundle LMCache code and does not claim feature parity;
+remote/distributed cache, P2P, NIXL, GDS, object-store tiers, and CacheBlend
+remain out of scope.
+
 ## v0.25.1-win-cu128 - 2026-07-19
 
 Upstream bump from vLLM 0.24.0 to **vLLM 0.25.1**, targeting CPython

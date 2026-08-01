@@ -1,6 +1,6 @@
 # Usage
 
-How to actually run vLLM v0.25.1 on Windows after installing it. Three
+How to actually run vLLM v0.26.0 on Windows after installing it. Three
 modes covered: **(A)** Python embedding, **(B)** OpenAI-compatible HTTP
 server via `vllm_launcher.py`, **(C)** the raw `vllm serve` upstream
 CLI.
@@ -85,7 +85,7 @@ python vllm_launcher.py ^
     --host 127.0.0.1 ^
     --gpu-memory-utilization 0.85 ^
     --max-model-len 2048 ^
-    --max-num-seqs 64 ^
+    --max-num-seqs 4 ^
     --trust-remote-code
 ```
 
@@ -99,6 +99,10 @@ python vllm_launcher.py ^
 | `--max-num-seqs` | 64 | Concurrent request limit |
 | `--max-num-batched-tokens` | (auto) | Tokens per forward pass |
 | `--enforce-eager` | False | Debug/compatibility option; disables compilation and CUDA graphs |
+| `--attention-backend` | (auto) | Force a backend such as `TRITON_ATTN`; useful on RTX 20xx/Turing |
+| `--kv-cache-dtype` | (auto) | KV-cache storage dtype; use `float16` on Turing when auto selection fails |
+| `--block-size` | (auto) | KV-cache block size; `16` or `32` are conservative compatibility choices |
+| `--turing-compat` | False | RTX 20xx/SM 7.5 profile: `TRITON_ATTN`, float16 KV, block 32, eager mode |
 | `--gpu-id` | (none) | Which GPU to pin to; otherwise preserve the current CUDA visibility |
 | `--enable-prefix-caching` | (not forced) | Explicitly enable common-prefix reuse; otherwise use vLLM's default |
 | `--task` | "generate" | "generate" or "embed" |
@@ -109,6 +113,31 @@ python vllm_launcher.py ^
 | `--kv-offload-fs-root` | (none) | Required explicit directory for `fs-lru`/`fs-arc` |
 | `--kv-offload-read-threads` | 4 | Read-priority threads for a filesystem tier |
 | `--kv-offload-write-threads` | 4 | Write-priority threads for a filesystem tier |
+
+### RTX 20xx / Turing (SM 7.5)
+
+The v0.26.0 build-candidate Windows wheel contains CUDA code for SM 7.5, but
+some newer attention and CUDA-graph paths are not available on Turing. If the
+integrated launcher reports an unsupported architecture, start with its
+compatibility profile:
+
+```bat
+launch.bat --model E:\models\Qwen3-4B --gpu-id 0 --turing-compat ^
+    --gpu-memory-utilization 0.85 --max-model-len 8192 --max-num-seqs 4
+```
+
+The profile forwards the same settings that are known to work with the direct
+vLLM entry point: `TRITON_ATTN`, `float16` KV cache, 32-token blocks, and
+`--enforce-eager`. Explicit `--attention-backend`, `--kv-cache-dtype`, and
+`--block-size` values override the profile. These settings improve compatibility;
+they do not remove the model's VRAM requirement.
+
+The launcher defaults (`0.6` GPU utilization, 8,192 max context, and 64
+sequences) are conservative for many GPUs, but a large sequence cap can still
+make startup profiling fail on an 11-GB card. Lower `--max-num-seqs` and
+`--max-model-len` first when a model loads its weights and then stalls while
+allocating KV cache. `launch.bat` sets `CUDA_DEVICE_ORDER=PCI_BUS_ID`, so
+`--gpu-id` follows the order shown by `nvidia-smi`.
 
 ### Experimental KV offload
 
@@ -216,7 +245,7 @@ Then load-balance with nginx or your own router.
 
 ## (C) Upstream `vllm serve`
 
-vLLM v0.25.1 ships an OpenAI-compatible server out of the box at
+vLLM v0.26.0 ships an OpenAI-compatible server out of the box at
 `vllm serve`. It works on Windows after the patches are applied:
 
 ```bat

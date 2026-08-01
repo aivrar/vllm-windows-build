@@ -1,12 +1,17 @@
-# Install vLLM v0.25.1 on Windows
+# Install vLLM v0.26.0 on Windows
+
+> v0.26.0 is the current build candidate with native SM 7.5/8.6/8.9/12.0
+> kernels. The release page is prepared but its assets are not public until
+> upload; until then, use the wheel in
+> `E:\vllm-windows-build-v2\dist-v0.26.0` or the previous stable release.
 
 Two paths:
 
 - **Install the pre-built wheel**: no compiler needed; recommended for most users.
 - **Build from source**: requires Visual Studio 2022, CUDA 12.8, Python 3.13, and patience.
 
-`install.bat` handles the wheel path end to end. `build.bat` and
-`run_build.bat` handle the source build path.
+`install.bat` handles the wheel path end to end. The current source build is
+driven by `build_cu128_py313_v0.26.0.bat` in `E:\vllm-windows-build-v2`.
 
 ## Install The Wheel
 
@@ -15,7 +20,7 @@ Two paths:
 | Component | Version | Notes |
 |---|---|---|
 | Windows | 10 / 11 x64 | Tested on Windows 10 Pro 22H2 |
-| GPU | NVIDIA SM 8.0+ | RTX 30/40/50, A100, H100 |
+| GPU | NVIDIA SM 7.5+ | RTX 20/30/40/50, A100, H100 |
 | Driver | R570+ | Required for RTX 50-series / Blackwell |
 | Python | 3.13.x | `install.bat` uses embedded Python 3.13.14 plus headers/libs for Triton |
 | PyTorch | 2.11.0+cu128 | CUDA 12.8 runtime from PyTorch wheels |
@@ -73,13 +78,13 @@ pip install torch==2.11.0 torchaudio==2.11.0 torchvision==0.26.0 ^
 pip install triton-windows==3.6.0.post26
 pip install "llguidance>=1.7.0,<1.8.0" "xgrammar>=0.2.0,<1.0.0"
 pip install multi_turboquant-0.1.0-py3-none-any.whl
-pip install dist-v9\vllm-0.25.1+cu128-cp313-cp313-win_amd64.whl
+pip install dist-v0.26.0\vllm-0.26.0+cu128-cp313-cp313-win_amd64.whl
 ```
 
 Or download the wheel from the latest GitHub release:
 
 ```text
-https://github.com/aivrar/vllm-windows-build/releases/tag/v0.25.1-win-cu128
+https://github.com/aivrar/vllm-windows-build/releases/tag/v0.26.0-win-cu128
 ```
 
 ### Verify
@@ -93,7 +98,7 @@ vllm serve --help
 Expected version:
 
 ```text
-0.25.1+cu128
+0.26.0+cu128
 ```
 
 ## Build From Source
@@ -108,52 +113,56 @@ Expected version:
 | PyTorch | 2.11.0+cu128 |
 | Ninja | Available in the venv or on PATH |
 | Rust | Current stable MSVC toolchain |
-| protoc | Required for v0.25.1 Rust frontend/tool parser |
+| protoc | Required for the v0.26.0 Rust frontend/tool parser |
 | RAM | 32 GB minimum, 64 GB recommended |
 | Disk | 30 GB+ |
 
 ### Source Tree
 
 ```bat
-git clone https://github.com/vllm-project/vllm.git vllm-source
-cd vllm-source
-git checkout v0.25.1
-git apply ..\vllm-windows-v9.patch
-cd ..
+cd /d E:\vllm-windows-build-v2
+git -C vllm-source-v0.26.0 describe --tags --always
 ```
+
+The v2 tree contains the native Windows changes and compiled artifacts used by
+the candidate. Do not apply the historical `vllm-windows-v9.patch` to it.
 
 ### Build
 
-Edit `run_build.bat` for your paths, then run it from a normal command prompt:
+Run the v2 build script from a Visual Studio developer command prompt:
 
 ```bat
-run_build.bat
+cd /d E:\vllm-windows-build-v2
+build_cu128_py313_v0.26.0.bat
 ```
 
 Important defaults:
 
 ```bat
-set TORCH_CUDA_ARCH_LIST=8.6;8.9;12.0
-set MAX_JOBS=2
+set TORCH_CUDA_ARCH_LIST=7.5;8.6;8.9;12.0
+set MAX_JOBS=8
 set VLLM_DISABLE_SCCACHE=1
-set SETUPTOOLS_SCM_PRETEND_VERSION=0.25.1
+set SETUPTOOLS_SCM_PRETEND_VERSION=0.26.0
 ```
 
-Keep `MAX_JOBS=2`. Higher parallelism has repeatedly produced MSVC
-compiler crashes on the heavy multi-arch CUDA translation units.
+The checked-in v2 script uses the available worker budget (`MAX_JOBS=8` on the
+tested machine). If memory or compiler stability is lower on another machine,
+reduce it to 2 before rebuilding.
 
 ### Build A Wheel From An Already-Built Tree
 
 After the editable install succeeds and `vllm.egg-info` exists:
 
 ```bat
-python assemble_wheel_cu128_v0.25.1.py
+cd /d E:\vllm-windows-build-v2\vllm-source-v0.26.0
+set VLLM_USE_LOCAL_PRECOMPILED=1
+python -m pip wheel . --no-build-isolation --no-deps --wheel-dir E:\vllm-windows-build-v2\dist-v0.26.0
 ```
 
 Output:
 
 ```text
-dist-v9\vllm-0.25.1+cu128-cp313-cp313-win_amd64.whl
+E:\vllm-windows-build-v2\dist-v0.26.0\vllm-0.26.0+cu128-cp313-cp313-win_amd64.whl
 ```
 
 ## Runtime Environment

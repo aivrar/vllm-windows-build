@@ -1,6 +1,9 @@
 # Architecture
 
-How the v0.25.1 Windows build hangs together and what each piece owns.
+How the v0.26.0 Windows build candidate hangs together and what each piece
+owns. The v0.25.1 patch and release layout mentioned below are historical;
+the current native source and wheel are produced in
+`E:\vllm-windows-build-v2`.
 
 ## Repository Layout
 
@@ -18,10 +21,8 @@ vllm-windows-build/
   expand_zip.ps1
   verify_install.py
   engine_dispatcher.py
-  assemble_wheel_cu128_v0.25.1.py
   vllm_launcher.py
-  dist-v9/
-    vllm-0.25.1+cu128-cp313-cp313-win_amd64.whl
+  docs/v0.26.0-build-candidate.md
   docs/
   tests/
 ```
@@ -62,7 +63,7 @@ then validates every ZIP member against wheel RECORD before release.
    `libs\python313.lib`) from the Python NuGet package for Triton's
    runtime CUDA helper compilation.
 3. Installs PyTorch 2.11.0+cu128 and `triton-windows`.
-4. Verifies and installs the v0.25.1+cu128 wheel, the pinned Multi-TurboQuant
+4. Verifies and installs the v0.26.0+cu128 wheel, the pinned Multi-TurboQuant
    wheel, and structured-output backends.
    Artifacts are downloaded through `.part` files and the install marker stores
    both release SHA-256 values only after the full runtime check succeeds.

@@ -1,8 +1,28 @@
 # Troubleshooting
 
-Common errors when building or running vLLM v0.25.1 on Windows.
+Common errors when building or running the native Windows vLLM releases.
 
 ## Runtime errors
+
+### RTX 20xx / SM 7.5 reports an unsupported architecture or stalls during startup
+
+The v0.26.0 build-candidate wheel includes SM 7.5 code, so this message does
+not by itself mean that an RTX 2080/2080 Ti is excluded. Turing cannot use every
+newer attention backend or CUDA-graph path. Start with the compatibility profile
+and small resource limits:
+
+```bat
+launch.bat --model E:\models\Qwen3-4B --gpu-id 0 --turing-compat ^
+    --gpu-memory-utilization 0.85 --max-model-len 8192 --max-num-seqs 4
+```
+
+That profile selects `TRITON_ATTN`, a float16 KV cache, 32-token blocks, and
+eager execution. If it still fails, try `--max-model-len 2048` and
+`--max-num-seqs 1`, then collect the complete traceback. The model weights can
+fit while the requested KV cache cannot; lowering the context and sequence cap
+is therefore the first diagnostic step. This is the launcher path for issue
+[#14](https://github.com/aivrar/vllm-windows-build/issues/14); a direct
+`vllm serve` success with different flags does not test the launcher's defaults.
 
 ### Filesystem KV cache is growing or is not reused after a restart
 
@@ -24,7 +44,7 @@ namespace rather than reusing incompatible data.
 
 ### Illegal memory access while loading offloaded KV blocks
 
-Install the current v0.25.1 wheel. The v9 patch routes Windows restores from
+Install the current v0.26.0 candidate wheel. The Windows patch routes restores from
 file-backed mmap through native CUDA DMA; the earlier Triton host-pointer route
 could fault for some grouped block shapes. If the problem persists, verify the
 installed wheel hash and run `python verify_install.py` before collecting a
@@ -92,7 +112,7 @@ rejecting a valid wheel.
 
 Pull the latest repository and rerun `install.bat`. Hashing now runs through
 `verify_artifact.py`, reports size and SHA-256 directly, and replaces stale or
-truncated wheels automatically. The current wheel is exactly 293,080,424 bytes
+truncated wheels automatically. The previous stable wheel is exactly 293,080,424 bytes
 with SHA-256:
 
 ```text
@@ -142,11 +162,12 @@ implementation.
 
 Pull the latest repository and rerun `install.bat`; it force-reinstalls the
 corrected wheel even though its version is unchanged. For a manual install,
-force-reinstall the wheel attached to the current `v0.25.1-win-cu128` release.
-Its SHA256 is:
+force-reinstall the wheel attached to the `v0.26.0-win-cu128` candidate release
+after its assets are uploaded. Until then, use the locally built wheel in
+`E:\vllm-windows-build-v2\dist-v0.26.0`. Its SHA256 is:
 
 ```text
-0C4F9B2E36482523FC7B4C092D711AC49B4265EF9F36A7AEEFFF9A667C875339
+A9FD2E5752D885A03C28AAA25472B9CDBE8685B4D3ED1A7CE3999803F0179658
 ```
 
 Verify the repaired import with:
@@ -216,14 +237,14 @@ Then lower vLLM's reservation and concurrency settings:
 
 ### `ValueError: not enough values to unpack (expected 2, got 1)` in `torch.unique`
 
-You're running a mismatched PyTorch + vLLM combo. The v0.25.1 wheel in
-this repo expects Python 3.13 and PyTorch 2.11.0+cu128. Reinstall with
+You're running a mismatched PyTorch + vLLM combo. The v0.26.0 candidate wheel
+in this repo expects Python 3.13 and PyTorch 2.11.0+cu128. Reinstall with
 `install.bat`, or in a manual venv reinstall:
 
 ```bat
 pip install torch==2.11.0 torchaudio==2.11.0 torchvision==0.26.0 ^
     --index-url https://download.pytorch.org/whl/cu128
-pip install --force-reinstall dist-v9\vllm-0.25.1+cu128-cp313-cp313-win_amd64.whl
+pip install --force-reinstall E:\vllm-windows-build-v2\dist-v0.26.0\vllm-0.26.0+cu128-cp313-cp313-win_amd64.whl
 ```
 
 ### `pyo3_runtime.PanicException: Python API call failed`

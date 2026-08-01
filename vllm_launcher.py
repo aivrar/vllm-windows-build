@@ -29,6 +29,11 @@ from pathlib import Path
 
 from engine_dispatcher import EngineDispatcher, EngineDispatchFailure
 
+# Keep CUDA device numbering consistent with nvidia-smi on Windows.  This is
+# especially important when --gpu-id is used on systems with mixed GPUs.
+if sys.platform == "win32":
+    os.environ.setdefault("CUDA_DEVICE_ORDER", "PCI_BUS_ID")
+
 # Stub uvloop on Windows before any vLLM imports
 if sys.platform == "win32":
     uvloop = types.ModuleType("uvloop")
@@ -726,10 +731,18 @@ def main():
                         help="Max concurrent sequences (default: 64). Lower it to reduce "
                              "the reserved KV-cache footprint.")
     parser.add_argument("--enforce-eager", action="store_true",
-                        help="Disable CUDA graphs (hurts throughput — only use for debugging)")
+                        help="Disable CUDA graphs (reduces throughput; useful for compatibility/debugging)")
+    parser.add_argument("--attention-backend", default=None,
+                        help="Force an attention backend (for RTX 20xx/Turing, use TRITON_ATTN; default: auto)")
+    parser.add_argument("--kv-cache-dtype", default=None,
+                        help="KV-cache dtype (auto, float16, bfloat16, fp8, or a supported TurboQuant dtype)")
+    parser.add_argument("--block-size", type=int, default=None,
+                        help="KV-cache block size in tokens (16 or 32 are conservative compatibility choices)")
+    parser.add_argument("--turing-compat", action="store_true",
+                        help="Compatibility profile for RTX 20xx/SM 7.5: TRITON_ATTN, float16 KV, block 32, eager mode")
     parser.add_argument("--tensor-parallel-size", type=int, default=1)
     parser.add_argument("--gpu-id", type=int, default=None,
-                        help="GPU device index to use (e.g. 1 for second GPU)")
+                        help="GPU index to use; with launch.bat this follows nvidia-smi (CUDA_DEVICE_ORDER=PCI_BUS_ID)")
     parser.add_argument("--enable-prefix-caching", action="store_true",
                         help="Enable automatic prefix caching (reuses KV cache for shared prefixes)")
     parser.add_argument("--num-scheduler-steps", type=int, default=1,
@@ -788,10 +801,27 @@ def main():
         parser.error("--kv-offload-read-threads must be at least 1")
     if args.kv_offload_write_threads < 1:
         parser.error("--kv-offload-write-threads must be at least 1")
+    if args.tensor_parallel_size < 1:
+        parser.error("--tensor-parallel-size must be at least 1")
     if args.kv_offload.startswith("fs-") and not args.kv_offload_fs_root:
         parser.error("--kv-offload-fs-root is required for fs-lru/fs-arc")
     if args.kv_offload_fs_root and not args.kv_offload.startswith("fs-"):
         parser.error("--kv-offload-fs-root is only valid with fs-lru/fs-arc")
+
+    if args.turing_compat:
+        # These are the settings that made the RTX 2080 Ti/SM 7.5 report work
+        # with the direct vLLM entry point.  Explicit flags still win.
+        args.attention_backend = args.attention_backend or "TRITON_ATTN"
+        args.kv_cache_dtype = args.kv_cache_dtype or "float16"
+        args.block_size = args.block_size or 32
+        args.enforce_eager = True
+        logger.info(
+            "Turing compatibility profile enabled: backend=%s, kv_cache_dtype=%s, "
+            "block_size=%s, enforce_eager=True",
+            args.attention_backend,
+            args.kv_cache_dtype,
+            args.block_size,
+        )
 
     # Interactive model selection if --model not provided
     if args.model is None:
@@ -800,6 +830,7 @@ def main():
 
     # Pin to specific GPU if requested
     if args.gpu_id is not None:
+        os.environ.setdefault("CUDA_DEVICE_ORDER", "PCI_BUS_ID")
         os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_id)
         logger.info(f"Pinned to GPU {args.gpu_id}")
 
@@ -808,7 +839,7 @@ def main():
     logger.info(
         f"Memory settings: gpu_memory_utilization={args.gpu_memory_utilization}, "
         f"max_model_len={ctx_desc}, max_num_seqs={args.max_num_seqs}. "
-        f"vLLM pre-allocates a KV cache from these — if VRAM use seems high for a small "
+        f"vLLM pre-allocates a KV cache from these settings; if VRAM use seems high for a small "
         f"model, lower --gpu-memory-utilization / --max-model-len / --max-num-seqs."
     )
     start = time.time()
@@ -818,9 +849,20 @@ def main():
         "gpu_memory_utilization": args.gpu_memory_utilization,
         "max_num_seqs": args.max_num_seqs,
     }
+    if args.tensor_parallel_size > 1:
+        llm_kwargs["tensor_parallel_size"] = args.tensor_parallel_size
     # Only force eager mode if explicitly requested (it disables CUDA graphs)
     if args.enforce_eager:
         llm_kwargs["enforce_eager"] = True
+    if args.attention_backend:
+        # Import lazily so the default path remains compatible with older
+        # packaged vLLM versions that predate AttentionConfig.
+        from vllm.config import AttentionConfig
+        llm_kwargs["attention_config"] = AttentionConfig(backend=args.attention_backend)
+    if args.kv_cache_dtype:
+        llm_kwargs["kv_cache_dtype"] = args.kv_cache_dtype
+    if args.block_size:
+        llm_kwargs["block_size"] = args.block_size
     if args.max_model_len:
         llm_kwargs["max_model_len"] = args.max_model_len
     if args.enable_prefix_caching or args.kv_offload != "disabled":

@@ -1,4 +1,4 @@
-"""Real-model validation for vLLM v0.25.1 Windows KV offloading.
+"""Real-model validation for the vLLM 0.26.0 Windows KV offloading candidate.
 
 Run one mode per process so CUDA, model, and cache state cannot leak between
 comparisons. The caller should expose only the intended GPU.
@@ -29,7 +29,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--result-json")
     parser.add_argument("--reference-json")
     parser.add_argument("--reuse-existing-cache", action="store_true")
-    parser.add_argument("--expected-version", default="0.25.1+cu128")
+    parser.add_argument("--expected-version", default="0.26.0+cu128")
     parser.add_argument("--cpu-cache-mib", type=int, default=512)
     parser.add_argument("--gpu-cache-mib", type=int, default=1536)
     parser.add_argument("--max-model-len", type=int, default=2048)

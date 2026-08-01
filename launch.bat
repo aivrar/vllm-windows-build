@@ -11,7 +11,7 @@ REM ============================================================
 REM  Check Python installation
 REM ============================================================
 set "NEEDS_INSTALL=0"
-set "EXPECTED_WHEEL_SHA256=0C4F9B2E36482523FC7B4C092D711AC49B4265EF9F36A7AEEFFF9A667C875339"
+set "EXPECTED_WHEEL_SHA256=A9FD2E5752D885A03C28AAA25472B9CDBE8685B4D3ED1A7CE3999803F0179658"
 set "EXPECTED_MTQ_SHA256=5B310E05904B588539D9A8E3374DFA6C160F025F9C2099BA5C7877C79B2FA149"
 if not exist "%~dp0python\python.exe" set "NEEDS_INSTALL=1"
 if not exist "%~dp0python\.torch-installed" set "NEEDS_INSTALL=1"
@@ -55,6 +55,8 @@ REM  Configure environment
 REM ============================================================
 set "PATH=%~dp0python;%~dp0python\Scripts;%~dp0python\Library\bin;%PATH%"
 if not defined CUDA_DEVICE_ORDER set "CUDA_DEVICE_ORDER=PCI_BUS_ID"
+set "PYTHONUTF8=1"
+set "PYTHONIOENCODING=utf-8"
 set "TRITON_NVIDIA_DIR=%~dp0python\Lib\site-packages\triton\backends\nvidia"
 if exist "%TRITON_NVIDIA_DIR%\bin\ptxas.exe" (
     set "CUDA_PATH=%TRITON_NVIDIA_DIR%"

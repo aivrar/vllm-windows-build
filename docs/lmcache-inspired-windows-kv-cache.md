@@ -1,12 +1,29 @@
 # LMCache-Inspired KV Cache Expansion for Native Windows
 
-Status: CPU LRU/ARC and RAM + filesystem LRU/ARC implemented and validated in
-the v0.25.1 wheel; feature remains experimental and opt-in
+Status: CPU LRU/ARC and RAM + filesystem LRU/ARC remain implemented and
+validated in the v0.26.0 candidate wheel; the feature remains experimental and
+opt-in.
 
-Last reviewed: 2026-07-19
+Last reviewed: 2026-07-31
 
-Target baseline: vLLM 0.25.1, CPython 3.13, PyTorch 2.11.0+cu128,
+Target baseline: vLLM 0.26.0, CPython 3.13, PyTorch 2.11.0+cu128,
 CUDA 12.8, native Windows
+
+## v0.26.0 Candidate Update
+
+The implementation was rebuilt on upstream vLLM 0.26.0 in
+`E:\vllm-windows-build-v2`. The candidate wheel retains the Windows DMA,
+shared-mmap, filesystem namespace, and non-Triton block-table fixes described
+below and adds the v0.26 launcher controls used for SM 7.5/Turing systems.
+The wheel is `vllm-0.26.0+cu128-cp313-cp313-win_amd64.whl` (389,473,142 bytes;
+SHA-256 `a9fd2e5752d885a03c28aaa25472b9cdbe8685b4d3ed1a7ce3999803f0179658`).
+
+The candidate passed native-import checks, a direct Qwen3-14B HTTP smoke test
+on the RTX 3090, the integrated launcher on the RTX 3060, and the repository
+regression suite (23 tests, 19 subtests). These are compatibility and
+correctness checks, not a claim that LMCache itself runs natively on Windows
+or that every model/configuration is supported. The exact Qwen3.5-9B GPTQ
+checkpoint still exposes a Transformers/vLLM config-name mismatch.
 
 ## Executive Summary
 
