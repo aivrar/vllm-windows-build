@@ -15,6 +15,8 @@ get tools injected via their chat template. Other models get tool
 descriptions injected into the system prompt with text-based parsing.
 """
 
+from __future__ import annotations
+
 import sys
 import types
 import os
@@ -40,11 +42,59 @@ if sys.platform == "win32":
     uvloop.run = asyncio.run
     sys.modules["uvloop"] = uvloop
 
-from vllm import LLM, SamplingParams
-from vllm.config import KVTransferConfig
-
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("vllm_launcher")
+
+DEFAULT_GPU_MEMORY_UTILIZATION = 0.6
+DEFAULT_MAX_NUM_SEQS = 64
+TURING_GPU_MEMORY_UTILIZATION = 0.89
+TURING_MAX_NUM_SEQS = 1
+TURING_MAX_NUM_BATCHED_TOKENS = 2048
+GGUF_UNSUPPORTED_MESSAGE = (
+    "Direct GGUF files are not supported by this Windows launcher. "
+    "Use a Hugging Face-format model directory or ID containing "
+    "config.json and safetensors/AWQ/GPTQ weights."
+)
+
+
+def apply_runtime_defaults(args: argparse.Namespace) -> None:
+    """Apply general or Turing-specific defaults while preserving overrides."""
+
+    if args.turing_compat:
+        args.attention_backend = args.attention_backend or "TRITON_ATTN"
+        args.kv_cache_dtype = args.kv_cache_dtype or "float16"
+        args.block_size = args.block_size or 32
+        args.enforce_eager = True
+        if args.gpu_memory_utilization is None:
+            args.gpu_memory_utilization = TURING_GPU_MEMORY_UTILIZATION
+        if args.max_num_seqs is None:
+            args.max_num_seqs = TURING_MAX_NUM_SEQS
+        if args.max_num_batched_tokens is None:
+            args.max_num_batched_tokens = TURING_MAX_NUM_BATCHED_TOKENS
+        logger.info(
+            "Turing compatibility profile enabled: backend=%s, kv_cache_dtype=%s, "
+            "block_size=%s, enforce_eager=True, gpu_memory_utilization=%s, "
+            "max_num_seqs=%s, max_num_batched_tokens=%s",
+            args.attention_backend,
+            args.kv_cache_dtype,
+            args.block_size,
+            args.gpu_memory_utilization,
+            args.max_num_seqs,
+            args.max_num_batched_tokens,
+        )
+        return
+
+    if args.gpu_memory_utilization is None:
+        args.gpu_memory_utilization = DEFAULT_GPU_MEMORY_UTILIZATION
+    if args.max_num_seqs is None:
+        args.max_num_seqs = DEFAULT_MAX_NUM_SEQS
+
+
+def validate_model_input(model: str) -> None:
+    """Reject inputs that this launch path cannot interpret as HF models."""
+
+    if Path(model).suffix.lower() == ".gguf":
+        raise ValueError(GGUF_UNSUPPORTED_MESSAGE)
 
 
 def parse_tool_calls(text: str):
@@ -169,6 +219,7 @@ def create_app(llm: LLM, model_name: str, task: str = "generate"):
     """Create FastAPI app with OpenAI-compatible endpoints."""
     from fastapi import FastAPI, Request
     from fastapi.responses import StreamingResponse, JSONResponse
+    from vllm import SamplingParams
     app = FastAPI()
     engine = llm.llm_engine
 
@@ -511,17 +562,9 @@ def _dir_size_gb(path: Path) -> float:
     return total / (1024 ** 3)
 
 
-def _file_size_gb(path: Path) -> float:
-    """Get file size in GB."""
-    try:
-        return path.stat().st_size / (1024 ** 3)
-    except OSError:
-        return 0.0
-
-
 def find_models(search_paths: list[str | Path] | None = None) -> list[dict]:
     """
-    Scan directories for HuggingFace models and GGUF files.
+    Scan directories for Hugging Face-format model directories.
 
     Returns list of dicts: {path, name, model_type, size_gb, kind}
     """
@@ -611,18 +654,7 @@ def _scan_directory(directory: Path, models: list, seen: set, max_depth: int, de
             return
 
     for entry in entries:
-        if not entry.is_dir() and entry.suffix.lower() == ".gguf":
-            entry_str = str(entry.resolve())
-            if entry_str not in seen:
-                seen.add(entry_str)
-                models.append({
-                    "path": str(entry),
-                    "name": entry.stem,
-                    "model_type": "gguf",
-                    "size_gb": round(_file_size_gb(entry), 1),
-                    "kind": "gguf",
-                })
-        elif entry.is_dir() and not entry.name.startswith("."):
+        if entry.is_dir() and not entry.name.startswith("."):
             _scan_directory(entry, models, seen, max_depth, depth + 1)
 
 
@@ -642,7 +674,7 @@ def interactive_model_select(search_paths: list[str | Path] | None = None) -> st
 
     if not models:
         print("\nNo models found automatically.")
-        print("Enter the path to your model (HuggingFace directory or GGUF file):")
+        print("Enter a Hugging Face model directory or repository ID:")
         path = input("> ").strip().strip('"')
         if not path:
             print("No model specified. Exiting.")
@@ -722,14 +754,15 @@ def main():
                              "otherwise reserve many GB of VRAM up front. Raise for "
                              "long-context use, lower to save VRAM. Pass 0 to use the "
                              "model's full advertised length.")
-    parser.add_argument("--gpu-memory-utilization", type=float, default=0.6,
-                        help="Fraction of GPU memory vLLM reserves up front for weights + "
-                             "KV cache (default: 0.6). vLLM pre-allocates this regardless of "
-                             "model size, so a small model can still 'use' a lot of VRAM. "
-                             "Lower it to leave more free VRAM.")
-    parser.add_argument("--max-num-seqs", type=int, default=64,
-                        help="Max concurrent sequences (default: 64). Lower it to reduce "
-                             "the reserved KV-cache footprint.")
+    parser.add_argument("--gpu-memory-utilization", type=float, default=None,
+                        help="Maximum fraction of total GPU memory vLLM may use for weights "
+                             "and KV cache (default: 0.6; 0.89 with --turing-compat). Raise "
+                             "it when weights fit but the KV-cache budget is negative; lower "
+                             "it only when reserving VRAM for other applications.")
+    parser.add_argument("--max-num-seqs", "--max-num-seq", type=int, default=None,
+                        help="Max concurrent sequences (default: 64; 1 with "
+                             "--turing-compat). Lower it to reduce startup and KV-cache "
+                             "requirements.")
     parser.add_argument("--enforce-eager", action="store_true",
                         help="Disable CUDA graphs (reduces throughput; useful for compatibility/debugging)")
     parser.add_argument("--attention-backend", default=None,
@@ -739,7 +772,9 @@ def main():
     parser.add_argument("--block-size", type=int, default=None,
                         help="KV-cache block size in tokens (16 or 32 are conservative compatibility choices)")
     parser.add_argument("--turing-compat", action="store_true",
-                        help="Compatibility profile for RTX 20xx/SM 7.5: TRITON_ATTN, float16 KV, block 32, eager mode")
+                        help="Tested RTX 20xx/SM 7.5 profile: TRITON_ATTN, float16 KV, "
+                             "block 32, eager mode, 0.89 GPU memory, 1 sequence, and a "
+                             "2,048-token batch cap")
     parser.add_argument("--tensor-parallel-size", type=int, default=1)
     parser.add_argument("--gpu-id", type=int, default=None,
                         help="GPU index to use; with launch.bat this follows nvidia-smi (CUDA_DEVICE_ORDER=PCI_BUS_ID)")
@@ -748,7 +783,9 @@ def main():
     parser.add_argument("--num-scheduler-steps", type=int, default=1,
                         help="Multi-step scheduling — decode N tokens before CPU sync (default: 1)")
     parser.add_argument("--max-num-batched-tokens", type=int, default=None,
-                        help="Max tokens per scheduler iteration (higher = more prefill throughput)")
+                        help="Max tokens per scheduler iteration (default: auto; 2048 with "
+                             "--turing-compat; higher values improve prefill throughput but "
+                             "need more memory)")
     parser.add_argument("--task", default="generate", choices=["generate", "embed"],
                         help="Task type: 'generate' for text generation, 'embed' for embeddings")
     parser.add_argument("--trust-remote-code", action="store_true",
@@ -795,6 +832,16 @@ def main():
     )
     args = parser.parse_args()
 
+    # These defaults include the values confirmed by the issue #14 reporter
+    # on an RTX 2080 Ti with 11 GiB. Explicit flags still win.
+    apply_runtime_defaults(args)
+
+    if not 0 < args.gpu_memory_utilization <= 1:
+        parser.error("--gpu-memory-utilization must be greater than 0 and at most 1")
+    if args.max_num_seqs < 1:
+        parser.error("--max-num-seqs must be at least 1")
+    if args.max_num_batched_tokens is not None and args.max_num_batched_tokens < 1:
+        parser.error("--max-num-batched-tokens must be at least 1")
     if args.kv_offload != "disabled" and args.kv_offload_cpu_gb <= 0:
         parser.error("--kv-offload-cpu-gb must be greater than zero")
     if args.kv_offload_read_threads < 1:
@@ -808,25 +855,17 @@ def main():
     if args.kv_offload_fs_root and not args.kv_offload.startswith("fs-"):
         parser.error("--kv-offload-fs-root is only valid with fs-lru/fs-arc")
 
-    if args.turing_compat:
-        # These are the settings that made the RTX 2080 Ti/SM 7.5 report work
-        # with the direct vLLM entry point.  Explicit flags still win.
-        args.attention_backend = args.attention_backend or "TRITON_ATTN"
-        args.kv_cache_dtype = args.kv_cache_dtype or "float16"
-        args.block_size = args.block_size or 32
-        args.enforce_eager = True
-        logger.info(
-            "Turing compatibility profile enabled: backend=%s, kv_cache_dtype=%s, "
-            "block_size=%s, enforce_eager=True",
-            args.attention_backend,
-            args.kv_cache_dtype,
-            args.block_size,
-        )
-
     # Interactive model selection if --model not provided
     if args.model is None:
         search_paths = [args.models_dir] if args.models_dir else None
         args.model = interactive_model_select(search_paths)
+
+    try:
+        validate_model_input(args.model)
+    except ValueError as exc:
+        parser.error(
+            str(exc)
+        )
 
     # Pin to specific GPU if requested
     if args.gpu_id is not None:
@@ -839,8 +878,9 @@ def main():
     logger.info(
         f"Memory settings: gpu_memory_utilization={args.gpu_memory_utilization}, "
         f"max_model_len={ctx_desc}, max_num_seqs={args.max_num_seqs}. "
-        f"vLLM pre-allocates a KV cache from these settings; if VRAM use seems high for a small "
-        f"model, lower --gpu-memory-utilization / --max-model-len / --max-num-seqs."
+        f"If weights load but vLLM reports no available KV-cache memory, raise "
+        f"--gpu-memory-utilization when VRAM is free, or lower --max-model-len, "
+        f"--max-num-seqs, and --max-num-batched-tokens."
     )
     start = time.time()
 
@@ -876,6 +916,8 @@ def main():
     if args.cpu_offload_gb > 0:
         llm_kwargs["cpu_offload_gb"] = args.cpu_offload_gb
     if args.kv_offload != "disabled":
+        from vllm.config import KVTransferConfig
+
         policy = args.kv_offload.rsplit("-", maxsplit=1)[1]
         extra_config = {
             "cpu_bytes_to_use": int(args.kv_offload_cpu_gb * (1 << 30)),
@@ -922,6 +964,8 @@ def main():
             args.kv_offload,
             args.kv_offload_cpu_gb,
         )
+
+    from vllm import LLM
 
     llm = LLM(**llm_kwargs)
     elapsed = time.time() - start

@@ -94,15 +94,15 @@ python vllm_launcher.py ^
 | `--model` | (required) | Path to a HuggingFace-format model directory |
 | `--port` | 8100 | HTTP port |
 | `--host` | 127.0.0.1 | Bind address |
-| `--gpu-memory-utilization` | 0.6 | Fraction of GPU memory to use |
+| `--gpu-memory-utilization` | 0.6 (0.89 with `--turing-compat`) | Maximum fraction of GPU memory vLLM may use; raise it if weights fit but the KV budget is negative |
 | `--max-model-len` | 8192 | Maximum context length; lower for small smoke tests |
-| `--max-num-seqs` | 64 | Concurrent request limit |
-| `--max-num-batched-tokens` | (auto) | Tokens per forward pass |
+| `--max-num-seqs` | 64 (1 with `--turing-compat`) | Concurrent request limit |
+| `--max-num-batched-tokens` | auto (2048 with `--turing-compat`) | Tokens per forward pass |
 | `--enforce-eager` | False | Debug/compatibility option; disables compilation and CUDA graphs |
 | `--attention-backend` | (auto) | Force a backend such as `TRITON_ATTN`; useful on RTX 20xx/Turing |
 | `--kv-cache-dtype` | (auto) | KV-cache storage dtype; use `float16` on Turing when auto selection fails |
 | `--block-size` | (auto) | KV-cache block size; `16` or `32` are conservative compatibility choices |
-| `--turing-compat` | False | RTX 20xx/SM 7.5 profile: `TRITON_ATTN`, float16 KV, block 32, eager mode |
+| `--turing-compat` | False | RTX 20xx/SM 7.5 profile: `TRITON_ATTN`, float16 KV, block 32, eager mode, 0.89 GPU utilization, one sequence, and 2,048 batched tokens |
 | `--gpu-id` | (none) | Which GPU to pin to; otherwise preserve the current CUDA visibility |
 | `--enable-prefix-caching` | (not forced) | Explicitly enable common-prefix reuse; otherwise use vLLM's default |
 | `--task` | "generate" | "generate" or "embed" |
@@ -122,22 +122,27 @@ integrated launcher reports an unsupported architecture, start with its
 compatibility profile:
 
 ```bat
-launch.bat --model E:\models\Qwen3-4B --gpu-id 0 --turing-compat ^
-    --gpu-memory-utilization 0.85 --max-model-len 8192 --max-num-seqs 4
+launch.bat --model cyankiwi/Qwen3.5-9B-AWQ-4bit --gpu-id 0 --turing-compat
 ```
 
-The profile forwards the same settings that are known to work with the direct
-vLLM entry point: `TRITON_ATTN`, `float16` KV cache, 32-token blocks, and
-`--enforce-eager`. Explicit `--attention-backend`, `--kv-cache-dtype`, and
-`--block-size` values override the profile. These settings improve compatibility;
-they do not remove the model's VRAM requirement.
+The profile applies the settings confirmed by the issue #14 reporter on an
+11-GB RTX 2080 Ti: `TRITON_ATTN`, `float16` KV cache, 32-token blocks,
+`--enforce-eager`, 0.89 GPU utilization, one sequence, and a 2,048-token batch
+cap. The default context remains 8,192. Every explicit command-line value
+overrides the profile.
 
-The launcher defaults (`0.6` GPU utilization, 8,192 max context, and 64
-sequences) are conservative for many GPUs, but a large sequence cap can still
-make startup profiling fail on an 11-GB card. Lower `--max-num-seqs` and
-`--max-model-len` first when a model loads its weights and then stalls while
-allocating KV cache. `launch.bat` sets `CUDA_DEVICE_ORDER=PCI_BUS_ID`, so
-`--gpu-id` follows the order shown by `nvidia-smi`.
+`--gpu-memory-utilization` is a budget ceiling, not simply extra allocation.
+If the weights load but vLLM reports a negative or unavailable KV-cache budget,
+raise it when the GPU has free VRAM. Reduce `--max-model-len`,
+`--max-num-seqs`, and `--max-num-batched-tokens` to reduce demand. Lower GPU
+utilization only when you need to reserve VRAM for another application.
+`launch.bat` sets `CUDA_DEVICE_ORDER=PCI_BUS_ID`, so `--gpu-id` follows the
+order shown by `nvidia-smi`.
+
+Direct `.gguf` files are not accepted. Use a Hugging Face-format directory or
+repository ID containing `config.json` and compatible Safetensors, AWQ, or GPTQ
+weights. The launcher rejects `.gguf` paths before Transformers can misreport
+the binary file as invalid UTF-8 JSON.
 
 ### Experimental KV offload
 
@@ -282,11 +287,17 @@ For a 24 GB GPU loading a 14B AWQ-4bit model:
 For longer contexts, drop `max_num_seqs` to give each sequence more KV
 budget. For high concurrency, drop `max_model_len`.
 
-If you see `OutOfMemoryError`:
-1. Lower `gpu_memory_utilization` by 0.1
-2. Drop `max_num_seqs` and `max_model_len`
-3. Close other GPU processes and ensure the Windows pagefile is enabled
-4. Switch to a compressed KV dtype only if its documented throughput cost is acceptable
+If you see `No available memory for the cache blocks` after the weights load:
+
+1. Raise `gpu_memory_utilization` if `nvidia-smi` shows free VRAM.
+2. Drop `max_num_seqs`, `max_num_batched_tokens`, and `max_model_len`.
+3. Close other GPU processes and ensure the Windows pagefile is enabled.
+4. Use a smaller or more strongly quantized model if the weights consume most
+   of the card.
+
+For a CUDA out-of-memory error caused by competing applications, close those
+applications or lower the vLLM budget. Compressed KV formats can extend context
+capacity, but use them only when their documented throughput cost is acceptable.
 
 ---
 

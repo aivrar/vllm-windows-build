@@ -6,6 +6,26 @@ Upstream bump to **vLLM 0.26.0**, targeting CPython 3.13, CUDA 12.8,
 PyTorch 2.11.0+cu128, Triton Windows 3.6.0.post26, and
 `TORCH_CUDA_ARCH_LIST=7.5;8.6;8.9;12.0`.
 
+### Issue #14 follow-up - 2026-08-02
+
+- Fixed the portable verifier's false failure: wheel metadata is
+  `0.26.0+cu128`, while upstream's `vllm.__version__` correctly remains
+  `0.26.0`. Both fields are now validated separately.
+- Expanded `--turing-compat` with the settings confirmed by the reporter on an
+  11-GB RTX 2080 Ti: 0.89 GPU utilization, one sequence, and 2,048 batched
+  tokens. Explicit user overrides still take precedence.
+- Corrected the launcher guidance for a negative KV-cache budget: raise GPU
+  utilization when VRAM is free, or lower context, concurrency, and batched
+  tokens.
+- Removed GGUF files from model discovery and added an immediate explanation
+  that direct `.gguf` input is unsupported, instead of allowing a misleading
+  UTF-8/JSON traceback from Transformers.
+- The published wheel is unchanged. The reporter confirmed that it loads
+  Qwen3.5-9B AWQ on the RTX 2080 Ti; issue #14 remains open pending an actual
+  inference response.
+- The follow-up passed 27 repository unit/contract tests. Wheel content,
+  complete RECORD integrity, exact size, and SHA-256 were revalidated.
+
 ### New and fixed
 
 - Added native SM 7.5 coverage for RTX 20xx/Turing while retaining RTX 30xx,

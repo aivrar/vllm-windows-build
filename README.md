@@ -74,7 +74,9 @@ acceleration, Triton support, and Multi-TurboQuant integration.
 - **SM 7.5/Turing coverage** added to the multi-architecture wheel alongside
   SM 8.6, 8.9, and 12.0.
 - **RTX 20xx launcher compatibility** via `--turing-compat`, which forwards
-  `TRITON_ATTN`, float16 KV cache, 32-token blocks, and eager execution.
+  `TRITON_ATTN`, float16 KV cache, 32-token blocks, eager execution, and the
+  RTX 2080 Ti-tested memory profile: 0.89 GPU utilization, one sequence, and
+  2,048 batched tokens. Explicit command-line values still win.
 - **GPU numbering and console fixes**: `launch.bat` sets
   `CUDA_DEVICE_ORDER=PCI_BUS_ID` and UTF-8 output settings.
 - **Windows build fixes**: hybrid-KV block-table fallback, Rust IPC polling,
@@ -82,9 +84,11 @@ acceleration, Triton support, and Multi-TurboQuant integration.
 - **Validation**: direct Qwen3-14B AWQ serving passed on the RTX 3090;
   integrated launcher serving passed on the RTX 3060; 23 tests and 19
   subtests passed.
-- **Known limits**: the exact RTX 2080 Ti and the reporter's Qwen3.5-9B
-  checkpoint still require confirmation; 11-GB cards may need lower context
-  and sequence limits.
+- **RTX 2080 Ti confirmation**: the issue #14 reporter loaded
+  `cyankiwi/Qwen3.5-9B-AWQ-4bit` with the v0.26.0 wheel and the compatibility
+  profile. Final request-level confirmation remains pending.
+- **Known limits**: direct `.gguf` files are not supported by this launcher;
+  use a Hugging Face-format model with `config.json` and compatible weights.
 
 See the [v0.26.0 release build record](docs/v0.26.0-build-candidate.md) for
 the wheel hash, test commands, and release scope.
@@ -293,13 +297,20 @@ and tool parser, FlashAttention 2, and the Windows KV-offload helper.
   on the RTX 3090.
 - The integrated `vllm_launcher.py` path returned HTTP 200 on the RTX 3060
   using the Turing-compatible profile.
+- The issue #14 reporter confirmed that the release wheel loads
+  `cyankiwi/Qwen3.5-9B-AWQ-4bit` on an 11-GB RTX 2080 Ti with
+  `--turing-compat`. Request-level confirmation is still pending.
 - The release-contract, wheel-content, launcher, and Windows runtime checks
   passed: **23 tests and 19 subtests**.
+- The issue #14 verifier/launcher follow-up passed **27 repository-side unit
+  and contract tests**; the published wheel's complete contents, 389,473,142
+  byte size, and SHA-256 were revalidated unchanged.
 
 This is release evidence for the wheel and launcher, not a claim that every
 checkpoint is compatible. The exact Qwen3.5-9B GPTQ directory currently has a
 Transformers `Qwen3_5TextConfig`/vLLM `Qwen3_5Config` mismatch, and an 11-GB
-RTX 2080 Ti may need lower `--max-model-len` and `--max-num-seqs` during startup.
+RTX 2080 Ti may need lower `--max-model-len` and concurrency during startup.
+The tested profile now applies those 11-GB-card limits automatically.
 
 ### v0.25.1 KV-offload validation (previous stable)
 
@@ -382,6 +393,10 @@ FlashAttention modules, marker hash, headers, or import checks are incomplete;
 `launch.bat` checks the same release contract before it starts the server.
 The installer also downloads the pinned `multi_turboquant-0.1.0` release wheel;
 Git is not required for the portable path.
+
+The wheel distribution is versioned `0.26.0+cu128`, while upstream vLLM
+reports `vllm.__version__ == "0.26.0"` at runtime. The installer verifies both
+values separately; seeing the base runtime version is expected.
 
 ### Option B — Build from source
 

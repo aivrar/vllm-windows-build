@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import importlib.metadata
 import sys
 from pathlib import Path
 
@@ -25,6 +26,24 @@ REQUIRED_MODULES = (
 )
 
 
+def validate_vllm_versions(runtime_version: str, distribution_version: str) -> None:
+    """Validate both the wheel build tag and vLLM's upstream runtime version."""
+
+    if distribution_version != EXPECTED_VLLM_VERSION:
+        raise RuntimeError(
+            "vLLM distribution version is "
+            f"{distribution_version!r}, expected {EXPECTED_VLLM_VERSION!r}"
+        )
+
+    expected_runtime_version = EXPECTED_VLLM_VERSION.partition("+")[0]
+    runtime_base_version = runtime_version.partition("+")[0]
+    if runtime_base_version != expected_runtime_version:
+        raise RuntimeError(
+            "vLLM runtime version is "
+            f"{runtime_version!r}, expected base version {expected_runtime_version!r}"
+        )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", required=True, type=Path)
@@ -40,10 +59,8 @@ def main() -> int:
     import vllm
     import multi_turboquant
 
-    if vllm.__version__ != EXPECTED_VLLM_VERSION:
-        raise RuntimeError(
-            f"vLLM version is {vllm.__version__!r}, expected {EXPECTED_VLLM_VERSION!r}"
-        )
+    installed_vllm_version = importlib.metadata.version("vllm")
+    validate_vllm_versions(vllm.__version__, installed_vllm_version)
     if not torch.__version__.startswith("2.11.0"):
         raise RuntimeError(f"PyTorch version is {torch.__version__!r}, expected 2.11.0")
     if not triton.__version__.startswith("3.6.0"):
@@ -99,7 +116,10 @@ def main() -> int:
             raise RuntimeError("FlashAttention rotary CUDA smoke test returned invalid output")
         print(f"Triton CUDA target: {target.backend} {target.arch}")
 
-    print(f"vLLM {vllm.__version__} runtime contract passed from {vllm_file}")
+    print(
+        f"vLLM runtime {vllm.__version__} / distribution "
+        f"{installed_vllm_version} contract passed from {vllm_file}"
+    )
     return 0
 
 

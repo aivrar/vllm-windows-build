@@ -101,14 +101,15 @@ set CUDA_VISIBLE_DEVICES=0
 ## Verify
 
 ```batch
-python\python.exe -c "import vllm; print(vllm.__version__)"
+python\python.exe -c "import importlib.metadata, vllm; print(vllm.__version__); print(importlib.metadata.version('vllm'))"
 python\Scripts\vllm.exe --help
 python\Scripts\vllm.exe serve --help
 ```
 
-Expected version:
+Expected runtime and distribution versions:
 
 ```text
+0.26.0
 0.26.0+cu128
 ```
 

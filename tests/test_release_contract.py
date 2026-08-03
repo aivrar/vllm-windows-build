@@ -49,6 +49,17 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertIn("vllm-0.26.0+cu128-cp313-cp313-win_amd64.whl", candidate)
         self.assertIn("a9fd2e5752d885a03c28aaa25472b9cdbe8685b4d3ed1a7ce3999803f0179658", candidate)
 
+    def test_verifier_distinguishes_wheel_and_runtime_versions(self) -> None:
+        from verify_install import validate_vllm_versions
+
+        validate_vllm_versions("0.26.0", "0.26.0+cu128")
+        validate_vllm_versions("0.26.0+cu128", "0.26.0+cu128")
+
+        with self.assertRaisesRegex(RuntimeError, "distribution version"):
+            validate_vllm_versions("0.26.0", "0.26.0")
+        with self.assertRaisesRegex(RuntimeError, "runtime version"):
+            validate_vllm_versions("0.25.1", "0.26.0+cu128")
+
     def test_installer_is_atomic_and_does_not_parse_hash_stdout(self) -> None:
         script = (ROOT / "install.bat").read_text(encoding="utf-8")
         self.assertIn("verify_artifact.py", script)
@@ -150,11 +161,29 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertIn('args.attention_backend = args.attention_backend or "TRITON_ATTN"', launcher)
         self.assertIn('args.kv_cache_dtype = args.kv_cache_dtype or "float16"', launcher)
         self.assertIn('args.block_size = args.block_size or 32', launcher)
+        self.assertIn(
+            'args.gpu_memory_utilization = TURING_GPU_MEMORY_UTILIZATION',
+            launcher,
+        )
+        self.assertIn('args.max_num_seqs = TURING_MAX_NUM_SEQS', launcher)
+        self.assertIn(
+            'args.max_num_batched_tokens = TURING_MAX_NUM_BATCHED_TOKENS',
+            launcher,
+        )
         self.assertIn('AttentionConfig(backend=args.attention_backend)', launcher)
         self.assertIn('llm_kwargs["kv_cache_dtype"] = args.kv_cache_dtype', launcher)
         self.assertIn('llm_kwargs["block_size"] = args.block_size', launcher)
         self.assertIn('llm_kwargs["tensor_parallel_size"] = args.tensor_parallel_size', launcher)
         self.assertIn('set "PYTHONUTF8=1"', (ROOT / "launch.bat").read_text(encoding="utf-8"))
+
+    def test_launcher_rejects_direct_gguf_with_actionable_message(self) -> None:
+        launcher = (ROOT / "vllm_launcher.py").read_text(encoding="utf-8")
+        self.assertIn('Path(model).suffix.lower() == ".gguf"', launcher)
+        self.assertIn("validate_model_input(args.model)", launcher)
+        self.assertIn("Direct GGUF files are not supported", launcher)
+        self.assertIn("config.json and safetensors/AWQ/GPTQ weights", launcher)
+        self.assertNotIn('"model_type": "gguf"', launcher)
+        self.assertNotIn("HuggingFace directory or GGUF file", launcher)
 
     def test_quickstarts_use_fast_reproducible_baseline(self) -> None:
         sections = {
@@ -194,9 +223,16 @@ class ReleaseContractTests(unittest.TestCase):
                 "| `--max-model-len` | 8192 |",
             ),
             (
-                'parser.add_argument("--gpu-memory-utilization", '
-                "type=float, default=0.6,",
-                "| `--gpu-memory-utilization` | 0.6 |",
+                "DEFAULT_GPU_MEMORY_UTILIZATION = 0.6",
+                "| `--gpu-memory-utilization` | 0.6 (0.89 with `--turing-compat`) |",
+            ),
+            (
+                "DEFAULT_MAX_NUM_SEQS = 64",
+                "| `--max-num-seqs` | 64 (1 with `--turing-compat`) |",
+            ),
+            (
+                "TURING_MAX_NUM_BATCHED_TOKENS = 2048",
+                "| `--max-num-batched-tokens` | auto (2048 with `--turing-compat`) |",
             ),
             (
                 'parser.add_argument("--gpu-id", type=int, default=None,',

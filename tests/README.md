@@ -14,12 +14,15 @@ offload. It also validates ZIP integrity and every wheel RECORD entry.
 Run the installer/hash and concurrent engine-dispatch regressions with:
 
 ```powershell
-python -m unittest tests.test_verify_artifact tests.test_bootstrap_helpers tests.test_engine_dispatcher tests.test_release_contract -v
+python -m unittest tests.test_verify_artifact tests.test_bootstrap_helpers tests.test_engine_dispatcher tests.test_release_contract tests.test_launcher_configuration -v
 ```
 
 The bootstrap suite specifically runs the PowerShell helpers without
 `Get-FileHash`/`Expand-Archive`, checks paths with spaces and overwrite repair,
 and verifies that a ZIP path-traversal entry is rejected.
+The launcher configuration suite verifies the general defaults, the exact
+RTX 2080 Ti profile, explicit override precedence, and early GGUF rejection
+without importing vLLM or reserving GPU memory.
 
 All six Multi-TurboQuant write/decode paths have a small CUDA integration test:
 

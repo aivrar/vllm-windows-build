@@ -89,16 +89,20 @@ https://github.com/aivrar/vllm-windows-build/releases/tag/v0.26.0-win-cu128
 ### Verify
 
 ```bat
-python -c "import vllm; print(vllm.__version__)"
+python -c "import importlib.metadata, vllm; print(vllm.__version__); print(importlib.metadata.version('vllm'))"
 vllm --help
 vllm serve --help
 ```
 
-Expected version:
+Expected runtime and distribution versions:
 
 ```text
+0.26.0
 0.26.0+cu128
 ```
+
+The module reports upstream's base version; the distribution metadata carries
+this project's `+cu128` wheel tag. `verify_install.py` checks both.
 
 ## Build From Source
 

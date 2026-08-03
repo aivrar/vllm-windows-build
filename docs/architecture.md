@@ -69,6 +69,11 @@ then validates every ZIP member against wheel RECORD before release.
    both release SHA-256 values only after the full runtime check succeeds.
 5. Verifies both `import vllm` and Triton's CUDA driver path.
 
+The vLLM module exposes upstream's base runtime version (`0.26.0`), while the
+installed distribution metadata retains the Windows build tag
+(`0.26.0+cu128`). The runtime verifier checks these as separate fields so it
+still rejects a wrong wheel without falsely rejecting the correct build.
+
 Before Python exists, `verify_bootstrap.ps1` computes SHA-256 through .NET and
 `expand_zip.ps1` extracts archives through `System.IO.Compression`. This avoids
 PowerShell module cmdlets that are absent in some Windows environments; the ZIP

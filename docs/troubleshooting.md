@@ -12,17 +12,36 @@ newer attention backend or CUDA-graph path. Start with the compatibility profile
 and small resource limits:
 
 ```bat
-launch.bat --model E:\models\Qwen3-4B --gpu-id 0 --turing-compat ^
-    --gpu-memory-utilization 0.85 --max-model-len 8192 --max-num-seqs 4
+launch.bat --model cyankiwi/Qwen3.5-9B-AWQ-4bit --gpu-id 0 --turing-compat
 ```
 
-That profile selects `TRITON_ATTN`, a float16 KV cache, 32-token blocks, and
-eager execution. If it still fails, try `--max-model-len 2048` and
-`--max-num-seqs 1`, then collect the complete traceback. The model weights can
-fit while the requested KV cache cannot; lowering the context and sequence cap
-is therefore the first diagnostic step. This is the launcher path for issue
-[#14](https://github.com/aivrar/vllm-windows-build/issues/14); a direct
-`vllm serve` success with different flags does not test the launcher's defaults.
+That profile selects `TRITON_ATTN`, a float16 KV cache, 32-token blocks, eager
+execution, 0.89 GPU utilization, one sequence, and a 2,048-token batch cap.
+These defaults were confirmed to load Qwen3.5-9B AWQ on the issue #14
+reporter's 11-GB RTX 2080 Ti. If it still fails, try `--max-model-len 2048`.
+
+`gpu_memory_utilization` is the maximum fraction vLLM is allowed to use. The
+old 0.6 default gave that 8.42-GiB model a negative KV-cache budget. Raise the
+value when VRAM is actually free; reduce context, sequences, and batched tokens
+to reduce the cache requirement. This is the launcher path for issue
+[#14](https://github.com/aivrar/vllm-windows-build/issues/14).
+
+### Installer says runtime 0.26.0 but expected 0.26.0+cu128
+
+The wheel metadata is `0.26.0+cu128`, but upstream vLLM intentionally exposes
+the base module version `0.26.0`. The original v0.26 verifier compared those two
+different version fields directly and falsely reported installation failure.
+Pull the current repository and rerun `install.bat`; the verifier now checks
+the distribution build tag and runtime base version separately.
+
+### A `.gguf` model fails with UTF-8 or invalid JSON errors
+
+Direct GGUF files are not supported by this launcher. The old model scanner
+listed them, after which Transformers attempted to read the binary GGUF file as
+JSON and produced a misleading UTF-8 error. Use a Hugging Face-format model
+directory or repository ID with `config.json` and compatible Safetensors, AWQ,
+or GPTQ weights. The current launcher rejects `.gguf` paths immediately with
+this explanation.
 
 ### Filesystem KV cache is growing or is not reused after a restart
 
