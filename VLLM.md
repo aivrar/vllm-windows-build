@@ -7,6 +7,11 @@
 A condensed page for getting a model running fast. For full documentation
 see [docs/](docs/).
 
+**Blackwell FP8/NVFP4:** the v0.27.1 wheel omits native SM120 FP8/NVFP4
+kernels. Issue #16's model serves with a Marlin setting and a manual Python
+fix; follow the [workaround](docs/troubleshooting.md#blackwell-fp8-nvfp4).
+The installer does not apply it, and it does not enable native FP4 acceleration.
+
 ## One-Line Install
 
 ```batch

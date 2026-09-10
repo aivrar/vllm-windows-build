@@ -26,6 +26,13 @@ Its SHA-256 is:
 7c13ed44e94694478bdd4f5fcca23e2d66ba1e8fa9bccad9fddb8651d1b2447b
 ```
 
+> **Blackwell FP8/NVFP4 users:** SM 12.0 code in this wheel does not include
+> native Blackwell FP4 acceleration. Some mixed FP8/NVFP4 models fail at startup
+> with the unmodified v0.27.1 installation. Issue #16 confirms serving with a
+> Marlin setting and a two-line Python fix; follow the
+> [Blackwell workaround](docs/troubleshooting.md#blackwell-fp8-nvfp4).
+> The published wheel and installer do not include that fix.
+
 The release tag is
 [`v0.27.1-win-cu130`](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.27.1-win-cu130).
 For RTX 20xx users, the launcher provides `--turing-compat`,
@@ -90,7 +97,9 @@ acceleration, Triton support, and Multi-TurboQuant integration.
   hybrid-block tests passed, with one expected platform-gated skip.
 - **Known Windows build limit**: a few specialized SM120-only CUTLASS FP8 and
   NVFP4/MoE entry points are omitted because their aligned parameter ABI is
-  incompatible with MSVC x64. Other SM120 kernels remain in the wheel.
+  incompatible with MSVC x64. Other SM120 kernels remain in the wheel, but
+  automatic FP8 backend selection can still choose an omitted implementation.
+  See the [issue #16 workaround](docs/troubleshooting.md#blackwell-fp8-nvfp4).
 
 See the [v0.27.1 release build record](docs/v0.27.1-build-candidate.md) for
 the exact wheel hash, measured results, and scope.
@@ -223,7 +232,11 @@ for opt-in examples and limitations.
   `vllm serve --help`; also verified `VLLM_USE_RUST_FRONTEND=1` resolves the
   packaged `vllm-rs.exe`.
 
-### What's new (cu128 / Python 3.13 / Blackwell)
+### What's new in v0.21.0-cu128 (historical Blackwell build)
+
+The notes in this section describe v0.21.0. For the current v0.27.1
+FP8/NVFP4 restrictions and workaround, see
+[Blackwell troubleshooting](docs/troubleshooting.md#blackwell-fp8-nvfp4).
 
 This is a rebuild of the same vLLM 0.21.0 source for **RTX 50-series
 (Blackwell)** plus a set of Windows API-server fixes. Thanks to
@@ -652,7 +665,7 @@ fail. See [docs/troubleshooting.md → OSError 1455](docs/troubleshooting.md#ose
 - Visual Studio 2022 Community 17.13 (MSVC 14.43)
 - CUDA Toolkit 13.0 Update 2 (`nvcc` 13.0.88)
 - Python 3.13.11 for the native build/final-wheel tests; portable installer targets Python 3.13.14 (same `cp313` ABI)
-- RTX 50-series (Blackwell sm_120): kernels compiled & verified via `cuobjdump`; runtime confirmation pending community hardware
+- RTX PRO 5000 Blackwell (48 GB, SM 12.0), Windows 11 Pro: the issue #16 reporter confirmed `unsloth/Qwen3.8-27B-NVFP4` serving with compilation, CUDA graphs, and a successful chat request using v0.27.1 plus the [Marlin setting and Python fix](docs/troubleshooting.md#blackwell-fp8-nvfp4). This validates that model's fallback path; native FP4 and other Blackwell configurations remain unvalidated.
 
 ### v0.21.0 smoke test (RTX 3090, Qwen3-14B-abliterated-AWQ-4bit)
 
@@ -693,6 +706,11 @@ set TQ_METHOD=isoquant3
 
 ## Limitations
 
+- **Blackwell FP8/NVFP4 requires care.** Native SM120 CUTLASS FP8/NVFP4
+  kernels are omitted from v0.27.1. The confirmed
+  [workaround](docs/troubleshooting.md#blackwell-fp8-nvfp4) uses Marlin with
+  16-bit activations and a manual Python fix. It does not enable native FP4
+  acceleration or establish a throughput guarantee.
 - **Single GPU only.** NCCL doesn't ship with PyTorch on Windows; the
   patch wires up `FakeProcessGroup` for single-rank operation. Multi-GPU
   needs separate vLLM instances + external load balancing.

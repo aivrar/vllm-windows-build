@@ -9,6 +9,11 @@ Two paths:
 - **Install the pre-built wheel**: no compiler needed; recommended for most users.
 - **Build from source**: requires Visual Studio 2022, CUDA 13.0, Python 3.13, and patience.
 
+**Blackwell FP8/NVFP4:** installing v0.27.1 does not provide native Blackwell
+FP4 acceleration or automatically apply issue #16's startup fix. Affected users
+need the [Marlin setting and Python edit](troubleshooting.md#blackwell-fp8-nvfp4)
+after installation. This workaround uses the existing wheel.
+
 `install.bat` handles the wheel path end to end. The current source build is
 driven by `build_cu130_py313_v0.27.1.bat` in `E:\vllm-windows-build-v2`.
 

@@ -6,6 +6,14 @@ legacy releases.
 
 For build internals, see [docs/build.md](docs/build.md).
 
+**Issue #16 follow-up:** v10 remains the source snapshot for the published
+v0.27.1 wheel. It omits native SM120 CUTLASS FP8/NVFP4 kernels but does not fix
+their runtime selection or the missing FP8 LM-head partition attributes.
+Rebuilding this exact snapshot retains those issues. The
+[existing-wheel workaround](docs/troubleshooting.md#blackwell-fp8-nvfp4)
+documents the Marlin setting and separate Python edit; neither is incorporated
+into v10 by this documentation update.
+
 ## Build environment
 
 | | |

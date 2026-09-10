@@ -6,6 +6,12 @@ exact `vllm-windows-v10.patch`, installer, launcher, validation contract, and
 release documentation. The older v0.25.1 patch workflow is retained below as
 historical reference.
 
+**Blackwell FP8/NVFP4:** the published v10 snapshot retains the backend-selection
+and FP8 LM-head bugs found in issue #16. Rebuilding it alone does not fix them
+or enable the omitted native SM120 kernels. The
+[documented workaround](troubleshooting.md#blackwell-fp8-nvfp4) can be applied
+to the existing v0.27.1 installation without a native rebuild.
+
 ## Current v0.27.1 build (v2 workspace)
 
 The v2 tree is based on upstream v0.27.1 and compiles CUDA targets

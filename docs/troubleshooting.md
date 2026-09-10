@@ -4,6 +4,121 @@ Common errors when building or running the native Windows vLLM releases.
 
 ## Runtime errors
 
+### Blackwell FP8/NVFP4 startup failures (v0.27.1) <a id="blackwell-fp8-nvfp4"></a>
+
+**The published v0.27.1 wheel needs a workaround for the mixed FP8/NVFP4
+model in [issue #16](https://github.com/aivrar/vllm-windows-build/issues/16).**
+The reporter confirmed `unsloth/Qwen3.8-27B-NVFP4` serving on an RTX PRO 5000
+Blackwell (48 GB, SM 12.0), Windows 11 Pro, after applying the workaround below.
+Compilation, CUDA graph capture, and a `/v1/chat/completions` request succeeded.
+This confirmation applies to that model and configuration.
+
+The unmodified installation can fail with:
+
+```text
+cutlass_scaled_mm_sm80_epilogue ... ScalarType::Char
+```
+
+The wheel omits native SM120 CUTLASS FP8/NVFP4 kernels because their aligned
+by-value parameters fail to compile with MSVC. Its FP8 backend selection still
+allows the omitted implementation, then dispatch falls through to an INT8
+kernel that rejects FP8 inputs. Reducing context length does not fix this
+dtype error. The model contains FP8 layers as well as NVFP4 layers.
+
+#### Apply the existing-wheel workaround
+
+These instructions are for **this repository's vLLM 0.27.1 Windows wheel**.
+Keep its pinned Python 3.13 / PyTorch 2.13.0+cu130 environment. Stop the server
+and use the same Python environment that runs it. For the portable installation,
+replace `python` in the commands below with `python\python.exe` from the repo
+directory.
+
+1. **Check the environment and locate the installed package.**
+
+   ```bat
+   python -c "import importlib.metadata, importlib.util, sys; print(sys.executable); print(importlib.metadata.version('vllm')); print(importlib.util.find_spec('vllm').origin)"
+   ```
+
+   The distribution version should be `0.27.1`. The final line locates
+   `vllm\__init__.py`; use that `vllm` directory for the edit below.
+
+2. **Fix the two missing LM-head attributes.** Back up
+   `model_executor\layers\quantization\compressed_tensors\schemes\compressed_tensors_w8a8_fp8.py`
+   inside that installed `vllm` directory before editing it.
+
+   Inside `create_weights`, insert the two partition-size assignments after
+   `layer.logical_widths`, keeping the existing indentation. The block should
+   then read:
+
+   ```python
+           output_size_per_partition = sum(output_partition_sizes)
+           layer.logical_widths = output_partition_sizes
+           layer.input_size_per_partition = input_size_per_partition
+           layer.output_size_per_partition = output_size_per_partition
+           layer.weight_block_size = None
+   ```
+
+   This fixes `AttributeError: 'ParallelLMHead' object has no attribute
+   'output_size_per_partition'`; the input attribute is required too. It matches
+   the fix proposed in upstream [PR #52451](https://github.com/vllm-project/vllm/pull/52451).
+   If the assignments are already present, do not add duplicates. If the
+   surrounding code differs, check the version and package path before editing.
+
+3. **Force the FP8 Marlin fallback before starting the server.** In Command Prompt:
+
+   ```bat
+   set "VLLM_TEST_FORCE_FP8_MARLIN=1"
+   ```
+
+   Or in PowerShell:
+
+   ```powershell
+   $env:VLLM_TEST_FORCE_FP8_MARLIN = '1'
+   ```
+
+   Rerun your server command from the same terminal. For the direct API server,
+   a launch example is:
+
+   ```bat
+   python -m vllm.entrypoints.openai.api_server --model D:\Qwen3.8-27B-NVFP4 --linear-backend marlin --host 127.0.0.1 --port 8080
+   ```
+
+   Substitute your local model directory. In v0.27.1, `--linear-backend marlin`
+   alone does not bypass the FP8 capability gate; keep the environment setting.
+   These version-specific instructions should not be assumed to apply to later
+   vLLM releases.
+
+Check that startup selects `MarlinFP8ScaledMMLinearKernel` and
+`MarlinNvFp4LinearKernel`, then verify readiness and a completed chat request.
+The reporter's working configuration removed `--enforce-eager`; eager mode is
+not required by this workaround. See their
+[confirmation](https://github.com/aivrar/vllm-windows-build/issues/16#issuecomment-5611096282).
+
+**No wheel rebuild is needed for these steps.** The published wheel, installer,
+and `vllm-windows-v10.patch` do not include the Python correction or an automatic
+backend-selection fix. Pulling the repo or reinstalling that wheel alone does
+not apply this workaround; reinstalling the package can overwrite the edit.
+To undo the workaround, stop the server, restore the backed-up Python file,
+and remove the environment setting from your terminal or launch script.
+
+#### What this confirms and what remains limited
+
+- Marlin uses FP8 or FP4 weights with 16-bit activations (W8A16/W4A16). This
+  workaround does not activate native Blackwell FP8/FP4 Tensor Core computation.
+- The Marlin warning that the GPU does not support FP4 is misleading on
+  Blackwell: the limitation here is the wheel's available kernels. A runtime
+  flag cannot enable omitted native kernels; FlashInfer is not included as a
+  supported Windows replacement in this release.
+- Local RTX 3090 tests passed six synthetic FP8 Marlin cases and twelve LM-head
+  cases. Full-model serving with CUDA graphs was confirmed by the Blackwell
+  reporter. These checks do not establish reference-model accuracy, every
+  context length, other models, or MTP/speculative decoding.
+- The reporter's first `Avg generation throughput: 15.5 tokens/s` log entry
+  includes a logging interval during the first request, which also triggered
+  JIT compilation. It is not an established steady decode rate or performance
+  ceiling. Measure warm requests and compare matching model, token lengths,
+  concurrency, and speculative-decoding settings.
+
 ### RTX 20xx / SM 7.5 reports an unsupported architecture or stalls during startup
 
 The v0.27.1 release wheel includes SM 7.5 code, so this message does

@@ -5,6 +5,11 @@ modes covered: **(A)** Python embedding, **(B)** OpenAI-compatible HTTP
 server via `vllm_launcher.py`, **(C)** the raw `vllm serve` upstream
 CLI.
 
+**Using an FP8/NVFP4 model on Blackwell?** Read the
+[v0.27.1 workaround](troubleshooting.md#blackwell-fp8-nvfp4) before launching.
+The confirmed model needs a Marlin setting and a Python edit, and runs through
+the fallback without native FP4 acceleration.
+
 ---
 
 ## (A) Python embedding
@@ -17,7 +22,7 @@ import os
 os.environ["VLLM_HOST_IP"] = "127.0.0.1"
 
 # Make sure CUDA + torch DLLs are findable
-os.add_dll_directory(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\bin")
+os.add_dll_directory(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.0\bin")
 os.add_dll_directory(r"C:\path\to\venv\Lib\site-packages\torch\lib")
 
 from vllm import LLM, SamplingParams
