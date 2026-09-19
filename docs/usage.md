@@ -1,5 +1,7 @@
 # Usage
 
+> **Release selection:** [Stable 0.27.1 and both 0.29.0 prereleases](releases.md) ? Python/CUDA versions, matching installers, and source-build guidance.
+
 How to actually run vLLM v0.27.1 on Windows after installing it. Three
 modes covered: **(A)** Python embedding, **(B)** OpenAI-compatible HTTP
 server via `vllm_launcher.py`, **(C)** the raw `vllm serve` upstream

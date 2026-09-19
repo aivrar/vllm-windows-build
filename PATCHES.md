@@ -1,5 +1,8 @@
 # Patch Reference
 
+> **Release selection:** [Stable 0.27.1 and both 0.29.0 prereleases](docs/releases.md) ? Python/CUDA versions, matching installers, and source-build guidance.
+> The stable instructions below describe 0.27.1; use the selected prerelease?s instructions for 0.29.0.
+
 > **Python 3.14 / CUDA 13.2 source deltas:** follow the [variant instructions](docs/v0.29.0-cu132-py314.md). The stable instructions below use a different runtime.
 
 The 0.29.0 prerelease is maintained on `prerelease/v0.29.0-win-cu130`.
