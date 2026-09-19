@@ -1,5 +1,11 @@
 # vllm-windows-build
 
+> **Optional 0.29.0 prerelease:** [Download and testing instructions](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu130-rc1).
+> Includes the issue #16 Marlin fallback fixes and passed targeted RTX 3090 checks.
+> Blackwell validation is pending; native Blackwell FP4 is not added.
+> Use the prerelease's **Source code (zip)** in a separate directory.
+> This branch and its installer continue to provide stable **0.27.1**.
+
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Platform: Windows](https://img.shields.io/badge/Platform-Windows%2010%2F11-blue)
 ![vLLM: v0.27.1](https://img.shields.io/badge/vLLM-v0.27.1-orange)
