@@ -1,7 +1,8 @@
 # vllm-windows-build
 
-> **Optional 0.29.0 prerelease:** [Download and testing instructions](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu130-rc1).
-> Includes the issue #16 Marlin fallback fixes and passed targeted RTX 3090 checks.
+> **Optional 0.29.0 prereleases:** [Python 3.13 / CUDA 13.0](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu130-rc1)
+> or [Python 3.14 / CUDA 13.2](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu132-py314-rc1) (**CPU TorchAudio**).
+> Both include the issue #16 Marlin fallback fixes and passed targeted RTX 3090 checks.
 > Blackwell validation is pending; native Blackwell FP4 is not added.
 > Use the prerelease's **Source code (zip)** in a separate directory.
 > This branch and its installer continue to provide stable **0.27.1**.
