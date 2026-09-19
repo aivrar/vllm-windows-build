@@ -1,14 +1,13 @@
 # vllm-windows-build
 
-> **0.29.0 prerelease branch.** This branch includes the issue #16 Marlin
-> fallback fixes. Download **Source code (zip)** from
-> [v0.29.0-win-cu130-rc1](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu130-rc1),
-> extract into a new directory and run `install.bat`. This branch's installer
-> installs 0.29.0. See the [release notes](docs/v0.29.0-release-notes.md) and
-> [build record](docs/v0.29.0-build-candidate.md). Blackwell testing remains
-> pending. The 0.27.1 information and measurements below describe the
-> stable release; [master](https://github.com/aivrar/vllm-windows-build/tree/master)
-> remains the stable installation branch.
+> **Python 3.14 / CUDA 13.2 prerelease:** [v0.29.0-win-cu132-py314-rc1](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu132-py314-rc1).
+> Download its **Source code (zip)**, extract into a new directory, and run
+> `install.bat`. This branch installs Python 3.14.2 and Torch 2.13.0+cu132,
+> with **CPU TorchAudio**. Read the [installation and validation notes](docs/v0.29.0-cu132-py314.md).
+> The [Python 3.13/cu130 prerelease](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu130-rc1)
+> remains available. Native Blackwell FP4 is not added.
+> The information and measurements below describe stable 0.27.1;
+> [master](https://github.com/aivrar/vllm-windows-build/tree/master) remains the stable installation branch.
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Platform: Windows](https://img.shields.io/badge/Platform-Windows%2010%2F11-blue)

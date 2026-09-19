@@ -1,5 +1,7 @@
 # Patch Reference
 
+> **Python 3.14 / CUDA 13.2 source deltas:** follow the [variant instructions](docs/v0.29.0-cu132-py314.md). The stable instructions below use a different runtime.
+
 The 0.29.0 prerelease is maintained on `prerelease/v0.29.0-win-cu130`.
 Its `vllm-windows-v11.patch` targets upstream commit
 `98dff2a81d747d1dba01a47f939f48c3526d4206`; validation is tracked in the

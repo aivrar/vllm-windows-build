@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-VLLM_SHA256 = "8C15E0A873B970A2163DD66708E6F33F946F91651EEEE717791C9D2981EBAF3B"
+VLLM_SHA256 = "A3E9A18B671673771AD233EA75C3E14F4D598BB1468D31565BEC07E0111F96BC"
 MTQ_SHA256 = "5B310E05904B588539D9A8E3374DFA6C160F025F9C2099BA5C7877C79B2FA149"
 PATCH_SHA256 = "D1304A8795FBB4BC1F3B3BBD67DDF670CEA59ECA769018468CE36C9158CAC8C2"
 
@@ -35,19 +35,19 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertEqual(install["MTQ_SHA256"], MTQ_SHA256)
         self.assertEqual(launch["EXPECTED_WHEEL_SHA256"], VLLM_SHA256)
         self.assertEqual(launch["EXPECTED_MTQ_SHA256"], MTQ_SHA256)
-        self.assertEqual(install["WHEEL_SIZE"], "241011728")
+        self.assertEqual(install["WHEEL_SIZE"], "242283093")
         self.assertEqual(install["MTQ_SIZE"], "136429")
-        self.assertIn("v0.29.0-win-cu130-rc1", install["WHEEL_URL"])
-        self.assertIn("vllm-0.29.0-cp313-cp313-win_amd64.whl", install["WHEEL_URL"])
+        self.assertIn("v0.29.0-win-cu132-py314-rc1", install["WHEEL_URL"])
+        self.assertIn("vllm-0.29.0-cp314-cp314-win_amd64.whl", install["WHEEL_URL"])
         self.assertIn("dist-v0.29.0", install["WHEEL_FILE"])
 
         verifier = (ROOT / "verify_install.py").read_text(encoding="utf-8")
-        candidate = (ROOT / "docs" / "v0.29.0-build-candidate.md").read_text(
+        candidate = (ROOT / "docs" / "v0.29.0-cu132-py314.md").read_text(
             encoding="utf-8"
         )
         self.assertIn('EXPECTED_VLLM_VERSION = "0.29.0"', verifier)
-        self.assertIn("vllm-0.29.0-cp313-cp313-win_amd64.whl", candidate)
-        self.assertIn("8c15e0a873b970a2163dd66708e6f33f946f91651eeee717791c9d2981ebaf3b", candidate)
+        self.assertIn("vllm-0.29.0-cp314-cp314-win_amd64.whl", candidate)
+        self.assertIn("a3e9a18b671673771ad233ea75c3e14f4d598bb1468d31565bec07e0111f96bc", candidate)
 
     def test_verifier_distinguishes_wheel_and_runtime_versions(self) -> None:
         from verify_install import validate_vllm_versions

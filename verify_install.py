@@ -67,10 +67,10 @@ def main() -> int:
 
     installed_vllm_version = importlib.metadata.version("vllm")
     validate_vllm_versions(vllm.__version__, installed_vllm_version)
-    if not torch.__version__.startswith("2.13.0") or torch.version.cuda != "13.0":
+    if not torch.__version__.startswith("2.13.0") or torch.version.cuda != "13.2":
         raise RuntimeError(
             f"PyTorch is {torch.__version__!r} with CUDA {torch.version.cuda!r}, "
-            "expected 2.13.0+cu130"
+            "expected 2.13.0+cu132"
         )
     if not triton.__version__.startswith("3.7.1"):
         raise RuntimeError(f"Triton version is {triton.__version__!r}, expected 3.7.1")

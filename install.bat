@@ -5,41 +5,41 @@ cd /d "%~dp0"
 echo.
 echo  ============================================================
 echo          vLLM v0.29.0 Windows Prerelease Installer
-echo     Portable Python 3.13.14 + PyTorch 2.13.0 (cu130) + vLLM 0.29.0
+echo     Portable Python 3.14.2 + PyTorch 2.13.0 (cu132) + vLLM 0.29.0
 echo  ============================================================
 echo.
 
 REM ============================================================
 REM  Version Configuration
 REM ============================================================
-set "PYTHON_VERSION=3.13.14"
-set "PYTHON_URL=https://www.python.org/ftp/python/3.13.14/python-3.13.14-embed-amd64.zip"
-set "PYTHON_SHA256=90B4E5B9898B72D744650524BFF92377C367F44BD5FBD09E3148656C080AD907"
-set "PYTHON_SIZE=10964839"
-set "PYTHON_DEV_URL=https://www.nuget.org/api/v2/package/python/3.13.14"
-set "PYTHON_DEV_SHA256=9AC15CFA6CAB1115C83D48F2AF55C554EFA4D1BB044BBC4AB1C9D17AD426E16C"
-set "PYTHON_DEV_SIZE=14345376"
-set "PYTHON_PTH_FILE=python313._pth"
-set "PYTHON_PTH_ZIP=python313.zip"
-set "PYTHON_LIB_NAME=python313.lib"
+set "PYTHON_VERSION=3.14.2"
+set "PYTHON_URL=https://www.python.org/ftp/python/3.14.2/python-3.14.2-embed-amd64.zip"
+set "PYTHON_SHA256=F05E28D161C6B15AF64A7CB7F08B4A22B3A6B03EEE71BAEE24EA557B3BDD5798"
+set "PYTHON_SIZE=12011844"
+set "PYTHON_DEV_URL=https://www.nuget.org/api/v2/package/python/3.14.2"
+set "PYTHON_DEV_SHA256=C8D5E2B95F0250CEB84AAFC2DED952C1C3AE65870651042AFF7C2F19DE856B75"
+set "PYTHON_DEV_SIZE=14917754"
+set "PYTHON_PTH_FILE=python314._pth"
+set "PYTHON_PTH_ZIP=python314.zip"
+set "PYTHON_LIB_NAME=python314.lib"
 set "TRITON_NVIDIA_DIR=%~dp0python\Lib\site-packages\triton\backends\nvidia"
 set "GETPIP_URL=https://raw.githubusercontent.com/pypa/get-pip/5e84c8360eaf92009551b3eec69d734137f31cec/public/get-pip.py"
 set "GETPIP_SHA256=A341E1A43E38001C551A1508A73FF23636A11970B61D901D9A1CAD2A18F57055"
 set "GETPIP_SIZE=2226848"
-set "TORCH_INDEX=https://download.pytorch.org/whl/cu130"
+set "TORCH_INDEX=https://download.pytorch.org/whl/cu132"
 
 REM Pre-built vLLM wheel (auto-downloaded into dist-v0.29.0\ if not present locally).
 REM This exact release artifact is verified by size and SHA-256 before install.
-set "WHEEL_NAME=vllm-0.29.0-cp313-cp313-win_amd64.whl"
-set "WHEEL_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.29.0-win-cu130-rc1/vllm-0.29.0-cp313-cp313-win_amd64.whl"
-set "WHEEL_SHA256=8C15E0A873B970A2163DD66708E6F33F946F91651EEEE717791C9D2981EBAF3B"
-set "WHEEL_SIZE=241011728"
+set "WHEEL_NAME=vllm-0.29.0-cp314-cp314-win_amd64.whl"
+set "WHEEL_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.29.0-win-cu132-py314-rc1/vllm-0.29.0-cp314-cp314-win_amd64.whl"
+set "WHEEL_SHA256=A3E9A18B671673771AD233EA75C3E14F4D598BB1468D31565BEC07E0111F96BC"
+set "WHEEL_SIZE=242283093"
 set "WHEEL_FILE=%~dp0dist-v0.29.0\%WHEEL_NAME%"
 set "WHEEL_PART=%~dp0dist-v0.29.0\%WHEEL_NAME%.part"
 
 REM Pure-Python Multi-TurboQuant wheel built from commit e2b59ee474132999c2b42d5c96bfc48fcaf850dc.
 set "MTQ_NAME=multi_turboquant-0.1.0-py3-none-any.whl"
-set "MTQ_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.29.0-win-cu130-rc1/multi_turboquant-0.1.0-py3-none-any.whl"
+set "MTQ_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.29.0-win-cu132-py314-rc1/multi_turboquant-0.1.0-py3-none-any.whl"
 set "MTQ_SHA256=5B310E05904B588539D9A8E3374DFA6C160F025F9C2099BA5C7877C79B2FA149"
 set "MTQ_SIZE=136429"
 set "MTQ_FILE=%~dp0dist-v0.29.0\%MTQ_NAME%"
@@ -51,7 +51,7 @@ if not defined CUDA_DEVICE_ORDER set "CUDA_DEVICE_ORDER=PCI_BUS_ID"
 echo  Components to install:
 echo    - Python %PYTHON_VERSION% (embedded distribution + headers/libs)
 echo    - pip (package manager)
-echo    - PyTorch 2.13.0+cu130 + triton-windows (CUDA GPU acceleration)
+echo    - PyTorch 2.13.0+cu132 + triton-windows (CUDA GPU acceleration)
 echo    - vLLM 0.29.0 wheel (pre-built Windows binary)
 echo    - Verification
 echo.
@@ -75,9 +75,9 @@ REM  STAGE 1: Download and Extract Python Embedded
 REM ============================================================
 echo [1/%STAGES_TOTAL%] Python %PYTHON_VERSION% embedded...
 if exist "%~dp0python\python.exe" (
-    "%~dp0python\python.exe" -c "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 13) else 1)" >nul 2>nul
+    "%~dp0python\python.exe" -c "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 14) else 1)" >nul 2>nul
     if errorlevel 1 (
-        echo          FAILED: Existing python\ is not Python 3.13.
+        echo          FAILED: Existing python\ is not Python 3.14.
         echo          Delete python\ and rerun install.bat to install Python %PYTHON_VERSION%.
         goto :fail
     )
@@ -119,7 +119,7 @@ if not exist "%~dp0python.part\python.exe" (
     rmdir /S /Q "%~dp0python.part" 2>nul
     goto :fail
 )
-"%~dp0python.part\python.exe" -c "import sys; raise SystemExit(0 if sys.version_info[:3] == (3, 13, 14) else 1)" >nul 2>nul
+"%~dp0python.part\python.exe" -c "import sys; raise SystemExit(0 if sys.version_info[:3] == (3, 14, 2) else 1)" >nul 2>nul
 if errorlevel 1 (
     echo          FAILED: Extracted Python version is not %PYTHON_VERSION%.
     rmdir /S /Q "%~dp0python.part" 2>nul
@@ -135,7 +135,7 @@ echo          OK
 
 :pythonDevFiles
 REM Triton JIT compiles a small CUDA driver helper at runtime and needs
-REM Python.h plus python313.lib. The embeddable Python zip does not ship them.
+REM Python.h plus python314.lib. The embeddable Python zip does not ship them.
 echo          Checking Python headers/libs for Triton...
 if exist "%~dp0python\Include\Python.h" if exist "%~dp0python\libs\%PYTHON_LIB_NAME%" (
     echo          OK - Python development files present
@@ -193,7 +193,7 @@ REM  STAGE 2: Configure Python for site-packages + Install pip
 REM ============================================================
 echo [2/%STAGES_TOTAL%] Python configuration + pip...
 
-REM Write python313._pth to enable site-packages and import site.
+REM Write python314._pth to enable site-packages and import site.
 echo          Configuring %PYTHON_PTH_FILE%...
 (
     echo %PYTHON_PTH_ZIP%
@@ -234,7 +234,7 @@ if errorlevel 1 (
     goto :fail
 )
 echo          Installing pip...
-"%~dp0python\python.exe" "%TEMP%\get-pip.py" --no-warn-script-location
+"%~dp0python\python.exe" "%TEMP%\get-pip.py" -c "%~dp0constraints-cu132-py314.txt" --no-warn-script-location
 if errorlevel 1 (
     echo          FAILED: pip installation error
     goto :fail
@@ -248,11 +248,11 @@ echo          OK
 
 :stage3
 REM ============================================================
-REM  STAGE 3: Install PyTorch 2.13.0+cu130 + triton-windows
+REM  STAGE 3: Install PyTorch 2.13.0+cu132 + triton-windows
 REM ============================================================
-echo [3/%STAGES_TOTAL%] PyTorch 2.13.0+cu130 + triton-windows (~2.5 GB download)...
+echo [3/%STAGES_TOTAL%] PyTorch 2.13.0+cu132 + triton-windows (~2.5 GB download)...
 if exist "%~dp0python\.torch-installed" (
-    "%~dp0python\python.exe" -c "import torch, triton; assert torch.__version__.startswith('2.13.0'); assert torch.version.cuda == '13.0'; assert triton.__version__.startswith('3.7.1')" >nul 2>nul
+    "%~dp0python\python.exe" -c "import torch, triton, torchaudio, torchvision, torchcodec; assert torch.__version__.startswith('2.13.0'); assert torch.version.cuda == '13.2'; assert triton.__version__.startswith('3.7.1')" >nul 2>nul
     if not errorlevel 1 (
         echo          SKIP - already installed ^(delete python\.torch-installed to force^)
         goto :stage4
@@ -261,13 +261,20 @@ if exist "%~dp0python\.torch-installed" (
     del "%~dp0python\.torch-installed" 2>nul
 )
 echo          Installing PyTorch 2.13.0 from pytorch.org...
-"%~dp0python\python.exe" -m pip install torch==2.13.0 torchaudio==2.11.0 torchvision==0.28.0 --index-url %TORCH_INDEX% --no-warn-script-location
+"%~dp0python\python.exe" -m pip install torch==2.13.0+cu132 torchvision==0.28.0+cu132 torchcodec==0.16.0+cu132 --index-url %TORCH_INDEX% -c "%~dp0constraints-cu132-py314.txt" --no-warn-script-location
 if errorlevel 1 (
     echo          FAILED: PyTorch installation error - check output above
     goto :fail
 )
+REM No cu132 TorchAudio wheel is available. Pin the tested CPU distribution.
+echo          Installing TorchAudio 2.11.0 CPU from PyPI...
+"%~dp0python\python.exe" -m pip install "torchaudio==2.11.0" --index-url https://pypi.org/simple -c "%~dp0constraints-cu132-py314.txt" --no-warn-script-location
+if errorlevel 1 (
+    echo          FAILED: CPU TorchAudio installation error.
+    goto :fail
+)
 echo          Installing triton-windows 3.7.1...
-"%~dp0python\python.exe" -m pip install "triton-windows==3.7.1.post27" --no-warn-script-location
+"%~dp0python\python.exe" -m pip install "triton-windows==3.7.1.post27" -c "%~dp0constraints-cu132-py314.txt" --no-warn-script-location
 if errorlevel 1 (
     echo          FAILED: triton-windows installation error
     goto :fail
@@ -349,13 +356,13 @@ if errorlevel 1 (
 )
 echo          SHA256 verified
 echo          Installing corrected vLLM wheel...
-"%~dp0python\python.exe" -m pip install "%WHEEL_FILE%" --force-reinstall --no-deps --no-warn-script-location
+"%~dp0python\python.exe" -m pip install "%WHEEL_FILE%" --force-reinstall --no-deps -c "%~dp0constraints-cu132-py314.txt" --no-warn-script-location
 if errorlevel 1 (
     echo          FAILED: vLLM installation error - check output above
     goto :fail
 )
 echo          Resolving vLLM dependencies...
-"%~dp0python\python.exe" -m pip install "%WHEEL_FILE%" --no-warn-script-location
+"%~dp0python\python.exe" -m pip install "%WHEEL_FILE%" -c "%~dp0constraints-cu132-py314.txt" --no-warn-script-location
 if errorlevel 1 (
     echo          FAILED: vLLM dependency installation error - check output above
     goto :fail
@@ -397,7 +404,7 @@ if not exist "%MTQ_FILE%" (
 "%~dp0python\python.exe" "%~dp0verify_artifact.py" "%MTQ_FILE%" "%MTQ_SHA256%" %MTQ_SIZE%
 if errorlevel 1 goto :fail
 echo          Installing pinned Multi-TurboQuant...
-"%~dp0python\python.exe" -m pip install "%MTQ_FILE%" --force-reinstall --no-deps --no-warn-script-location
+"%~dp0python\python.exe" -m pip install "%MTQ_FILE%" --force-reinstall --no-deps -c "%~dp0constraints-cu132-py314.txt" --no-warn-script-location
 if errorlevel 1 (
     echo          FAILED: Multi-TurboQuant installation error.
     goto :fail
@@ -407,7 +414,7 @@ REM The Windows patch adds AMD64 to vLLM's dependency markers. Keep an
 REM explicit install here as a repair step for environments created by older
 REM wheels or pip metadata caches.
 echo          Installing structured-output backends (llguidance, xgrammar)...
-"%~dp0python\python.exe" -m pip install "llguidance>=1.7.0,<1.8.0" "xgrammar>=0.2.1,<1.0.0" --no-warn-script-location
+"%~dp0python\python.exe" -m pip install "llguidance>=1.7.0,<1.8.0" "xgrammar>=0.2.1,<1.0.0" -c "%~dp0constraints-cu132-py314.txt" --no-warn-script-location
 if errorlevel 1 (
     echo          FAILED: llguidance/xgrammar installation error.
     goto :fail
@@ -429,7 +436,7 @@ if exist "%TRITON_NVIDIA_DIR%\bin\ptxas.exe" (
 if errorlevel 1 (
     echo          FAILED: vLLM runtime verification failed.
     echo          Make sure an NVIDIA driver is installed and rerun install.bat.
-    echo          If you see Python.h or python313.lib errors, delete python\ and rerun install.bat.
+    echo          If you see Python.h or python314.lib errors, delete python\ and rerun install.bat.
     goto :fail
 )
 > "%~dp0python\.vllm-installed" echo WHEEL_SHA256=%WHEEL_SHA256%

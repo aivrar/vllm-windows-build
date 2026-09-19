@@ -1,0 +1,21 @@
+diff --git a/csrc/libtorch_stable/topk_histogram_4096.cuh b/csrc/libtorch_stable/topk_histogram_4096.cuh
+index 5f9f823a3..ad28a496e 100644
+--- a/csrc/libtorch_stable/topk_histogram_4096.cuh
++++ b/csrc/libtorch_stable/topk_histogram_4096.cuh
+@@ -7,6 +7,7 @@
+ 
+ #include <cuda_fp16.h>
+ #include <cuda_runtime.h>
++#include <cfloat>
+ #include <cstdint>
+ 
+ namespace vllm {
+@@ -516,7 +517,7 @@ __device__ void histogram_4096_topk(const float* __restrict__ scores,
+     const auto warp_id = tx / kWarpSize;
+     const auto lane1 = lane_id + kWarpSize;
+     const auto warp1 = warp_id + kWarpSize;
+-    const auto invalid = Tie{0xFFFFFFFF, -__FLT_MAX__};
++      const auto invalid = Tie{0xFFFFFFFF, -FLT_MAX};
+     const auto tie0 = smem->tie_buffer[lane_id];
+     const auto tie1 = lane1 < num_ties ? smem->tie_buffer[lane1] : invalid;
+     if (warp_id < num_ties) {
