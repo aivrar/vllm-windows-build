@@ -1,6 +1,9 @@
 # Build From Source
 
-The current release build is vLLM 0.27.1. The native compile and wheel
+> **Release selection:** [Stable 0.27.1 and both 0.29.0 prereleases](releases.md) ? Python/CUDA versions, matching installers, and source-build guidance.
+> The stable instructions below describe 0.27.1; use the selected prerelease?s instructions for 0.29.0.
+
+The current stable release build is vLLM 0.27.1. The native compile and wheel
 assembly live in `E:\vllm-windows-build-v2`; this repository contains the
 exact `vllm-windows-v10.patch`, installer, launcher, validation contract, and
 release documentation. The older v0.25.1 patch workflow is retained below as
@@ -12,7 +15,7 @@ or enable the omitted native SM120 kernels. The
 [documented workaround](troubleshooting.md#blackwell-fp8-nvfp4) can be applied
 to the existing v0.27.1 installation without a native rebuild.
 
-## Current v0.27.1 build (v2 workspace)
+## Stable v0.27.1 build (v2 workspace)
 
 The v2 tree is based on upstream v0.27.1 and compiles CUDA targets
 `7.5;8.6;8.9;12.0` with Python 3.13, PyTorch 2.13.0+cu130, and CUDA 13.0.

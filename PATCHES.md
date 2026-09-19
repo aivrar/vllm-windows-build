@@ -1,5 +1,8 @@
 # Patch Reference
 
+> **Release selection:** [Stable 0.27.1 and both 0.29.0 prereleases](docs/releases.md) ? Python/CUDA versions, matching installers, and source-build guidance.
+> The stable instructions below describe 0.27.1; use the selected prerelease?s instructions for 0.29.0.
+
 Reference for `vllm-windows-v10.patch` (active), the exact committed Windows
 delta against upstream vLLM 0.27.1. Older patches remain in the repository for
 legacy releases.
