@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.29.0-win-cu130-rc1 - 2026-09-19 (prerelease)
+
+- Update the native Windows port to vLLM 0.29.0, preserving the Torch 2.13.0+cu130 / Python 3.13 stack and existing Windows features.
+- Fix automatic Marlin fallback and FP8 LM-head metadata for issue #16; native Blackwell FP4 remains unavailable in this build.
+- Adapt local KV formats and Windows cache handling to upstream changes; expose `--linear-backend` in the launcher.
+- Validate the installed wheel on RTX 3090. Blackwell testing is still pending; 0.27.1 remains stable/Latest.
+
+Details and installation: [release notes](docs/v0.29.0-release-notes.md) and [build record](docs/v0.29.0-build-candidate.md).
+
 ## v0.27.1-win-cu130 - 2026-08-21
 
 Release notes: [docs/v0.27.1-release-notes.md](docs/v0.27.1-release-notes.md)

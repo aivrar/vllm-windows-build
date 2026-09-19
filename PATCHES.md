@@ -1,6 +1,13 @@
 # Patch Reference
 
-Reference for `vllm-windows-v10.patch` (active), the exact committed Windows
+The 0.29.0 prerelease is maintained on `prerelease/v0.29.0-win-cu130`.
+Its `vllm-windows-v11.patch` targets upstream commit
+`98dff2a81d747d1dba01a47f939f48c3526d4206`; validation is tracked in the
+[candidate build record](docs/v0.29.0-build-candidate.md).
+Version 0.27.1 remains the stable release. The sections below document its
+immutable v10 patch.
+
+Reference for `vllm-windows-v10.patch` (stable), the exact committed Windows
 delta against upstream vLLM 0.27.1. Older patches remain in the repository for
 legacy releases.
 
@@ -419,7 +426,8 @@ installs:
 
 | Patch file | Base vLLM | Status |
 |---|---|---|
-| `vllm-windows-v10.patch` | v0.27.1 | **current** |
+| `vllm-windows-v10.patch` | v0.27.1 | **stable** |
+| `vllm-windows-v11.patch` | v0.29.0 | **prerelease** |
 | `vllm-windows-v9.patch` | v0.25.1 | stale; final v0.25.1 patch |
 | `vllm-windows-v8.patch` | v0.24.0 | stale; final v0.24.0 patch including the sampling/KV-copy hotfixes |
 | `vllm-windows-v7.patch` | v0.24.0 | stale; original wheel omitted generated FlashAttention Python files |

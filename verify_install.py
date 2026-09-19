@@ -8,7 +8,7 @@ import importlib.metadata
 import sys
 from pathlib import Path
 
-EXPECTED_VLLM_VERSION = "0.27.1"
+EXPECTED_VLLM_VERSION = "0.29.0"
 
 REQUIRED_MODULES = (
     "llguidance",

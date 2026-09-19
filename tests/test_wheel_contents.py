@@ -104,7 +104,7 @@ def validate_wheel(wheel_path: Path) -> None:
         assert len(metadata_names) == 1, f"expected one METADATA, found {metadata_names}"
         metadata = BytesParser().parsebytes(wheel.read(metadata_names[0]))
         assert metadata.get("Name", "").lower() == "vllm"
-        assert metadata.get("Version") == "0.27.1"
+        assert metadata.get("Version") == "0.29.0"
         metadata_data = wheel.read(metadata_names[0])
         assert b'platform_machine == "AMD64"' in metadata_data, (
             "wheel metadata does not install AMD64 structured-output dependencies"

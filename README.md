@@ -1,5 +1,15 @@
 # vllm-windows-build
 
+> **0.29.0 prerelease branch.** This branch includes the issue #16 Marlin
+> fallback fixes. Download **Source code (zip)** from
+> [v0.29.0-win-cu130-rc1](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu130-rc1),
+> extract into a new directory and run `install.bat`. This branch's installer
+> installs 0.29.0. See the [release notes](docs/v0.29.0-release-notes.md) and
+> [build record](docs/v0.29.0-build-candidate.md). Blackwell testing remains
+> pending. The 0.27.1 information and measurements below describe the
+> stable release; [master](https://github.com/aivrar/vllm-windows-build/tree/master)
+> remains the stable installation branch.
+
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Platform: Windows](https://img.shields.io/badge/Platform-Windows%2010%2F11-blue)
 ![vLLM: v0.27.1](https://img.shields.io/badge/vLLM-v0.27.1-orange)
