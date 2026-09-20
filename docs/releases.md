@@ -10,6 +10,8 @@ The two prereleases are runtime variants of the same vLLM version. Neither
 replaces stable/Latest. **The cu132 variant uses CPU TorchAudio**; GPU audio
 processing and audio-model serving were not validated. vLLM inference uses CUDA.
 
+> **Launcher correction (2026-09-20, Python 3.14/cu132 only):** Download [the corrected launch.bat](https://github.com/aivrar/vllm-windows-build/releases/download/v0.29.0-win-cu132-py314-rc1/launch.bat) and replace `launch.bat` in your extracted installation directory. This also applies to fresh installs from the rc1 Source code ZIP. It fixes unnecessary installer reruns caused by Python 3.13 file checks. No wheel reinstall or rebuild is needed. It does not fix the separate TorchCodec/FFmpeg DLL popup.
+
 ## Install a prebuilt wheel
 
 Download **Source code (zip)** from your chosen release, extract into a new
