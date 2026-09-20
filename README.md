@@ -1,5 +1,8 @@
 # vllm-windows-build
 
+> **Launcher correction (2026-09-20, Python 3.14/cu132 only):** Download [the corrected launch.bat](https://github.com/aivrar/vllm-windows-build/releases/download/v0.29.0-win-cu132-py314-rc1/launch.bat) and replace `launch.bat` in your extracted installation directory. This also applies to fresh installs from the rc1 Source code ZIP. It fixes unnecessary installer reruns caused by Python 3.13 file checks. No wheel reinstall or rebuild is needed. It does not fix the separate TorchCodec/FFmpeg DLL popup.
+
+
 > **Release selection:** [Stable 0.27.1 and both 0.29.0 prereleases](docs/releases.md) ? Python/CUDA versions, matching installers, and source-build guidance.
 
 > **Python 3.14 / CUDA 13.2 prerelease:** [v0.29.0-win-cu132-py314-rc1](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu132-py314-rc1).

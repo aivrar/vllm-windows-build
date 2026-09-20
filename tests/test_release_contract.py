@@ -35,6 +35,11 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertEqual(install["MTQ_SHA256"], MTQ_SHA256)
         self.assertEqual(launch["EXPECTED_WHEEL_SHA256"], VLLM_SHA256)
         self.assertEqual(launch["EXPECTED_MTQ_SHA256"], MTQ_SHA256)
+        launch_script = (ROOT / "launch.bat").read_text(encoding="utf-8")
+        # A mismatched Python ABI check forces a valid install into repair on every launch.
+        self.assertIn(install["PYTHON_LIB_NAME"], launch_script)
+        self.assertIn(install["PYTHON_PTH_FILE"], launch_script)
+        self.assertNotIn("python313", launch_script)
         self.assertEqual(install["WHEEL_SIZE"], "242283093")
         self.assertEqual(install["MTQ_SIZE"], "136429")
         self.assertIn("v0.29.0-win-cu132-py314-rc1", install["WHEEL_URL"])
