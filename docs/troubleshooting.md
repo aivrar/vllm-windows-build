@@ -249,7 +249,7 @@ rejecting a valid wheel.
 
 Pull the latest repository and rerun `install.bat`. Hashing now runs through
 `verify_artifact.py`, reports size and SHA-256 directly, and replaces stale or
-truncated wheels automatically. The previous stable wheel is exactly 293,080,424 bytes
+truncated wheels automatically. The historical v0.25.1 wheel affected by the original report is 293,080,424 bytes
 with SHA-256:
 
 ```text
