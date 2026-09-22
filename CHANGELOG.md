@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.29.0-win-cu132-py314 - 2026-09-22 (regular release)
+
+[Python 3.14 / CUDA 13.2 release](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu132-py314) uses the same verified wheel as its release candidate and includes the corrected launcher in the final source ZIP. An [RTX 5090 tester](https://github.com/aivrar/vllm-windows-build/issues/17#issuecomment-5774839645) confirmed one Qwen3.8-27B INT4 checkpoint with FP8 KV cache and MTP at 128K context. This establishes that configuration, not a speed improvement or native FP4. CPU TorchAudio remains a limitation; 0.27.1 remains Latest. See the [release guide](docs/releases.md).
+
 ## v0.29.0-win-cu130-rc1 - 2026-09-19 (prerelease)
 
 - Update the native Windows port to vLLM 0.29.0, preserving the Torch 2.13.0+cu130 / Python 3.13 stack and existing Windows features.
