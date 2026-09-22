@@ -4,7 +4,7 @@ cd /d "%~dp0"
 
 echo.
 echo  ============================================================
-echo          vLLM v0.29.0 Windows Prerelease Installer
+echo          vLLM v0.29.0 Windows Installer
 echo     Portable Python 3.14.2 + PyTorch 2.13.0 (cu132) + vLLM 0.29.0
 echo  ============================================================
 echo.
@@ -31,7 +31,7 @@ set "TORCH_INDEX=https://download.pytorch.org/whl/cu132"
 REM Pre-built vLLM wheel (auto-downloaded into dist-v0.29.0\ if not present locally).
 REM This exact release artifact is verified by size and SHA-256 before install.
 set "WHEEL_NAME=vllm-0.29.0-cp314-cp314-win_amd64.whl"
-set "WHEEL_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.29.0-win-cu132-py314-rc1/vllm-0.29.0-cp314-cp314-win_amd64.whl"
+set "WHEEL_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.29.0-win-cu132-py314/vllm-0.29.0-cp314-cp314-win_amd64.whl"
 set "WHEEL_SHA256=A3E9A18B671673771AD233EA75C3E14F4D598BB1468D31565BEC07E0111F96BC"
 set "WHEEL_SIZE=242283093"
 set "WHEEL_FILE=%~dp0dist-v0.29.0\%WHEEL_NAME%"
@@ -39,7 +39,7 @@ set "WHEEL_PART=%~dp0dist-v0.29.0\%WHEEL_NAME%.part"
 
 REM Pure-Python Multi-TurboQuant wheel built from commit e2b59ee474132999c2b42d5c96bfc48fcaf850dc.
 set "MTQ_NAME=multi_turboquant-0.1.0-py3-none-any.whl"
-set "MTQ_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.29.0-win-cu132-py314-rc1/multi_turboquant-0.1.0-py3-none-any.whl"
+set "MTQ_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.29.0-win-cu132-py314/multi_turboquant-0.1.0-py3-none-any.whl"
 set "MTQ_SHA256=5B310E05904B588539D9A8E3374DFA6C160F025F9C2099BA5C7877C79B2FA149"
 set "MTQ_SIZE=136429"
 set "MTQ_FILE=%~dp0dist-v0.29.0\%MTQ_NAME%"

@@ -42,7 +42,8 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertNotIn("python313", launch_script)
         self.assertEqual(install["WHEEL_SIZE"], "242283093")
         self.assertEqual(install["MTQ_SIZE"], "136429")
-        self.assertIn("v0.29.0-win-cu132-py314-rc1", install["WHEEL_URL"])
+        self.assertIn("v0.29.0-win-cu132-py314/", install["WHEEL_URL"])
+        self.assertIn("v0.29.0-win-cu132-py314/", install["MTQ_URL"])
         self.assertIn("vllm-0.29.0-cp314-cp314-win_amd64.whl", install["WHEEL_URL"])
         self.assertIn("dist-v0.29.0", install["WHEEL_FILE"])
 

@@ -1,14 +1,14 @@
 # vllm-windows-build
 
-> **Launcher correction (2026-09-20, Python 3.14/cu132 only):** Download [the corrected launch.bat](https://github.com/aivrar/vllm-windows-build/releases/download/v0.29.0-win-cu132-py314-rc1/launch.bat) and replace `launch.bat` in your extracted installation directory. This also applies to fresh installs from the rc1 Source code ZIP. It fixes unnecessary installer reruns caused by Python 3.13 file checks. No wheel reinstall or rebuild is needed. It does not fix the separate TorchCodec/FFmpeg DLL popup.
+> **Release selection:** [Compare the Windows releases](docs/releases.md) by Python/CUDA version and installer.
 
-
-> **Release selection:** [Stable 0.27.1 and both 0.29.0 prereleases](docs/releases.md) ? Python/CUDA versions, matching installers, and source-build guidance.
-
-> **Python 3.14 / CUDA 13.2 prerelease:** [v0.29.0-win-cu132-py314-rc1](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu132-py314-rc1).
+> **Python 3.14 / CUDA 13.2 release:** [v0.29.0-win-cu132-py314](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu132-py314).
 > Download its **Source code (zip)**, extract into a new directory, and run
 > `install.bat`. This branch installs Python 3.14.2 and Torch 2.13.0+cu132,
 > with **CPU TorchAudio**. Read the [installation and validation notes](docs/v0.29.0-cu132-py314.md).
+> An RTX 5090 tester confirmed Qwen3.8-27B INT4 serving with FP8 KV cache,
+> one-token MTP, and a 127,987-token input. This is a model-specific validation,
+> not a speed benchmark.
 > The [Python 3.13/cu130 prerelease](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu130-rc1)
 > remains available. Native Blackwell FP4 is not added.
 > The information and measurements below describe stable 0.27.1;
@@ -80,7 +80,7 @@ acceleration, Triton support, and Multi-TurboQuant integration.
 
 | Release | vLLM | PyTorch | Triton | KV compression | Download |
 |---|---|---|---|---|---|
-| v0.29.0-win-cu132-py314-rc1 (prerelease, Python 3.14) | 0.29.0 | 2.13.0+cu132 | 3.7.1 | Retains Windows KV features; **CPU TorchAudio**; [validation](docs/releases.md) | [Release page](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu132-py314-rc1) |
+| v0.29.0-win-cu132-py314 (regular, Python 3.14) | 0.29.0 | 2.13.0+cu132 | 3.7.1 | Retains Windows KV features; **CPU TorchAudio**; [validation](docs/v0.29.0-cu132-py314.md) | [Release page](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu132-py314) |
 | v0.29.0-win-cu130-rc1 (prerelease, Python 3.13) | 0.29.0 | 2.13.0+cu130 | 3.7.1 | Retains Windows KV features; issue #16 Marlin fallback fixes | [Release page](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu130-rc1) |
 | **v0.27.1-win-cu130 (latest)** | 0.27.1 | 2.13.0+cu130 | 3.7.1 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8; **SM 7.5/8.6/8.9/12.0, Qwen3.5, Turing profile, CPU/filesystem KV offload, optimized Rust frontend + tool parser** | [Release page](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.27.1-win-cu130) |
 | v0.26.0-win-cu128 (previous release) | 0.26.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8; SM 7.5/8.6/8.9/12.0, Turing profile, CPU/filesystem KV offload, Rust frontend + tool parser | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.26.0-win-cu128) |

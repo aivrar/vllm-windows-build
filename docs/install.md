@@ -1,9 +1,9 @@
 # Install vLLM v0.27.1 on Windows
 
-> **Release selection:** [Stable 0.27.1 and both 0.29.0 prereleases](releases.md) ? Python/CUDA versions, matching installers, and source-build guidance.
-> The stable instructions below describe 0.27.1; use the selected prerelease?s instructions for 0.29.0.
+> **Release selection:** [Compare the Windows releases](releases.md) by Python/CUDA version and installer.
+> The instructions below describe 0.27.1; use the selected variant's instructions for 0.29.0.
 
-> **Python 3.14 / CUDA 13.2 prerelease:** follow the [variant instructions](v0.29.0-cu132-py314.md). The stable instructions below use a different runtime.
+> **Python 3.14 / CUDA 13.2 release:** follow the [variant instructions](v0.29.0-cu132-py314.md). The 0.27.1 instructions below use a different runtime.
 
 > v0.27.1 is the current CUDA 13.0 release with native SM
 > 7.5/8.6/8.9/12.0 kernels. The locally built wheel is in
