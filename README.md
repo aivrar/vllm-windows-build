@@ -81,7 +81,7 @@ acceleration, Triton support, and Multi-TurboQuant integration.
 | v0.29.0-win-cu132-py314 (regular, Python 3.14) | 0.29.0 | 2.13.0+cu132 | 3.7.1 | Retains Windows KV features; **CPU TorchAudio**; [validation](https://github.com/aivrar/vllm-windows-build/blob/v0.29.0-win-cu132-py314/docs/v0.29.0-cu132-py314.md) | [Release page](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu132-py314) |
 | v0.29.0-win-cu130-rc1 (prerelease, Python 3.13) | 0.29.0 | 2.13.0+cu130 | 3.7.1 | Retains Windows KV features; issue #16 Marlin fallback fixes | [Release page](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu130-rc1) |
 | **v0.27.1-win-cu130 (latest)** | 0.27.1 | 2.13.0+cu130 | 3.7.1 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8; **SM 7.5/8.6/8.9/12.0, Qwen3.5, Turing profile, CPU/filesystem KV offload, optimized Rust frontend + tool parser** | [Release page](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.27.1-win-cu130) |
-| v0.26.0-win-cu128 (previous release) | 0.26.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8; SM 7.5/8.6/8.9/12.0, Turing profile, CPU/filesystem KV offload, Rust frontend + tool parser | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.26.0-win-cu128) |
+| v0.26.0-win-cu128 (older stable) | 0.26.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8; SM 7.5/8.6/8.9/12.0, Turing profile, CPU/filesystem KV offload, Rust frontend + tool parser | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.26.0-win-cu128) |
 | v0.25.1-win-cu128 | 0.25.1 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant + upstream TurboQuant + fp8; CPU/filesystem KV offload, SM 8.6/8.9/12.0 | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.25.1-win-cu128) |
 | v0.24.0-win-cu128 | 0.24.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8 - Python 3.13, Blackwell sm_120, Rust frontend + Rust tool parser included | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.24.0-win-cu128) |
 | v0.23.0-win-cu128 | 0.23.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8 - **Python 3.13, Blackwell sm_120, Rust frontend included** | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.23.0-win-cu128) |
@@ -368,7 +368,7 @@ start. All restored runs reproduced the cold run's generated token IDs.
 Full commands, filesystem counts, and scope are in the
 [v0.27.1 build record](docs/v0.27.1-build-candidate.md).
 
-### v0.26.0 GPU validation (previous release)
+### v0.26.0 GPU validation (older release)
 
 The v0.26.0 release wheel was validated after installation from
 `E:\vllm-windows-build-v2\dist-v0.26.0` (389,473,142 bytes; SHA-256
