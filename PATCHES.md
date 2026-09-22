@@ -1,15 +1,15 @@
 # Patch Reference
 
-> **Release selection:** [Stable 0.27.1 and both 0.29.0 prereleases](docs/releases.md) ? Python/CUDA versions, matching installers, and source-build guidance.
-> The stable instructions below describe 0.27.1; use the selected prerelease?s instructions for 0.29.0.
+> **Release selection:** [Compare the Windows releases](docs/releases.md) by Python/CUDA version, matching installer, and source-build guidance.
+> The 0.27.1 instructions below apply to the default branch; use the selected variant's instructions for 0.29.0.
 
 > **Python 3.14 / CUDA 13.2 source deltas:** follow the [variant instructions](docs/v0.29.0-cu132-py314.md). The stable instructions below use a different runtime.
 
-The 0.29.0 prerelease is maintained on `prerelease/v0.29.0-win-cu130`.
+The Python 3.13 / CUDA 13.0 prerelease is maintained on `prerelease/v0.29.0-win-cu130`.
 Its `vllm-windows-v11.patch` targets upstream commit
 `98dff2a81d747d1dba01a47f939f48c3526d4206`; validation is tracked in the
 [candidate build record](docs/v0.29.0-build-candidate.md).
-Version 0.27.1 remains the stable release. The sections below document its
+Version 0.27.1 remains the default and Latest release. The sections below document its
 immutable v10 patch.
 
 Reference for `vllm-windows-v10.patch` (stable), the exact committed Windows
@@ -432,7 +432,7 @@ installs:
 | Patch file | Base vLLM | Status |
 |---|---|---|
 | `vllm-windows-v10.patch` | v0.27.1 | **stable** |
-| `vllm-windows-v11.patch` | v0.29.0 | **prerelease** |
+| `vllm-windows-v11.patch` | v0.29.0 | Python 3.13 prerelease and Python 3.14 regular release base port |
 | `vllm-windows-v9.patch` | v0.25.1 | stale; final v0.25.1 patch |
 | `vllm-windows-v8.patch` | v0.24.0 | stale; final v0.24.0 patch including the sampling/KV-copy hotfixes |
 | `vllm-windows-v7.patch` | v0.24.0 | stale; original wheel omitted generated FlashAttention Python files |

@@ -107,7 +107,7 @@ python vllm_launcher.py ^
 | `--max-num-batched-tokens` | auto (2048 with `--turing-compat`) | Tokens per forward pass |
 | `--enforce-eager` | False | Debug/compatibility option; disables compilation and CUDA graphs |
 | `--attention-backend` | (auto) | Force a backend such as `TRITON_ATTN`; useful on RTX 20xx/Turing |
-| `--linear-backend` | (auto) | 0.29.0 candidate: select a linear backend such as `marlin`; omit for automatic selection |
+| `--linear-backend` | (auto) | 0.29.0: select a linear backend such as `marlin`; omit for automatic selection |
 | `--num-scheduler-steps` | 1 | Legacy compatibility argument; values other than `1` are rejected |
 | `--kv-cache-dtype` | (auto) | KV-cache storage dtype; use `float16` on Turing when auto selection fails |
 | `--block-size` | (auto) | KV-cache block size; `16` or `32` are conservative compatibility choices |
@@ -153,11 +153,11 @@ repository ID containing `config.json` and compatible Safetensors, AWQ, or GPTQ
 weights. The launcher rejects `.gguf` paths before Transformers can misreport
 the binary file as invalid UTF-8 JSON.
 
-For the 0.29.0 candidate, the launcher also accepts `--linear-backend marlin`
+For the 0.29.0 releases, the launcher also accepts `--linear-backend marlin`
 to select Marlin explicitly. Omit this option to use automatic selection.
 The old `VLLM_TEST_FORCE_FP8_MARLIN` workaround is not used by 0.29.0.
 Legacy `--num-scheduler-steps` values other than `1` are rejected before
-model loading. See the [candidate notes](v0.29.0-release-notes.md) for status.
+model loading. See the [Python 3.13 release notes](v0.29.0-release-notes.md) for that variant's status.
 
 ### Experimental KV offload
 
