@@ -78,7 +78,7 @@ acceleration, Triton support, and Multi-TurboQuant integration.
 | v0.29.0-win-cu132-py314 (regular, Python 3.14) | 0.29.0 | 2.13.0+cu132 | 3.7.1 | Retains Windows KV features; **CPU TorchAudio**; [validation](https://github.com/aivrar/vllm-windows-build/blob/v0.29.0-win-cu132-py314/docs/v0.29.0-cu132-py314.md) | [Release page](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu132-py314) |
 | v0.29.0-win-cu130-rc1 (prerelease, Python 3.13) | 0.29.0 | 2.13.0+cu130 | 3.7.1 | Retains Windows KV features; issue #16 Marlin fallback fixes | [Release page](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu130-rc1) |
 | **v0.27.1-win-cu130 (latest)** | 0.27.1 | 2.13.0+cu130 | 3.7.1 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8; **SM 7.5/8.6/8.9/12.0, Qwen3.5, Turing profile, CPU/filesystem KV offload, optimized Rust frontend + tool parser** | [Release page](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.27.1-win-cu130) |
-| v0.26.0-win-cu128 (older stable) | 0.26.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8; SM 7.5/8.6/8.9/12.0, Turing profile, CPU/filesystem KV offload, Rust frontend + tool parser | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.26.0-win-cu128) |
+| v0.26.0-win-cu128 (older release) | 0.26.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8; SM 7.5/8.6/8.9/12.0, Turing profile, CPU/filesystem KV offload, Rust frontend + tool parser | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.26.0-win-cu128) |
 | v0.25.1-win-cu128 | 0.25.1 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant + upstream TurboQuant + fp8; CPU/filesystem KV offload, SM 8.6/8.9/12.0 | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.25.1-win-cu128) |
 | v0.24.0-win-cu128 | 0.24.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8 - Python 3.13, Blackwell sm_120, Rust frontend + Rust tool parser included | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.24.0-win-cu128) |
 | v0.23.0-win-cu128 | 0.23.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8 - **Python 3.13, Blackwell sm_120, Rust frontend included** | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.23.0-win-cu128) |
@@ -115,7 +115,7 @@ acceleration, Triton support, and Multi-TurboQuant integration.
 See the [v0.27.1 release build record](docs/v0.27.1-build-candidate.md) for
 the exact wheel hash, measured results, and scope.
 
-### What's new in v0.26.0 (previous stable)
+### What's new in v0.26.0 (older release)
 
 - **Upstream vLLM 0.26.0** with native Windows CUDA/MSVC, serving, Rust, and
   FlashAttention packaging carried forward from the previous release.
@@ -141,7 +141,7 @@ the exact wheel hash, measured results, and scope.
 See the [v0.26.0 release build record](docs/v0.26.0-build-candidate.md) for
 the wheel hash, test commands, and release scope.
 
-### What's new in v0.25.1 (previous stable)
+### What's new in v0.25.1 (older release)
 
 - **vLLM v0.25.1 base** - carries forward the native Windows CUDA/MSVC,
   serving, Rust, FlashAttention packaging, and Multi-TurboQuant work.
@@ -392,7 +392,7 @@ specific limitation, and the model is now part of the current release
 evidence. An 11-GB RTX 2080 Ti can still require lower `--max-model-len` and
 concurrency during startup; `--turing-compat` applies those limits.
 
-### v0.25.1 KV-offload validation (previous stable)
+### v0.25.1 KV-offload validation (older release)
 
 The final `0.25.1+cu128` wheel was also tested on the same RTX 3090 with
 Qwen3-14B-abliterated-AWQ-4bit. Request times below are focused eager-mode
