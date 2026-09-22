@@ -1,6 +1,6 @@
 # vllm-windows-build
 
-> **Release selection:** [Stable 0.27.1 and both 0.29.0 prereleases](docs/releases.md) ? Python/CUDA versions, matching installers, and source-build guidance.
+> **Release selection:** [the Windows releases](docs/releases.md) by Python/CUDA version, installer, and source-build guidance.
 
 > **0.29.0 prerelease branch.** This branch includes the issue #16 Marlin
 > fallback fixes. Download **Source code (zip)** from
@@ -78,7 +78,7 @@ acceleration, Triton support, and Multi-TurboQuant integration.
 
 | Release | vLLM | PyTorch | Triton | KV compression | Download |
 |---|---|---|---|---|---|
-| v0.29.0-win-cu132-py314-rc1 (prerelease, Python 3.14) | 0.29.0 | 2.13.0+cu132 | 3.7.1 | Retains Windows KV features; **CPU TorchAudio**; [validation](docs/releases.md) | [Release page](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu132-py314-rc1) |
+| v0.29.0-win-cu132-py314 (regular, Python 3.14) | 0.29.0 | 2.13.0+cu132 | 3.7.1 | Retains Windows KV features; **CPU TorchAudio**; [validation](docs/releases.md) | [Release page](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu132-py314) |
 | v0.29.0-win-cu130-rc1 (prerelease, Python 3.13) | 0.29.0 | 2.13.0+cu130 | 3.7.1 | Retains Windows KV features; issue #16 Marlin fallback fixes | [Release page](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu130-rc1) |
 | **v0.27.1-win-cu130 (latest)** | 0.27.1 | 2.13.0+cu130 | 3.7.1 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8; **SM 7.5/8.6/8.9/12.0, Qwen3.5, Turing profile, CPU/filesystem KV offload, optimized Rust frontend + tool parser** | [Release page](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.27.1-win-cu130) |
 | v0.26.0-win-cu128 (previous release) | 0.26.0 | 2.11.0+cu128 | 3.6.0 | Multi-TurboQuant (6) + upstream TurboQuant (4) + fp8; SM 7.5/8.6/8.9/12.0, Turing profile, CPU/filesystem KV offload, Rust frontend + tool parser | [Download](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.26.0-win-cu128) |

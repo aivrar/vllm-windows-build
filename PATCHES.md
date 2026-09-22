@@ -1,7 +1,7 @@
 # Patch Reference
 
-> **Release selection:** [Stable 0.27.1 and both 0.29.0 prereleases](docs/releases.md) ? Python/CUDA versions, matching installers, and source-build guidance.
-> The stable instructions below describe 0.27.1; use the selected prerelease?s instructions for 0.29.0.
+> **Release selection:** [the Windows releases](docs/releases.md) by Python/CUDA version, installer, and source-build guidance.
+> The stable instructions below describe 0.27.1; use the selected variant's instructions for 0.29.0.
 
 The 0.29.0 prerelease is maintained on `prerelease/v0.29.0-win-cu130`.
 Its `vllm-windows-v11.patch` targets upstream commit
