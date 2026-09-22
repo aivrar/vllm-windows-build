@@ -3,12 +3,14 @@
 | Channel | vLLM | Installer Python | Torch / CUDA | Release |
 |---|---|---|---|---|
 | **Stable / Latest** | 0.27.1 | 3.13.14 | 2.13.0+cu130 / 13.0 | [Stable](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.27.1-win-cu130) |
-| Prerelease | 0.29.0 | 3.13.14 | 2.13.0+cu130 / 13.0 | [Python 3.13 / cu130](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu130-rc1) |
 | Regular release (not Latest) | 0.29.0 | 3.14.2 | 2.13.0+cu132 / 13.2 | [Python 3.14 / cu132](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu132-py314) |
+| Prerelease | 0.29.0 | 3.13.14 | 2.13.0+cu130 / 13.0 | [Python 3.13 / cu130](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu130-rc1) |
 
 The two 0.29.0 builds are runtime variants of the same vLLM version. Neither
-replaces the 0.27.1 Latest release. **The cu132 variant uses CPU TorchAudio**; GPU audio
-processing and audio-model serving were not validated. vLLM inference uses CUDA.
+replaces the 0.27.1 Latest release. The Python 3.14 variant uses **CPU
+TorchAudio**; GPU audio processing and audio-model serving were not validated.
+That narrower audio scope is why 0.27.1 remains the default Latest release.
+vLLM model inference still uses CUDA.
 
 The final Python 3.14 release includes the corrected `launch.bat` in its source
 ZIP. The earlier `rc1` source ZIP does not; existing `rc1` installs can replace
