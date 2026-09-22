@@ -1,7 +1,7 @@
 # vLLM v0.27.1 Windows Quick Reference
 
-> **Release selection:** [Stable 0.27.1 and both 0.29.0 prereleases](docs/releases.md) ? Python/CUDA versions, matching installers, and source-build guidance.
-> The stable instructions below describe 0.27.1; use the selected prerelease?s instructions for 0.29.0.
+> **Release selection:** [Compare the Windows releases](docs/releases.md) by Python/CUDA version and installer.
+> The stable instructions below describe 0.27.1; use the selected variant's instructions for 0.29.0.
 
 > **v0.27.1 release:** The CUDA 13.0 SM 7.5/8.6/8.9/12.0 wheel, RTX 20xx
 > launcher profile, and GPU/cache measurements are documented in

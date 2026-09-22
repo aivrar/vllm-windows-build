@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.29.0-win-cu132-py314 - 2026-09-22
+
+[Regular release](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu132-py314) for Python 3.14.2, CUDA 13.2 and PyTorch 2.13.0+cu132. The default `master` installer and the GitHub Latest designation still point to 0.27.1.
+
+- Reuses the byte-identical wheel from the Python 3.14 release candidate. The final tagged source and installer contain the corrected Python 3.14 launcher; the candidate's source ZIP did not.
+- Retains native Windows serving, Rust, FlashAttention, ten KV formats and opt-in CPU/filesystem cache tiers. The exact wheel passed targeted RTX 3090 serving and cache checks.
+- An [RTX 5090 tester](https://github.com/aivrar/vllm-windows-build/issues/17#issuecomment-5774839645) served a Qwen3.8-27B INT4 checkpoint with FP8 KV and one-token MTP at 131,072 configured context; a 127,987-token input returned the correct hidden label. This is model-specific confirmation, not a speed benchmark.
+- TorchAudio is CPU-only in this variant; GPU audio processing and audio-model serving were not validated. Native Blackwell FP4 is not included.
+
+See the [Python 3.14 build and validation notes](https://github.com/aivrar/vllm-windows-build/blob/v0.29.0-win-cu132-py314/docs/v0.29.0-cu132-py314.md) and [release selection guide](docs/releases.md).
+
+## v0.29.0-win-cu130-rc1 - 2026-09-19
+
+[Python 3.13 / CUDA 13.0 prerelease](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu130-rc1) updates the Windows port to upstream vLLM 0.29.0 and carries the issue #16 Marlin fallback fixes. The exact wheel passed targeted RTX 3090 real-model serving, KV-format and persistent cache checks. Native Blackwell FP4 remains unavailable. See the [build record](https://github.com/aivrar/vllm-windows-build/blob/v0.29.0-win-cu130-rc1/docs/v0.29.0-build-candidate.md).
+
 ## v0.27.1-win-cu130 - 2026-08-21
 
 Release notes: [docs/v0.27.1-release-notes.md](docs/v0.27.1-release-notes.md)

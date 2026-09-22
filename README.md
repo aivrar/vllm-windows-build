@@ -22,8 +22,8 @@
 
 ## v0.27.1 Windows release
 
-The native Windows **vLLM 0.27.1 + CUDA 13.0 / Python 3.13** wheel is built
-and GPU-validated in `E:\vllm-windows-build-v2`. It includes kernels for
+The native Windows **vLLM 0.27.1 + CUDA 13.0 / Python 3.13** wheel is published
+and was GPU-validated on an RTX 3090. It includes kernels for
 RTX 20xx/Turing (SM 7.5), RTX 30xx (SM 8.6), RTX 40xx (SM 8.9), and Blackwell
 (SM 12.0), stable-libtorch CUDA/MoE modules, FlashAttention 2, the optimized
 Rust frontend/tool parser, Multi-TurboQuant, and opt-in Windows CPU/filesystem
@@ -422,6 +422,10 @@ KV-offload evidence and scope →
 
 ## Quick Start
 
+For the recommended portable install, [choose a release](docs/releases.md), download
+its **Source code (zip)**, extract it, and run `install.bat` followed by
+`launch.bat`. The manual commands below are for the default 0.27.1 release.
+
 ### Option A — Pre-built wheel (no compiler needed)
 
 Download
@@ -429,9 +433,8 @@ Download
 and `multi_turboquant-0.1.0-py3-none-any.whl` from the release page,
 then:
 
-> Download the v0.27.1 wheel from the release page above, or install the local
-> copy from
-> `E:\vllm-windows-build-v2\dist-v0.27.1`.
+> Download the v0.27.1 wheel from the release page above. To reuse a verified download,
+> place the verified wheel in `dist-v0.27.1` beside `install.bat`.
 
 | Artifact | SHA-256 |
 |---|---|
@@ -635,16 +638,19 @@ All changes are guarded by `#ifdef _MSC_VER`, `sys.platform == "win32"`,
 
 | Page | Topic |
 |---|---|
+| [docs/releases.md](docs/releases.md) | Choose a release, Python version, and matching installer |
 | [docs/install.md](docs/install.md) | Install the wheel or build from source |
 | [docs/usage.md](docs/usage.md) | Python embedding + HTTP server |
 | [docs/turboquant.md](docs/turboquant.md) | Multi-TurboQuant deep dive |
-| [docs/benchmarks.md](docs/benchmarks.md) | Real numbers, all 6 methods |
+| [docs/benchmarks.md](docs/benchmarks.md) | Historical Multi-TurboQuant benchmarks and current release checks |
 | [docs/build.md](docs/build.md) | Patch internals + iterating on builds |
 | [docs/architecture.md](docs/architecture.md) | How the integration works |
 | [docs/lmcache-inspired-windows-kv-cache.md](docs/lmcache-inspired-windows-kv-cache.md) | LMCache research, implemented native-Windows KV tiers, test evidence, and roadmap |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | Common errors + fixes |
 | [tests/README.md](tests/README.md) | End-to-end test scripts |
 | [GitHub Wiki](https://github.com/aivrar/vllm-windows-build/wiki) | Browsable installation, usage, architecture, benchmarks, and KV-offload reference |
+| [CHANGELOG.md](CHANGELOG.md) | Release history |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Issue reports and pull requests |
 
 ---
 
