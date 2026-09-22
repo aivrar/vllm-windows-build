@@ -812,8 +812,8 @@ Following the v0.25.1 implementation, later work should:
    administration before considering a broader default.
 4. Test compressed active-cache formats one at a time with exact layout and
    output checks.
-5. Revisit Qwen3.5 hybrid-cache behavior after its upstream text-only
-   registry/config path supports the local model without a private workaround.
+5. Keep Qwen3.5 hybrid-cache behavior covered as upstream registry/config APIs
+   change; the 0.27.1 model path already works in targeted tests.
 6. Benchmark and optimize the Windows DMA choices only if profiling identifies
    transfer submission overhead as material.
 
