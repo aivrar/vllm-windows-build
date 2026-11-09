@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-VLLM_SHA256 = "28C45D24E246D515D1AE87E8CA286CF7D3B1DADBD8AEC4FEB685B01B93627321"
+VLLM_SHA256 = "80D68165C53DF4F46E7EE0C27F4E5847307F788FBB909037A6295C97D6BECBEF"
 MTQ_SHA256 = "5B310E05904B588539D9A8E3374DFA6C160F025F9C2099BA5C7877C79B2FA149"
 PATCH_SHA256 = "CB0D7041F0A3B1C126C1FC89930A861296D62066590D6037EC72FF079EAF4206"
 
@@ -35,19 +35,25 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertEqual(install["MTQ_SHA256"], MTQ_SHA256)
         self.assertEqual(launch["EXPECTED_WHEEL_SHA256"], VLLM_SHA256)
         self.assertEqual(launch["EXPECTED_MTQ_SHA256"], MTQ_SHA256)
-        self.assertEqual(install["WHEEL_SIZE"], "243466236")
+        launch_script = (ROOT / "launch.bat").read_text(encoding="utf-8")
+        # A mismatched Python ABI check forces a valid install into repair on every launch.
+        self.assertIn(install["PYTHON_LIB_NAME"], launch_script)
+        self.assertIn(install["PYTHON_PTH_FILE"], launch_script)
+        self.assertNotIn("python313", launch_script)
+        self.assertEqual(install["WHEEL_SIZE"], "244879376")
         self.assertEqual(install["MTQ_SIZE"], "136429")
-        self.assertIn("v0.33.0-win-cu130", install["WHEEL_URL"])
-        self.assertIn("vllm-0.33.0-cp313-cp313-win_amd64.whl", install["WHEEL_URL"])
+        self.assertIn("v0.33.0-win-cu132-py314/", install["WHEEL_URL"])
+        self.assertIn("v0.33.0-win-cu132-py314/", install["MTQ_URL"])
+        self.assertIn("vllm-0.33.0-cp314-cp314-win_amd64.whl", install["WHEEL_URL"])
         self.assertIn("dist-v0.33.0", install["WHEEL_FILE"])
 
         verifier = (ROOT / "verify_install.py").read_text(encoding="utf-8")
-        candidate = (ROOT / "docs" / "v0.33.0-build-candidate.md").read_text(
+        candidate = (ROOT / "docs" / "v0.33.0-cu132-py314.md").read_text(
             encoding="utf-8"
         )
         self.assertIn('EXPECTED_VLLM_VERSION = "0.33.0"', verifier)
-        self.assertIn("vllm-0.33.0-cp313-cp313-win_amd64.whl", candidate)
-        self.assertIn("28c45d24e246d515d1ae87e8ca286cf7d3b1dadbd8aec4feb685b01b93627321", candidate)
+        self.assertIn("vllm-0.33.0-cp314-cp314-win_amd64.whl", candidate)
+        self.assertIn("80d68165c53df4f46e7ee0c27f4e5847307f788fbb909037a6295c97d6becbef", candidate)
 
     def test_verifier_distinguishes_wheel_and_runtime_versions(self) -> None:
         from verify_install import validate_vllm_versions

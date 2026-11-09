@@ -1,6 +1,6 @@
 # Troubleshooting
 
-> **Release selection:** [the Windows releases](releases.md) by Python/CUDA version, installer, and source-build guidance.
+> **Release selection:** [Compare the Windows releases](releases.md) by Python/CUDA version and installer.
 
 Common errors when building or running the native Windows vLLM releases.
 
