@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.33.0-win-cu132-py314 - 2026-11-08
+
+[Regular release](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.33.0-win-cu132-py314) for Python 3.14.2, CUDA 13.2 and PyTorch 2.14.0+cu132, built from the same 0.33.0 Windows port source as the Python 3.13 variant. The default `master` installer and the GitHub Latest designation still point to 0.27.1.
+
+- Same Windows port, fixes and retained features as the Python 3.13 variant below. The 0.29 top-k `FLT_MAX` patch is no longer needed; the FlashAttention Python 3.14 allowlist patch still is.
+- The exact wheel passed the same targeted RTX 3090 checks with identical FP8 and KV-format results, plus a pinned CPU-offload restore.
+- TorchAudio is CPU-only in this variant; GPU audio processing and audio-model serving were not validated. Native Blackwell FP4 is not included.
+
+See the [Python 3.14 build and validation notes](https://github.com/aivrar/vllm-windows-build/blob/v0.33.0-win-cu132-py314/docs/v0.33.0-cu132-py314.md) and [release selection guide](docs/releases.md).
+
+## v0.33.0-win-cu130 - 2026-11-08
+
+[Regular release](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.33.0-win-cu130) updating the Windows port to upstream vLLM 0.33.0 for Python 3.13, CUDA 13.0 and PyTorch 2.14.0+cu130. The default `master` installer and the GitHub Latest designation still point to 0.27.1.
+
+- Carries native Windows serving, FlashAttention, ten KV formats, the issue #16 Marlin fallback and opt-in CPU/filesystem cache tiers forward to 0.33.0. Source patch: `vllm-windows-v12.patch`.
+- Upstream removed the Rust tool-parser extension; the optimized, opt-in `vllm-rs` frontend remains.
+- Fixes a Windows error importing the sleep-mode allocator during worker shutdown (also present in 0.29.0) and keeps CPU KV-offload host memory pinned on Windows.
+- The exact wheel passed targeted RTX 3090 real-model serving, KV-format, FP8 Marlin and CPU-offload restore checks. Blackwell hardware was not tested; native Blackwell FP4 is not included.
+
+See the [build record](https://github.com/aivrar/vllm-windows-build/blob/v0.33.0-win-cu130/docs/v0.33.0-build-candidate.md) and [release selection guide](docs/releases.md).
+
 ## v0.29.0-win-cu132-py314 - 2026-09-22
 
 [Regular release](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu132-py314) for Python 3.14.2, CUDA 13.2 and PyTorch 2.13.0+cu132. The default `master` installer and the GitHub Latest designation still point to 0.27.1.
