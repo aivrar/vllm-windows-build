@@ -1,7 +1,7 @@
 # Build From Source
 
 > **Release selection:** [Compare the Windows releases](releases.md) by Python/CUDA version and source-build instructions.
-> The instructions below describe 0.27.1; use the selected variant's build record for 0.29.0.
+> The instructions below describe 0.27.1; use the selected variant's build record for 0.29.0 or 0.33.0.
 
 The current stable release build is vLLM 0.27.1. The native compile and wheel
 assembly live in `E:\vllm-windows-build-v2`; this repository contains the
