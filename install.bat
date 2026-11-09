@@ -4,8 +4,8 @@ cd /d "%~dp0"
 
 echo.
 echo  ============================================================
-echo          vLLM v0.27.1 Windows Installer
-echo     Portable Python 3.13.14 + PyTorch 2.13.0 (cu130) + vLLM 0.27.1
+echo          vLLM v0.33.0 Windows Installer
+echo     Portable Python 3.13.14 + PyTorch 2.14.0 (cu130) + vLLM 0.33.0
 echo  ============================================================
 echo.
 
@@ -28,22 +28,22 @@ set "GETPIP_SHA256=A341E1A43E38001C551A1508A73FF23636A11970B61D901D9A1CAD2A18F57
 set "GETPIP_SIZE=2226848"
 set "TORCH_INDEX=https://download.pytorch.org/whl/cu130"
 
-REM Pre-built vLLM wheel (auto-downloaded into dist-v0.27.1\ if not present locally).
+REM Pre-built vLLM wheel (auto-downloaded into dist-v0.33.0\ if not present locally).
 REM This exact release artifact is verified by size and SHA-256 before install.
-set "WHEEL_NAME=vllm-0.27.1-cp313-cp313-win_amd64.whl"
-set "WHEEL_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.27.1-win-cu130/vllm-0.27.1-cp313-cp313-win_amd64.whl"
-set "WHEEL_SHA256=7C13ED44E94694478BDD4F5FCCA23E2D66BA1E8FA9BCCAD9FDDB8651D1B2447B"
-set "WHEEL_SIZE=239025534"
-set "WHEEL_FILE=%~dp0dist-v0.27.1\%WHEEL_NAME%"
-set "WHEEL_PART=%~dp0dist-v0.27.1\%WHEEL_NAME%.part"
+set "WHEEL_NAME=vllm-0.33.0-cp313-cp313-win_amd64.whl"
+set "WHEEL_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.33.0-win-cu130/vllm-0.33.0-cp313-cp313-win_amd64.whl"
+set "WHEEL_SHA256=28C45D24E246D515D1AE87E8CA286CF7D3B1DADBD8AEC4FEB685B01B93627321"
+set "WHEEL_SIZE=243466236"
+set "WHEEL_FILE=%~dp0dist-v0.33.0\%WHEEL_NAME%"
+set "WHEEL_PART=%~dp0dist-v0.33.0\%WHEEL_NAME%.part"
 
 REM Pure-Python Multi-TurboQuant wheel built from commit e2b59ee474132999c2b42d5c96bfc48fcaf850dc.
 set "MTQ_NAME=multi_turboquant-0.1.0-py3-none-any.whl"
-set "MTQ_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.27.1-win-cu130/multi_turboquant-0.1.0-py3-none-any.whl"
+set "MTQ_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.33.0-win-cu130/multi_turboquant-0.1.0-py3-none-any.whl"
 set "MTQ_SHA256=5B310E05904B588539D9A8E3374DFA6C160F025F9C2099BA5C7877C79B2FA149"
 set "MTQ_SIZE=136429"
-set "MTQ_FILE=%~dp0dist-v0.27.1\%MTQ_NAME%"
-set "MTQ_PART=%~dp0dist-v0.27.1\%MTQ_NAME%.part"
+set "MTQ_FILE=%~dp0dist-v0.33.0\%MTQ_NAME%"
+set "MTQ_PART=%~dp0dist-v0.33.0\%MTQ_NAME%.part"
 
 set "STAGES_TOTAL=5"
 if not defined CUDA_DEVICE_ORDER set "CUDA_DEVICE_ORDER=PCI_BUS_ID"
@@ -51,8 +51,8 @@ if not defined CUDA_DEVICE_ORDER set "CUDA_DEVICE_ORDER=PCI_BUS_ID"
 echo  Components to install:
 echo    - Python %PYTHON_VERSION% (embedded distribution + headers/libs)
 echo    - pip (package manager)
-echo    - PyTorch 2.13.0+cu130 + triton-windows (CUDA GPU acceleration)
-echo    - vLLM 0.27.1 wheel (pre-built Windows binary)
+echo    - PyTorch 2.14.0+cu130 + triton-windows (CUDA GPU acceleration)
+echo    - vLLM 0.33.0 wheel (pre-built Windows binary)
 echo    - Verification
 echo.
 
@@ -248,11 +248,11 @@ echo          OK
 
 :stage3
 REM ============================================================
-REM  STAGE 3: Install PyTorch 2.13.0+cu130 + triton-windows
+REM  STAGE 3: Install PyTorch 2.14.0+cu130 + triton-windows
 REM ============================================================
-echo [3/%STAGES_TOTAL%] PyTorch 2.13.0+cu130 + triton-windows (~2.5 GB download)...
+echo [3/%STAGES_TOTAL%] PyTorch 2.14.0+cu130 + triton-windows (~2.5 GB download)...
 if exist "%~dp0python\.torch-installed" (
-    "%~dp0python\python.exe" -c "import torch, triton; assert torch.__version__.startswith('2.13.0'); assert torch.version.cuda == '13.0'; assert triton.__version__.startswith('3.7.1')" >nul 2>nul
+    "%~dp0python\python.exe" -c "import torch, triton; assert torch.__version__.startswith('2.14.0'); assert torch.version.cuda == '13.0'; assert triton.__version__.startswith('3.8.0')" >nul 2>nul
     if not errorlevel 1 (
         echo          SKIP - already installed ^(delete python\.torch-installed to force^)
         goto :stage4
@@ -260,14 +260,14 @@ if exist "%~dp0python\.torch-installed" (
     echo          Existing marker found, but torch/triton import failed - reinstalling...
     del "%~dp0python\.torch-installed" 2>nul
 )
-echo          Installing PyTorch 2.13.0 from pytorch.org...
-"%~dp0python\python.exe" -m pip install torch==2.13.0 torchaudio==2.11.0 torchvision==0.28.0 --index-url %TORCH_INDEX% --no-warn-script-location
+echo          Installing PyTorch 2.14.0 from pytorch.org...
+"%~dp0python\python.exe" -m pip install torch==2.14.0 torchaudio==2.11.0 torchvision==0.29.0 --index-url %TORCH_INDEX% --no-warn-script-location
 if errorlevel 1 (
     echo          FAILED: PyTorch installation error - check output above
     goto :fail
 )
-echo          Installing triton-windows 3.7.1...
-"%~dp0python\python.exe" -m pip install "triton-windows==3.7.1.post27" --no-warn-script-location
+echo          Installing triton-windows 3.8.0...
+"%~dp0python\python.exe" -m pip install "triton-windows==3.8.0.post29" --no-warn-script-location
 if errorlevel 1 (
     echo          FAILED: triton-windows installation error
     goto :fail
@@ -292,7 +292,7 @@ if exist "%~dp0python\.vllm-installed" (
     del "%~dp0python\.vllm-installed" 2>nul
 )
 
-REM Only accept the current v0.27.1 wheel. Older local wheels are not
+REM Only accept the current v0.33.0 wheel. Older local wheels are not
 REM compatible substitutes and the original dist-v7 artifact omitted required
 REM FlashAttention Python modules.
 if not exist "%~dp0verify_artifact.py" (
@@ -312,7 +312,7 @@ if exist "%WHEEL_FILE%" (
 REM Download to a temporary name so an interrupted request cannot look complete.
 if not exist "%WHEEL_FILE%" (
     echo          No local wheel found - downloading from GitHub Releases ^(~228 MB^)...
-    if not exist "%~dp0dist-v0.27.1" mkdir "%~dp0dist-v0.27.1"
+    if not exist "%~dp0dist-v0.33.0" mkdir "%~dp0dist-v0.33.0"
     del /F /Q "%WHEEL_PART%" 2>nul
     powershell -NoProfile -ExecutionPolicy Bypass -Command ^
         "$ErrorActionPreference = 'Stop';" ^
@@ -322,7 +322,7 @@ if not exist "%WHEEL_FILE%" (
     if errorlevel 1 (
         echo          FAILED: Could not download the vLLM wheel.
         echo          URL: %WHEEL_URL%
-        echo          Download it manually and place it in: %~dp0dist-v0.27.1\
+        echo          Download it manually and place it in: %~dp0dist-v0.33.0\
         del /F /Q "%WHEEL_PART%" 2>nul
         goto :fail
     )
@@ -336,7 +336,7 @@ if not exist "%WHEEL_FILE%" (
 
     move /Y "%WHEEL_PART%" "%WHEEL_FILE%" >nul
     if errorlevel 1 (
-        echo          FAILED: Could not move the verified wheel into dist-v0.27.1\.
+        echo          FAILED: Could not move the verified wheel into dist-v0.33.0\.
         goto :fail
     )
 )
@@ -407,7 +407,7 @@ REM The Windows patch adds AMD64 to vLLM's dependency markers. Keep an
 REM explicit install here as a repair step for environments created by older
 REM wheels or pip metadata caches.
 echo          Installing structured-output backends (llguidance, xgrammar)...
-"%~dp0python\python.exe" -m pip install "llguidance>=1.7.0,<1.8.0" "xgrammar>=0.2.0,<1.0.0" --no-warn-script-location
+"%~dp0python\python.exe" -m pip install "llguidance>=1.7.0,<1.8.0" "xgrammar==0.2.8" --no-warn-script-location
 if errorlevel 1 (
     echo          FAILED: llguidance/xgrammar installation error.
     goto :fail

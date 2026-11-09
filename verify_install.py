@@ -8,7 +8,7 @@ import importlib.metadata
 import sys
 from pathlib import Path
 
-EXPECTED_VLLM_VERSION = "0.27.1"
+EXPECTED_VLLM_VERSION = "0.33.0"
 
 REQUIRED_MODULES = (
     "llguidance",
@@ -16,7 +16,6 @@ REQUIRED_MODULES = (
     "xgrammar",
     "vllm._C_stable_libtorch",
     "vllm._moe_C_stable_libtorch",
-    "vllm._rust_tool_parser",
     "vllm.cumem_allocator",
     "vllm.fs_io_C",
     "vllm.spinloop",
@@ -67,13 +66,13 @@ def main() -> int:
 
     installed_vllm_version = importlib.metadata.version("vllm")
     validate_vllm_versions(vllm.__version__, installed_vllm_version)
-    if not torch.__version__.startswith("2.13.0") or torch.version.cuda != "13.0":
+    if not torch.__version__.startswith("2.14.0") or torch.version.cuda != "13.0":
         raise RuntimeError(
             f"PyTorch is {torch.__version__!r} with CUDA {torch.version.cuda!r}, "
-            "expected 2.13.0+cu130"
+            "expected 2.14.0+cu130"
         )
-    if not triton.__version__.startswith("3.7.1"):
-        raise RuntimeError(f"Triton version is {triton.__version__!r}, expected 3.7.1")
+    if not triton.__version__.startswith("3.8.0"):
+        raise RuntimeError(f"Triton version is {triton.__version__!r}, expected 3.8.0")
     if multi_turboquant.__version__ != "0.1.0":
         raise RuntimeError(
             f"Multi-TurboQuant version is {multi_turboquant.__version__!r}, expected '0.1.0'"
