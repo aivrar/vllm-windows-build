@@ -234,7 +234,8 @@ if errorlevel 1 (
     goto :fail
 )
 echo          Installing pip...
-"%~dp0python\python.exe" "%TEMP%\get-pip.py" -c "%~dp0constraints-cu132-py314.txt" --no-warn-script-location
+REM Install setuptools from PyPI here: the PyTorch index lacks the version vLLM requires.
+"%~dp0python\python.exe" "%TEMP%\get-pip.py" setuptools wheel -c "%~dp0constraints-cu132-py314.txt" --no-warn-script-location
 if errorlevel 1 (
     echo          FAILED: pip installation error
     goto :fail
