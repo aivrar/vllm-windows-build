@@ -23,7 +23,6 @@ REQUIRED_FLASH_ATTN_FILES = {
 REQUIRED_RELEASE_FILES = REQUIRED_FLASH_ATTN_FILES | {
     "vllm/_C_stable_libtorch.pyd",
     "vllm/_moe_C_stable_libtorch.pyd",
-    "vllm/_rust_tool_parser.pyd",
     "vllm/cumem_allocator.pyd",
     "vllm/fs_io_C.pyd",
     "vllm/spinloop.pyd",
@@ -96,6 +95,12 @@ def validate_wheel(wheel_path: Path) -> None:
         fs_io = wheel.read(FS_IO)
         assert b'O_BINARY = getattr(os, "O_BINARY", 0)' in fs_io
         assert b'if hasattr(os, "readv"):' in fs_io
+        assert b'cumem allocator is not supported on Windows' in wheel.read(
+            "vllm/device_allocator/cumem.py"
+        ), "wheel is missing the Windows cumem import guard"
+        assert b'_find_windows_cudart()' in wheel.read(
+            "vllm/distributed/device_communicators/cuda_wrapper.py"
+        ), "wheel is missing the Windows CUDA runtime lookup"
         block_table = wheel.read(BLOCK_TABLE)
         assert b"def _compute_slot_mapping_torch(" in block_table
         assert b'if not HAS_TRITON and self.device.type != "cpu":' in block_table
@@ -104,7 +109,7 @@ def validate_wheel(wheel_path: Path) -> None:
         assert len(metadata_names) == 1, f"expected one METADATA, found {metadata_names}"
         metadata = BytesParser().parsebytes(wheel.read(metadata_names[0]))
         assert metadata.get("Name", "").lower() == "vllm"
-        assert metadata.get("Version") == "0.27.1"
+        assert metadata.get("Version") == "0.33.0"
         metadata_data = wheel.read(metadata_names[0])
         assert b'platform_machine == "AMD64"' in metadata_data, (
             "wheel metadata does not install AMD64 structured-output dependencies"

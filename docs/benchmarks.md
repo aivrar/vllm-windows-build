@@ -2,10 +2,11 @@
 
 This page preserves the original v0.19.0/cu126 Multi-TurboQuant benchmark
 run. It is useful for understanding the local TQ memory/throughput tradeoff,
-but it is not a v0.27.1 performance claim. The current v0.27.1 wheel has
-measured Qwen3.5 GPTQ API, prefix-cache, CPU-LRU, filesystem-restore, and
-persistent-restart results on an RTX 3090; no broad Multi-TurboQuant sweep was
-rerun. See the [0.27.1 build record](v0.27.1-build-candidate.md) and current
+but it is not a performance claim for current releases. The current 0.33.0
+wheel has targeted RTX 3090 serving, KV-format, and CPU-restore checks in its
+[build record](v0.33.0-build-candidate.md); the 0.27.1 record has API,
+prefix-cache, CPU-LRU, filesystem-restore, and persistent-restart measurements.
+No broad Multi-TurboQuant sweep was rerun. See the current
 [install requirements](install.md).
 
 All numbers below are from the same historical hardware run with

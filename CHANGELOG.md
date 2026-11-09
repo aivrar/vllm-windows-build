@@ -2,7 +2,7 @@
 
 ## v0.33.0-win-cu132-py314 - 2026-11-08
 
-[Regular release](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.33.0-win-cu132-py314) for Python 3.14.2, CUDA 13.2 and PyTorch 2.14.0+cu132, built from the same 0.33.0 Windows port source as the Python 3.13 variant. The default `master` installer and the GitHub Latest designation still point to 0.27.1.
+[Regular release](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.33.0-win-cu132-py314) for Python 3.14.2, CUDA 13.2 and PyTorch 2.14.0+cu132, built from the same 0.33.0 Windows port source as the Python 3.13 Latest release.
 
 - Same Windows port, fixes and retained features as the Python 3.13 variant below. The 0.29 top-k `FLT_MAX` patch is no longer needed; the FlashAttention Python 3.14 allowlist patch still is.
 - The exact wheel passed the same targeted RTX 3090 checks with identical FP8 and KV-format results, plus a pinned CPU-offload restore.
@@ -12,7 +12,7 @@ See the [Python 3.14 build and validation notes](https://github.com/aivrar/vllm-
 
 ## v0.33.0-win-cu130 - 2026-11-08
 
-[Regular release](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.33.0-win-cu130) updating the Windows port to upstream vLLM 0.33.0 for Python 3.13, CUDA 13.0 and PyTorch 2.14.0+cu130. The default `master` installer and the GitHub Latest designation still point to 0.27.1.
+[Regular release](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.33.0-win-cu130) updating the Windows port to upstream vLLM 0.33.0 for Python 3.13, CUDA 13.0 and PyTorch 2.14.0+cu130. This is the Latest release and the default `master` installer.
 
 - Carries native Windows serving, FlashAttention, ten KV formats, the issue #16 Marlin fallback and opt-in CPU/filesystem cache tiers forward to 0.33.0. Source patch: `vllm-windows-v12.patch`.
 - Upstream removed the Rust tool-parser extension; the optimized, opt-in `vllm-rs` frontend remains.

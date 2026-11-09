@@ -8,6 +8,13 @@ Common errors when building or running the native Windows vLLM releases.
 
 ### Blackwell FP8/NVFP4 startup failures (v0.27.1) <a id="blackwell-fp8-nvfp4"></a>
 
+> **0.29.0 and later (including the current 0.33.0):** these releases include
+> the issue #16 FP8 Marlin fallback fixes, so the Python edit below is not
+> needed. If an FP8/NVFP4 model still fails on Blackwell, try
+> `--linear-backend marlin` in the launcher and report the full traceback.
+> Native Blackwell FP4 acceleration is still not available on Windows. The
+> rest of this section applies to the 0.27.1 wheel.
+
 **The published v0.27.1 wheel needs a workaround for the mixed FP8/NVFP4
 model in [issue #16](https://github.com/aivrar/vllm-windows-build/issues/16).**
 The reporter confirmed `unsloth/Qwen3.8-27B-NVFP4` serving on an RTX PRO 5000
@@ -150,7 +157,7 @@ the base module version `0.26.0`. The original v0.26 verifier compared those two
 different version fields directly and falsely reported installation failure.
 Pull the current repository and rerun `install.bat`; the verifier now checks
 the distribution build tag and runtime base version separately.
-The current 0.27.1 runtime and distribution both report `0.27.1`.
+The current 0.33.0 runtime and distribution both report `0.33.0`.
 
 ### A `.gguf` model fails with UTF-8 or invalid JSON errors
 
@@ -181,7 +188,7 @@ namespace rather than reusing incompatible data.
 
 ### Illegal memory access while loading offloaded KV blocks
 
-Install the current v0.27.1 release wheel. The Windows patch routes restores from
+Install the current release wheel. The Windows patch routes restores from
 file-backed mmap through native CUDA DMA; the earlier Triton host-pointer route
 could fault for some grouped block shapes. If the problem persists, verify the
 installed wheel hash and run `python verify_install.py` before collecting a
@@ -299,12 +306,11 @@ implementation.
 
 Pull the latest repository and rerun `install.bat`; it force-reinstalls the
 corrected wheel even though its version is unchanged. For a manual install,
-force-reinstall the wheel attached to the `v0.27.1-win-cu130`
-release. You can also use the locally built wheel in
-`E:\vllm-windows-build-v2\dist-v0.27.1`. Its SHA256 is:
+force-reinstall the wheel attached to the `v0.33.0-win-cu130`
+release. Its SHA256 is:
 
 ```text
-7C13ED44E94694478BDD4F5FCCA23E2D66BA1E8FA9BCCAD9FDDB8651D1B2447B
+28C45D24E246D515D1AE87E8CA286CF7D3B1DADBD8AEC4FEB685B01B93627321
 ```
 
 Verify the repaired import with:
@@ -351,7 +357,7 @@ allocation.
 problem by using `numpy.memmap` (file-backed, no commit charge) plus
 chunked GPU streaming. It's already enabled — if you're seeing this
 error you may have an older patched build. Re-apply
-`vllm-windows-v10.patch` to a clean upstream v0.27.1 tree, or install the
+`vllm-windows-v12.patch` to a clean upstream v0.33.0 tree, or install the
 published wheel.
 
 ### `torch.OutOfMemoryError: CUDA out of memory. ... X GiB is free` <a id="oom-with-free-gpu"></a>
@@ -375,14 +381,14 @@ Then lower vLLM's reservation and concurrency settings:
 
 ### `ValueError: not enough values to unpack (expected 2, got 1)` in `torch.unique`
 
-You're running a mismatched PyTorch + vLLM combo. The v0.27.1 release wheel
-in this repo expects Python 3.13 and PyTorch 2.13.0+cu130. Reinstall with
+You're running a mismatched PyTorch + vLLM combo. The v0.33.0 release wheel
+in this repo expects Python 3.13 and PyTorch 2.14.0+cu130. Reinstall with
 `install.bat`, or in a manual venv reinstall:
 
 ```bat
-pip install torch==2.13.0 torchaudio==2.11.0 torchvision==0.28.0 ^
+pip install torch==2.14.0 torchaudio==2.11.0 torchvision==0.29.0 ^
     --index-url https://download.pytorch.org/whl/cu130
-pip install --force-reinstall E:\vllm-windows-build-v2\dist-v0.27.1\vllm-0.27.1-cp313-cp313-win_amd64.whl
+pip install --force-reinstall dist-v0.33.0\vllm-0.33.0-cp313-cp313-win_amd64.whl
 ```
 
 ### `pyo3_runtime.PanicException: Python API call failed`
@@ -413,13 +419,13 @@ Then re-run `build.bat`.
 ### `cl : error C2018: unknown character 'or' / 'and' / 'not'`
 
 MSVC doesn't accept `or` / `and` / `not` as keywords by default. The
-patch fixes every known instance - make sure `vllm-windows-v10.patch`
+patch fixes every known instance - make sure `vllm-windows-v12.patch`
 applied cleanly:
 
 ```bat
 cd vllm-source
-git checkout v0.27.1
-git apply --check ..\vllm-windows-v10.patch
+git checkout v0.33.0
+git apply --check ..\vllm-windows-v12.patch
 ```
 
 If the check fails, the patch is partially applied or the source has
@@ -427,9 +433,9 @@ been modified. Reset:
 
 ```bat
 cd vllm-source
-git checkout v0.27.1
-git reset --hard v0.27.1
-git apply ..\vllm-windows-v10.patch
+git checkout v0.33.0
+git reset --hard v0.33.0
+git apply ..\vllm-windows-v12.patch
 ```
 
 ### `nvcc fatal: Unsupported gpu architecture 'compute_120'`

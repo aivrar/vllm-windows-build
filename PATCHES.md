@@ -1,10 +1,14 @@
 # Patch Reference
 
 > **Release selection:** [the Windows releases](docs/releases.md) by Python/CUDA version, installer, and source-build guidance.
-> The stable instructions below describe 0.27.1; use the selected variant's instructions for 0.29.0.
+>
+> **Current patch:** `vllm-windows-v12.patch` targets upstream vLLM v0.33.0
+> (`4ba787ec9959e566d3b587a796dff07673324da5`). Its 0.33-specific changes and
+> validation are in the [build record](docs/v0.33.0-build-candidate.md#port-changes).
 
-Reference for `vllm-windows-v10.patch` (active), the exact committed Windows
-delta against upstream vLLM 0.27.1. Older patches remain in the repository for
+The detailed reference below documents `vllm-windows-v10.patch`, the committed
+Windows delta against upstream vLLM 0.27.1; v12 carries the same areas forward
+onto 0.33.0. Older patches remain in the repository for
 legacy releases.
 
 For build internals, see [docs/build.md](docs/build.md).
@@ -422,7 +426,8 @@ installs:
 
 | Patch file | Base vLLM | Status |
 |---|---|---|
-| `vllm-windows-v10.patch` | v0.27.1 | **current** |
+| `vllm-windows-v12.patch` | v0.33.0 | **current** |
+| `vllm-windows-v10.patch` | v0.27.1 | previous; final v0.27.1 patch |
 | `vllm-windows-v9.patch` | v0.25.1 | stale; final v0.25.1 patch |
 | `vllm-windows-v8.patch` | v0.24.0 | stale; final v0.24.0 patch including the sampling/KV-copy hotfixes |
 | `vllm-windows-v7.patch` | v0.24.0 | stale; original wheel omitted generated FlashAttention Python files |

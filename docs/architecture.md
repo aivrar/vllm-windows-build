@@ -1,8 +1,8 @@
 # Architecture
 
-How the v0.27.1 Windows release hangs together and what each piece
-owns. The current patch is based on upstream v0.27.1; the native source and
-wheel are produced in `E:\vllm-windows-build-v2`.
+How the v0.33.0 Windows release hangs together and what each piece
+owns. The current patch is based on upstream v0.33.0; the native source and
+wheel are produced in a separate build workspace.
 
 ## Repository Layout
 
@@ -10,7 +10,7 @@ wheel are produced in `E:\vllm-windows-build-v2`.
 vllm-windows-build/
   README.md
   VLLM.md
-  vllm-windows-v10.patch
+  vllm-windows-v12.patch
   build.bat
   run_build.bat
   install.bat
@@ -21,15 +21,15 @@ vllm-windows-build/
   verify_install.py
   engine_dispatcher.py
   vllm_launcher.py
-  docs/v0.27.1-build-candidate.md
+  docs/v0.33.0-build-candidate.md
   docs/
   tests/
 ```
 
 ## Layer 1: Windows Compatibility Patch
 
-`vllm-windows-v10.patch` is the exact committed unified diff against upstream
-`vllm-project/vllm` tag `v0.27.1`. Older patch files are retained only for
+`vllm-windows-v12.patch` is the exact committed unified diff against upstream
+`vllm-project/vllm` tag `v0.33.0`. Older patch files are retained only for
 their matching historical releases.
 
 Main categories:
@@ -41,7 +41,8 @@ Main categories:
   selector depth.
 - Runtime Python: Windows multiprocessing, event-loop, networking,
   safetensors, and FakeProcessGroup fallbacks.
-- Rust artifacts: packaging for `vllm-rs.exe` and `_rust_tool_parser.pyd`.
+- Rust artifacts: packaging for `vllm-rs.exe` (upstream removed the
+  `_rust_tool_parser` extension in 0.33.0).
 - Multi-TurboQuant: six local KV-cache compression methods carried
   alongside the four upstream TurboQuant variants.
 - KV offload: Windows-safe DMA, shared mmap, filesystem I/O/cache paths,
@@ -49,7 +50,7 @@ Main categories:
 
 See [build.md](build.md) for the current build flow.
 
-The 0.27.1 setup path packages the locally precompiled native and optimized
+The 0.33.0 setup path packages the locally precompiled native and optimized
 Rust artifacts without downloading an upstream Linux wheel.
 `tests/test_wheel_contents.py` validates the required payloads and every ZIP
 member against wheel RECORD before release.
@@ -62,15 +63,15 @@ member against wheel RECORD before release.
 2. Adds CPython development files (`Include\Python.h` and
    `libs\python313.lib`) from the Python NuGet package for Triton's
    runtime CUDA helper compilation.
-3. Installs PyTorch 2.13.0+cu130 and `triton-windows` 3.7.1.post27.
-4. Verifies and installs the v0.27.1 wheel, the pinned Multi-TurboQuant
+3. Installs PyTorch 2.14.0+cu130 and `triton-windows` 3.8.0.post29.
+4. Verifies and installs the v0.33.0 wheel, the pinned Multi-TurboQuant
    wheel, and structured-output backends.
    Artifacts are downloaded through `.part` files and the install marker stores
    both release SHA-256 values only after the full runtime check succeeds.
 5. Verifies both `import vllm` and Triton's CUDA driver path.
 
-The vLLM module and installed distribution metadata both report `0.27.1`.
-The runtime verifier separately enforces Torch 2.13.0+cu130 and Triton 3.7.1
+The vLLM module and installed distribution metadata both report `0.33.0`.
+The runtime verifier separately enforces Torch 2.14.0+cu130 and Triton 3.8.0
 so a wrong binary stack is rejected even when the package version matches.
 
 Before Python exists, `verify_bootstrap.ps1` computes SHA-256 through .NET and

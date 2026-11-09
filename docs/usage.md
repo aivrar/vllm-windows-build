@@ -2,15 +2,15 @@
 
 > **Release selection:** [the Windows releases](releases.md) by Python/CUDA version, installer, and source-build guidance.
 
-How to actually run vLLM v0.27.1 on Windows after installing it. Three
+How to actually run vLLM v0.33.0 on Windows after installing it. Three
 modes covered: **(A)** Python embedding, **(B)** OpenAI-compatible HTTP
 server via `vllm_launcher.py`, **(C)** the raw `vllm serve` upstream
 CLI.
 
-**Using an FP8/NVFP4 model on Blackwell?** Read the
-[v0.27.1 workaround](troubleshooting.md#blackwell-fp8-nvfp4) before launching.
-The confirmed model needs a Marlin setting and a Python edit, and runs through
-the fallback without native FP4 acceleration.
+**Using an FP8/NVFP4 model on Blackwell?** 0.33.0 includes the issue #16
+FP8 Marlin fallback fixes, but native FP4 acceleration is not available and
+Blackwell hardware was not tested for 0.33.0. Read the
+[Blackwell notes](troubleshooting.md#blackwell-fp8-nvfp4) if a model fails.
 
 ---
 
@@ -107,6 +107,8 @@ python vllm_launcher.py ^
 | `--max-num-batched-tokens` | auto (2048 with `--turing-compat`) | Tokens per forward pass |
 | `--enforce-eager` | False | Debug/compatibility option; disables compilation and CUDA graphs |
 | `--attention-backend` | (auto) | Force a backend such as `TRITON_ATTN`; useful on RTX 20xx/Turing |
+| `--linear-backend` | (auto) | 0.29.0 and later: select a linear backend such as `marlin`; omit for automatic selection |
+| `--num-scheduler-steps` | 1 | Legacy compatibility argument; values other than `1` are rejected |
 | `--kv-cache-dtype` | (auto) | KV-cache storage dtype; use `float16` on Turing when auto selection fails |
 | `--block-size` | (auto) | KV-cache block size; `16` or `32` are conservative compatibility choices |
 | `--turing-compat` | False | RTX 20xx/SM 7.5 profile: `TRITON_ATTN`, float16 KV, block 32, eager mode, 0.89 GPU utilization, one sequence, and 2,048 batched tokens |
@@ -123,7 +125,7 @@ python vllm_launcher.py ^
 
 ### RTX 20xx / Turing (SM 7.5)
 
-The v0.27.1 Windows release wheel contains CUDA code for SM 7.5, but
+The Windows release wheel contains CUDA code for SM 7.5, but
 some newer attention and CUDA-graph paths are not available on Turing. If the
 integrated launcher reports an unsupported architecture, start with its
 compatibility profile:
@@ -150,6 +152,12 @@ Direct `.gguf` files are not accepted. Use a Hugging Face-format directory or
 repository ID containing `config.json` and compatible Safetensors, AWQ, or GPTQ
 weights. The launcher rejects `.gguf` paths before Transformers can misreport
 the binary file as invalid UTF-8 JSON.
+
+For the 0.29.0 and 0.33.0 releases, the launcher also accepts `--linear-backend marlin`
+to select Marlin explicitly. Omit this option to use automatic selection.
+The old `VLLM_TEST_FORCE_FP8_MARLIN` workaround is not used by 0.29.0 or later.
+Legacy `--num-scheduler-steps` values other than `1` are rejected before
+model loading. See the [0.33.0 build record](v0.33.0-build-candidate.md) for current validation scope.
 
 ### Experimental KV offload
 
@@ -257,7 +265,7 @@ Then load-balance with nginx or your own router.
 
 ## (C) Upstream `vllm serve`
 
-vLLM v0.27.1 ships an OpenAI-compatible server out of the box at
+vLLM v0.33.0 ships an OpenAI-compatible server out of the box at
 `vllm serve`. It works on Windows after the patches are applied:
 
 ```bat

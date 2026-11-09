@@ -11,7 +11,7 @@ REM ============================================================
 REM  Check Python installation
 REM ============================================================
 set "NEEDS_INSTALL=0"
-set "EXPECTED_WHEEL_SHA256=7C13ED44E94694478BDD4F5FCCA23E2D66BA1E8FA9BCCAD9FDDB8651D1B2447B"
+set "EXPECTED_WHEEL_SHA256=28C45D24E246D515D1AE87E8CA286CF7D3B1DADBD8AEC4FEB685B01B93627321"
 set "EXPECTED_MTQ_SHA256=5B310E05904B588539D9A8E3374DFA6C160F025F9C2099BA5C7877C79B2FA149"
 if not exist "%~dp0python\python.exe" set "NEEDS_INSTALL=1"
 if not exist "%~dp0python\.torch-installed" set "NEEDS_INSTALL=1"
@@ -27,7 +27,6 @@ if not exist "%~dp0python\Lib\site-packages\vllm" set "NEEDS_INSTALL=1"
 if not exist "%~dp0python\Lib\site-packages\llguidance" set "NEEDS_INSTALL=1"
 if not exist "%~dp0python\Lib\site-packages\multi_turboquant" set "NEEDS_INSTALL=1"
 if not exist "%~dp0python\Lib\site-packages\xgrammar" set "NEEDS_INSTALL=1"
-if not exist "%~dp0python\Lib\site-packages\vllm\_rust_tool_parser.pyd" set "NEEDS_INSTALL=1"
 if not exist "%~dp0python\Lib\site-packages\vllm\vllm-rs.exe" set "NEEDS_INSTALL=1"
 if not exist "%~dp0python\Lib\site-packages\vllm\model_executor\models\qwen3_5.py" set "NEEDS_INSTALL=1"
 if not exist "%~dp0python\Lib\site-packages\vllm\model_executor\models\qwen3_vl.py" set "NEEDS_INSTALL=1"

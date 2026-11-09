@@ -1,21 +1,24 @@
 # Build From Source
 
 > **Release selection:** [the Windows releases](releases.md) by Python/CUDA version, installer, and source-build guidance.
-> The stable instructions below describe 0.27.1; use the selected variant's instructions for 0.29.0.
 
-The current stable release build is vLLM 0.27.1. The native compile and wheel
-assembly live in `E:\vllm-windows-build-v2`; this repository contains the
-exact `vllm-windows-v10.patch`, installer, launcher, validation contract, and
-release documentation. The older v0.25.1 patch workflow is retained below as
-historical reference.
+The current release build is vLLM 0.33.0. Its exact environment, source commit,
+build commands, and validation are in the
+[v0.33.0 build record](v0.33.0-build-candidate.md), and the short version is in
+[install.md](install.md#build-from-source). This repository contains the exact
+`vllm-windows-v12.patch`, installer, launcher, validation contract, and release
+documentation. The previous 0.27.1 build and the older v0.25.1 patch workflow
+are retained below as historical reference.
 
-**Blackwell FP8/NVFP4:** the published v10 snapshot retains the backend-selection
-and FP8 LM-head bugs found in issue #16. Rebuilding it alone does not fix them
-or enable the omitted native SM120 kernels. The
-[documented workaround](troubleshooting.md#blackwell-fp8-nvfp4) can be applied
-to the existing v0.27.1 installation without a native rebuild.
+Apply the current patch to a clean upstream tree with:
 
-## Stable v0.27.1 build (v2 workspace)
+```bat
+git checkout v0.33.0
+git apply --check ..\vllm-windows-v12.patch
+git apply ..\vllm-windows-v12.patch
+```
+
+## Previous v0.27.1 build (v2 workspace)
 
 The v2 tree is based on upstream v0.27.1 and compiles CUDA targets
 `7.5;8.6;8.9;12.0` with Python 3.13, PyTorch 2.13.0+cu130, and CUDA 13.0.

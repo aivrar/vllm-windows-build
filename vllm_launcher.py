@@ -768,6 +768,8 @@ def main():
                         help="Disable CUDA graphs (reduces throughput; useful for compatibility/debugging)")
     parser.add_argument("--attention-backend", default=None,
                         help="Force an attention backend (for RTX 20xx/Turing, use TRITON_ATTN; default: auto)")
+    parser.add_argument("--linear-backend", default=None,
+                        help="Linear kernel backend (for example marlin; default: auto)")
     parser.add_argument("--kv-cache-dtype", default=None,
                         help="KV-cache dtype (auto, float16, bfloat16, fp8, or a supported TurboQuant dtype)")
     parser.add_argument("--block-size", type=int, default=None,
@@ -782,7 +784,7 @@ def main():
     parser.add_argument("--enable-prefix-caching", action="store_true",
                         help="Enable automatic prefix caching (reuses KV cache for shared prefixes)")
     parser.add_argument("--num-scheduler-steps", type=int, default=1,
-                        help="Multi-step scheduling — decode N tokens before CPU sync (default: 1)")
+                        help="Legacy compatibility option; only 1 is supported")
     parser.add_argument("--max-num-batched-tokens", type=int, default=None,
                         help="Max tokens per scheduler iteration (default: auto; 2048 with "
                              "--turing-compat; higher values improve prefill throughput but "
@@ -832,6 +834,12 @@ def main():
         help="Write-priority filesystem cache threads (default: 4)",
     )
     args = parser.parse_args()
+
+    if args.num_scheduler_steps != 1:
+        parser.error(
+            "--num-scheduler-steps values other than 1 are not supported by "
+            "the current vLLM engine; remove this option"
+        )
 
     # These defaults include the values confirmed by the issue #14 reporter
     # on an RTX 2080 Ti with 11 GiB. Explicit flags still win.
@@ -908,8 +916,8 @@ def main():
         llm_kwargs["max_model_len"] = args.max_model_len
     if args.enable_prefix_caching or args.kv_offload != "disabled":
         llm_kwargs["enable_prefix_caching"] = True
-    if args.num_scheduler_steps > 1:
-        llm_kwargs["num_scheduler_steps"] = args.num_scheduler_steps
+    if args.linear_backend:
+        llm_kwargs["linear_backend"] = args.linear_backend.lower().replace("-", "_")
     if args.max_num_batched_tokens:
         llm_kwargs["max_num_batched_tokens"] = args.max_num_batched_tokens
     if args.trust_remote_code:

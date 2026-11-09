@@ -1,6 +1,6 @@
 # Contributing
 
-Start with the [release selection guide](docs/releases.md). `master` installs the 0.27.1 Latest release; the maintained 0.29.0 variants use separate branches and Python/CUDA stacks. A source checkout does not download Python or build a wheel by itself.
+Start with the [release selection guide](docs/releases.md). `master` installs the Latest release (0.33.0, Python 3.13 / CUDA 13.0); the Python 3.14 build and older versions use separate release branches and Python/CUDA stacks. A source checkout does not download Python or build a wheel by itself.
 
 For a bug, use the [bug report form](https://github.com/aivrar/vllm-windows-build/issues/new/choose). Include the exact release tag, GPU and driver, Windows/Python/PyTorch versions, model and quantization when relevant, launch command, and the first error. Remove tokens, passwords, and private data from logs. For a feature or documentation request, explain the desired behavior and a concrete use case.
 
