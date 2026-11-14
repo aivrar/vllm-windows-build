@@ -1,0 +1,39 @@
+diff --git a/tools/util/include/cutlass/util/reference/host/tensor_fill.h b/tools/util/include/cutlass/util/reference/host/tensor_fill.h
+--- a/tools/util/include/cutlass/util/reference/host/tensor_fill.h
++++ b/tools/util/include/cutlass/util/reference/host/tensor_fill.h
+@@ -626,7 +626,7 @@ public:
+     // Sample from NaN distribution.
+     if constexpr (std::numeric_limits<Element>::has_quiet_NaN) {
+       if (pnan > 0 && bernoulli_dist(bernoulli_rnd)) {
+-        return Element(NAN);
++        return Element(std::numeric_limits<float>::quiet_NaN());
+       }
+     }
+ 
+@@ -712,7 +712,7 @@ public:
+     // Sample from NaN distribution.
+     if constexpr (std::numeric_limits<Element>::has_quiet_NaN) {
+       if (pnan > 0 && bernoulli_dist(bernoulli_rnd)) {
+-        return Element(NAN);
++        return Element(std::numeric_limits<float>::quiet_NaN());
+       }
+     }
+ 
+@@ -778,7 +778,7 @@ public:
+     // Sample from NaN distribution.
+     if constexpr (std::numeric_limits<Element>::has_quiet_NaN) {
+       if (pnan > 0 && bernoulli_dist(bernoulli_rnd)) {
+-        return Element(NAN);
++        return Element(std::numeric_limits<float>::quiet_NaN());
+       }
+     }
+ 
+@@ -861,7 +861,7 @@ public:
+     // Sample from NaN distribution.
+     if constexpr (std::numeric_limits<Element>::has_quiet_NaN) {
+       if (pnan > 0 && bernoulli_dist(bernoulli_rnd)) {
+-        return Element(NAN);
++        return Element(std::numeric_limits<float>::quiet_NaN());
+       }
+     }
+ 
