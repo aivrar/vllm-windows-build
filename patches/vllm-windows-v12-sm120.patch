@@ -1,0 +1,233 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 07d1af5..ac6af4e 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -16,6 +16,37 @@ project(vllm_extensions LANGUAGES CXX)
+ set(CMAKE_CXX_STANDARD 20)
+ set(CMAKE_CXX_STANDARD_REQUIRED ON)
+ set(CMAKE_CUDA_STANDARD 20)
++
++# Windows/MSVC opt-in switches for native SM120 (Blackwell) FP8/NVFP4 CUTLASS kernels (see docs/blackwell-sm120.md).
++# Both are OFF unless the environment variable is 1/ON/TRUE/YES, so default builds are unchanged.
++set(VLLM_WIN_NATIVE_SM120 OFF)
++set(VLLM_WIN_CXX17_CUTLASS OFF)
++if(WIN32)
++  if("$ENV{VLLM_WIN_NATIVE_SM120}" MATCHES "^(1|ON|TRUE|YES)$")
++    set(VLLM_WIN_NATIVE_SM120 ON)
++  endif()
++  if("$ENV{VLLM_WIN_CXX17_CUTLASS}" MATCHES "^(1|ON|TRUE|YES)$")
++    set(VLLM_WIN_CXX17_CUTLASS ON)
++  endif()
++  message(STATUS "Windows opt-ins: VLLM_WIN_NATIVE_SM120=${VLLM_WIN_NATIVE_SM120} VLLM_WIN_CXX17_CUTLASS=${VLLM_WIN_CXX17_CUTLASS}")
++endif()
++# Windows/MSVC + CUDA 13.5: CUTLASS/cute fails to compile in C++20 mode (C3545), while other vLLM sources need C++20
++# (e.g. explicit lambda template parameters). With VLLM_WIN_CXX17_CUTLASS=1 build the CUTLASS-heavy sources as C++17;
++# nvcc takes the last -std.
++if(WIN32 AND VLLM_WIN_CXX17_CUTLASS)
++  file(GLOB_RECURSE _VLLM_WIN_CXX17_SRCS
++       "${CMAKE_CURRENT_SOURCE_DIR}/csrc/quantization/w8a8/cutlass/*.cu"
++       "${CMAKE_CURRENT_SOURCE_DIR}/csrc/quantization/fp4/*.cu"
++       "${CMAKE_CURRENT_SOURCE_DIR}/csrc/quantization/cutlass_w4a8/*.cu"
++       "${CMAKE_CURRENT_SOURCE_DIR}/csrc/sparse/cutlass/*.cu"
++       "${CMAKE_CURRENT_SOURCE_DIR}/csrc/attention/mla/*.cu")
++  set_source_files_properties(${_VLLM_WIN_CXX17_SRCS} PROPERTIES COMPILE_OPTIONS "-std=c++17")
++endif()
++# Windows/MSVC cannot pass 128-byte-aligned by-value kernel parameters (C2719). The CUDA 13.x cuda.h declares
++# CUtensorMap alignas(128) (only 12.6/12.8 use alignas(64)), so allow a patched cuda.h directory to take precedence.
++if(WIN32 AND DEFINED ENV{VLLM_CUDA_SHIM_DIR})
++  set(CMAKE_CUDA_FLAGS "-I$ENV{VLLM_CUDA_SHIM_DIR} ${CMAKE_CUDA_FLAGS}")
++endif()
+ set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+ set(CMAKE_HIP_STANDARD 20)
+ set(CMAKE_HIP_STANDARD_REQUIRED ON)
+@@ -635,6 +666,38 @@ if(VLLM_GPU_LANG STREQUAL "CUDA" OR VLLM_GPU_LANG STREQUAL "HIP")
+       endif()
+     endif()
+ 
++    # Opt-in native SM120 build: CUTLASS tensor_fill.h uses the NAN macro, which nvcc does not see here.
++    if(MSVC AND VLLM_WIN_NATIVE_SM120 AND EXISTS "${CMAKE_SOURCE_DIR}/cutlass-windows-sm120.patch")
++      execute_process(
++        COMMAND git apply --check "${CMAKE_SOURCE_DIR}/cutlass-windows-sm120.patch"
++        WORKING_DIRECTORY "${cutlass_SOURCE_DIR}"
++        RESULT_VARIABLE _cutlass_sm120_patch_check
++        OUTPUT_QUIET ERROR_QUIET
++      )
++      if(_cutlass_sm120_patch_check EQUAL 0)
++        message(STATUS "Applying cutlass-windows-sm120.patch")
++        execute_process(
++          COMMAND git apply "${CMAKE_SOURCE_DIR}/cutlass-windows-sm120.patch"
++          WORKING_DIRECTORY "${cutlass_SOURCE_DIR}"
++          RESULT_VARIABLE _cutlass_sm120_patch_apply
++        )
++        if(NOT _cutlass_sm120_patch_apply EQUAL 0)
++          message(FATAL_ERROR "Failed to apply cutlass-windows-sm120.patch")
++        endif()
++      else()
++        execute_process(
++          COMMAND git apply --reverse --check "${CMAKE_SOURCE_DIR}/cutlass-windows-sm120.patch"
++          WORKING_DIRECTORY "${cutlass_SOURCE_DIR}"
++          RESULT_VARIABLE _cutlass_sm120_patch_reverse
++          OUTPUT_QUIET ERROR_QUIET
++        )
++        if(NOT _cutlass_sm120_patch_reverse EQUAL 0)
++          message(FATAL_ERROR "cutlass-windows-sm120.patch neither applies nor is already applied")
++        endif()
++        message(STATUS "cutlass-windows-sm120.patch already applied")
++      endif()
++    endif()
++
+     list(APPEND VLLM_STABLE_EXT_SRC
+       "csrc/quantization/w8a8/cutlass/scaled_mm_entry.cu"
+       "csrc/quantization/fp4/nvfp4_quant_entry.cu"
+@@ -972,7 +1035,7 @@ if(VLLM_GPU_LANG STREQUAL "CUDA" OR VLLM_GPU_LANG STREQUAL "HIP")
+   else()
+     cuda_archs_loose_intersection(SCALED_MM_ARCHS "12.0a;12.1a" "${CUDA_ARCHS}")
+   endif()
+-  if(${CMAKE_CUDA_COMPILER_VERSION} VERSION_GREATER_EQUAL 12.8 AND SCALED_MM_ARCHS AND NOT WIN32)
++  if(${CMAKE_CUDA_COMPILER_VERSION} VERSION_GREATER_EQUAL 12.8 AND SCALED_MM_ARCHS AND (NOT WIN32 OR VLLM_WIN_NATIVE_SM120))
+     set(SCALED_MM_SM120_SRCS
+       "csrc/quantization/w8a8/cutlass/scaled_mm_c3x_sm120.cu"
+       "csrc/quantization/w8a8/cutlass/c3x/scaled_mm_sm120_fp8.cu"
+@@ -1150,7 +1213,7 @@ if(VLLM_GPU_LANG STREQUAL "CUDA" OR VLLM_GPU_LANG STREQUAL "HIP")
+   else()
+     cuda_archs_loose_intersection(FP4_SM120_ARCHS "12.0a;12.1a" "${CUDA_ARCHS}")
+   endif()
+-  if(${CMAKE_CUDA_COMPILER_VERSION} VERSION_GREATER_EQUAL 12.8 AND FP4_SM120_ARCHS AND NOT WIN32)
++  if(${CMAKE_CUDA_COMPILER_VERSION} VERSION_GREATER_EQUAL 12.8 AND FP4_SM120_ARCHS AND (NOT WIN32 OR VLLM_WIN_NATIVE_SM120))
+     set(FP4_SM120_SRCS
+       "csrc/quantization/fp4/nvfp4_quant_kernels.cu"
+       "csrc/quantization/fp4/activation_nvfp4_quant_fusion_kernels.cu"
+diff --git a/cmake/external_projects/vllm_flash_attn.cmake b/cmake/external_projects/vllm_flash_attn.cmake
+index bfc24e9..549b285 100644
+--- a/cmake/external_projects/vllm_flash_attn.cmake
++++ b/cmake/external_projects/vllm_flash_attn.cmake
+@@ -57,6 +57,17 @@ install(CODE "set(CMAKE_INSTALL_PREFIX \"\${CMAKE_INSTALL_PREFIX}/vllm/\")" ALL_
+ FetchContent_MakeAvailable(vllm-flash-attn)
+ message(STATUS "vllm-flash-attn is available at ${vllm-flash-attn_SOURCE_DIR}")
+ 
++# Windows/MSVC + CUDA 13.5: the vendored CUTLASS/cute headers fail to compile in C++20 mode (C3545). With
++# VLLM_WIN_CXX17_CUTLASS=1 build the FlashAttention CUDA sources as C++17 even though the subproject pins
++# CXX_STANDARD 20.
++if(WIN32 AND VLLM_WIN_CXX17_CUTLASS)
++  foreach(_vfa_tgt _vllm_fa2_C _vllm_fa3_C)
++    if(TARGET ${_vfa_tgt})
++      set_target_properties(${_vfa_tgt} PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED ON)
++    endif()
++  endforeach()
++endif()
++
+ # MSVC only exposes the non-standard M_* math constants used by
+ # flash_api.cpp when this definition is present before its headers.
+ if(MSVC)
+diff --git a/csrc/moe/grouped_topk_kernels.cu b/csrc/moe/grouped_topk_kernels.cu
+index 2ec1590..7aa63e4 100644
+--- a/csrc/moe/grouped_topk_kernels.cu
++++ b/csrc/moe/grouped_topk_kernels.cu
+@@ -669,7 +669,7 @@ __global__ void grouped_topk_fused_small_expert_count_kernel(
+   // note that for invalid scores, we simply use a negative value:
+   // they work well even with the compacted format used in topK, and
+   // sigmoid / bias activated scores cannot be negative
+-  const float invalidScoreFloat = float{-INFINITY};
++  const float invalidScoreFloat = -cuda::std::numeric_limits<float>::infinity();
+ 
+   // load bias already; each warp represents one expert group
+   auto threadExpert = threadIdx.x;
+@@ -853,7 +853,7 @@ namespace detail {
+ 
+ static constexpr int BlockDim = 256;
+ static constexpr uint32_t FullWarpMask = 0xffffffffU;
+-static constexpr float InvalidScore = -INFINITY;
++static constexpr float InvalidScore = -cuda::std::numeric_limits<float>::infinity();
+ 
+ // TopK-only tuning: use wider workers and keep these tiers on the block path.
+ template <int MaxNumExperts, int MaxNumTopExperts>
+diff --git a/csrc/quantization/fp4/nvfp4_blockwise_moe_kernel.cu b/csrc/quantization/fp4/nvfp4_blockwise_moe_kernel.cu
+index 8e8a30e..ce76867 100644
+--- a/csrc/quantization/fp4/nvfp4_blockwise_moe_kernel.cu
++++ b/csrc/quantization/fp4/nvfp4_blockwise_moe_kernel.cu
+@@ -1,3 +1,4 @@
++#include <cmath>  // NAN for CUTLASS tensor_fill.h on MSVC
+ /*
+  * Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+  *
+diff --git a/csrc/quantization/fp4/nvfp4_experts_quant.cu b/csrc/quantization/fp4/nvfp4_experts_quant.cu
+index 55c722f..3a92140 100644
+--- a/csrc/quantization/fp4/nvfp4_experts_quant.cu
++++ b/csrc/quantization/fp4/nvfp4_experts_quant.cu
+@@ -345,9 +345,9 @@ void quant_impl(void* output, void* output_scale, void* input,
+ 
+ constexpr auto HALF = torch::headeronly::ScalarType::Half;
+ constexpr auto BF16 = torch::headeronly::ScalarType::BFloat16;
+-constexpr auto FLOAT = torch::headeronly::ScalarType::Float;
+-constexpr auto INT = torch::headeronly::ScalarType::Int;
+-constexpr auto UINT8 = torch::headeronly::ScalarType::Byte;
++constexpr auto kT_FLOAT = torch::headeronly::ScalarType::Float;
++constexpr auto kT_INT = torch::headeronly::ScalarType::Int;
++constexpr auto kT_UINT8 = torch::headeronly::ScalarType::Byte;
+ 
+ // Common validation for fp4 experts quantization entry points.
+ static void validate_fp4_experts_quant_inputs(
+@@ -373,13 +373,13 @@ static void validate_fp4_experts_quant_inputs(
+   STD_TORCH_CHECK(output_scale_offset_by_experts.dim() == 1);
+ 
+   STD_TORCH_CHECK(input.scalar_type() == HALF || input.scalar_type() == BF16);
+-  STD_TORCH_CHECK(input_global_scale.scalar_type() == FLOAT);
+-  STD_TORCH_CHECK(input_offset_by_experts.scalar_type() == INT);
+-  STD_TORCH_CHECK(output_scale_offset_by_experts.scalar_type() == INT);
++  STD_TORCH_CHECK(input_global_scale.scalar_type() == kT_FLOAT);
++  STD_TORCH_CHECK(input_offset_by_experts.scalar_type() == kT_INT);
++  STD_TORCH_CHECK(output_scale_offset_by_experts.scalar_type() == kT_INT);
+   // output is uint8 (two nvfp4 values are packed into one uint8)
+   // output_scale is int32 (four fp8 values are packed into one int32)
+-  STD_TORCH_CHECK(output.scalar_type() == UINT8);
+-  STD_TORCH_CHECK(output_scale.scalar_type() == INT);
++  STD_TORCH_CHECK(output.scalar_type() == kT_UINT8);
++  STD_TORCH_CHECK(output_scale.scalar_type() == kT_INT);
+ 
+   const int BLOCK_SIZE = 16;
+   STD_TORCH_CHECK(k % BLOCK_SIZE == 0, "k must be a multiple of 16");
+diff --git a/cutlass-windows-sm120.patch b/cutlass-windows-sm120.patch
+new file mode 100644
+index 0000000..4d3d9f2
+--- /dev/null
++++ b/cutlass-windows-sm120.patch
+@@ -0,0 +1,39 @@
++diff --git a/tools/util/include/cutlass/util/reference/host/tensor_fill.h b/tools/util/include/cutlass/util/reference/host/tensor_fill.h
++--- a/tools/util/include/cutlass/util/reference/host/tensor_fill.h
+++++ b/tools/util/include/cutlass/util/reference/host/tensor_fill.h
++@@ -626,7 +626,7 @@ public:
++     // Sample from NaN distribution.
++     if constexpr (std::numeric_limits<Element>::has_quiet_NaN) {
++       if (pnan > 0 && bernoulli_dist(bernoulli_rnd)) {
++-        return Element(NAN);
+++        return Element(std::numeric_limits<float>::quiet_NaN());
++       }
++     }
++ 
++@@ -712,7 +712,7 @@ public:
++     // Sample from NaN distribution.
++     if constexpr (std::numeric_limits<Element>::has_quiet_NaN) {
++       if (pnan > 0 && bernoulli_dist(bernoulli_rnd)) {
++-        return Element(NAN);
+++        return Element(std::numeric_limits<float>::quiet_NaN());
++       }
++     }
++ 
++@@ -778,7 +778,7 @@ public:
++     // Sample from NaN distribution.
++     if constexpr (std::numeric_limits<Element>::has_quiet_NaN) {
++       if (pnan > 0 && bernoulli_dist(bernoulli_rnd)) {
++-        return Element(NAN);
+++        return Element(std::numeric_limits<float>::quiet_NaN());
++       }
++     }
++ 
++@@ -861,7 +861,7 @@ public:
++     // Sample from NaN distribution.
++     if constexpr (std::numeric_limits<Element>::has_quiet_NaN) {
++       if (pnan > 0 && bernoulli_dist(bernoulli_rnd)) {
++-        return Element(NAN);
+++        return Element(std::numeric_limits<float>::quiet_NaN());
++       }
++     }
++ 

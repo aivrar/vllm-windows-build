@@ -36,3 +36,12 @@ jobs:
         run: |
           git clone --depth 1 --branch v0.33.0 https://github.com/vllm-project/vllm.git patch-check
           git -C patch-check apply --check ../vllm-windows-v12.patch
+      - name: Validate SM120 add-on patch on top of v12
+        shell: pwsh
+        run: |
+          git -C patch-check apply ../vllm-windows-v12.patch
+          git -C patch-check apply --check ../patches/vllm-windows-v12-sm120.patch
+          git -C patch-check apply ../patches/vllm-windows-v12-sm120.patch
+          $nested = (Get-FileHash patch-check/cutlass-windows-sm120.patch).Hash
+          $standalone = (Get-FileHash patches/cutlass-windows-sm120.patch).Hash
+          if ($nested -ne $standalone) { throw "patches/cutlass-windows-sm120.patch differs from the file installed by the SM120 patch" }

@@ -13,6 +13,9 @@ legacy releases.
 
 For build internals, see [docs/build.md](docs/build.md).
 
+**Native SM120 add-on (experimental, opt-in):** `patches/vllm-windows-v12-sm120.patch` re-enables the SM120 CUTLASS FP8/NVFP4
+kernels on top of v12 behind environment switches; see [docs/blackwell-sm120.md](docs/blackwell-sm120.md). It does not change v12 or any release.
+
 **Issue #16 follow-up:** v10 remains the source snapshot for the published
 v0.27.1 wheel. It omits native SM120 CUTLASS FP8/NVFP4 kernels but does not fix
 their runtime selection or the missing FP8 LM-head partition attributes.
