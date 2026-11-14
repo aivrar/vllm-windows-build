@@ -4,6 +4,9 @@
 > changes nothing unless you set the environment switches below. It has been run on **one GPU, an
 > RTX 5090 (SM 12.0)**, and has not been built or regression-tested for SM 7.5/8.6/8.9, with CUDA 13.0/13.1,
 > or with an accuracy evaluation. See [Validation](#validation).
+>
+> **Treat this as a template, not a verified solution.** It has been validated in a single environment (one RTX 5090,
+> CUDA 13.5, MSVC 19.44) with one live test session. It may work as-is on other setups, but it may also need changes there.
 
 `vllm-windows-v12.patch` omits the native SM120 CUTLASS FP8 scaled-mm and SM12x NVFP4 kernels because their
 generated host stubs do not compile with MSVC (see [issue #16](https://github.com/aivrar/vllm-windows-build/issues/16)).
