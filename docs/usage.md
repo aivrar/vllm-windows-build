@@ -348,9 +348,13 @@ setup; the kit ships only the 13.0 runtime), MSVC Build Tools, ninja, and
 `flashinfer-python` 0.7.2.post1 (the JIT wheel) with the Windows fixes from the
 write-up applied by hand. Kernels are compiled on your own machine on first use,
 so there is no binary to download. Once FlashInfer is installed, vLLM may select
-it automatically. vLLM's FlashInfer top-k kernel also fails to build under MSVC;
-that has a separate opt-out (`VLLM_USE_FLASHINFER_TOPK=0`), described in issue
-#20 and not yet part of the Windows patch.
+it automatically. vLLM's FlashInfer top-k kernel also fails to build under MSVC
+(CCCL's arch namespace macro), and the speculative drafters call it while they
+warm up, so the engine cannot start. The opt-out is `VLLM_USE_FLASHINFER_TOPK=0`:
+unset keeps the current behaviour, `0` forces `torch.topk`, which costs about
+0.1 ms per drafter step. It ships as the opt-in
+`patches/vllm-windows-v12-flashinfer-topk.patch`, applied after
+`vllm-windows-v12.patch`.
 
 **What it gains.** These are one person's measurements: a 27B GPTQ model with
 MTP on one RTX 3090, a 33K-token prompt and a 500-token answer, three runs each.

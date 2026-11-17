@@ -1,0 +1,53 @@
+diff --git a/vllm/envs.py b/vllm/envs.py
+index 8ac89fd..f48cd62 100644
+--- a/vllm/envs.py
++++ b/vllm/envs.py
+@@ -49,6 +49,7 @@ if TYPE_CHECKING:
+     VLLM_LOG_STATS_INTERVAL: float = 10.0
+     VLLM_TRACE_FUNCTION: int = 0
+     VLLM_USE_FLASHINFER_SAMPLER: bool = True
++    VLLM_USE_FLASHINFER_TOPK: bool = True
+     VLLM_PP_LAYER_PARTITION: str | None = None
+     VLLM_CPU_KVCACHE_SPACE: int | None = 0
+     VLLM_CPU_OMP_THREADS_BIND: str = "auto"
+@@ -899,6 +900,16 @@ environment_variables: dict[str, Callable[[], Any]] = {
+         # to False on Windows so the Triton fallback is used instead.
+         else (False if sys.platform == "win32" else True)
+     ),
++    # Whether to use FlashInfer's radix top-k for the vocab-parallel top-k in
++    # LogitsProcessor, which speculative drafters call to pick candidates.
++    # Enabled by default; 0 forces torch.topk. FlashInfer's top-k JIT does not
++    # build under MSVC, so on Windows with flashinfer installed this has to be
++    # 0, otherwise the engine fails while it warms the drafter up.
++    "VLLM_USE_FLASHINFER_TOPK": lambda: (
++        bool(int(os.environ["VLLM_USE_FLASHINFER_TOPK"]))
++        if "VLLM_USE_FLASHINFER_TOPK" in os.environ
++        else True
++    ),
+     # Pipeline stage partition strategy
+     "VLLM_PP_LAYER_PARTITION": lambda: os.getenv("VLLM_PP_LAYER_PARTITION", None),
+     # (CPU backend only) CPU key-value cache space.
+diff --git a/vllm/model_executor/layers/logits_processor.py b/vllm/model_executor/layers/logits_processor.py
+index 0454121..4523ca6 100644
+--- a/vllm/model_executor/layers/logits_processor.py
++++ b/vllm/model_executor/layers/logits_processor.py
+@@ -8,6 +8,7 @@ from functools import cache
+ import torch
+ import torch.nn.functional as F
+ 
++from vllm import envs
+ from vllm.config import get_current_vllm_config
+ from vllm.distributed import (
+     tensor_model_parallel_all_gather,
+@@ -33,6 +34,11 @@ def _flashinfer_topk() -> Callable[..., tuple[torch.Tensor, torch.Tensor]] | Non
+     The top-k spans the vocabulary, where the radix kernel is about twice
+     torch.topk.
+     """
++    if not envs.VLLM_USE_FLASHINFER_TOPK:
++        logger.info_once(
++            "VLLM_USE_FLASHINFER_TOPK=0; vocab-parallel top-k uses torch.topk."
++        )
++        return None
+     if not current_platform.is_cuda():
+         return None
+     if not has_flashinfer():
