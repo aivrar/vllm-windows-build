@@ -361,9 +361,14 @@ do not include it yet.
 [prebuilt Windows FlashInfer wheels](https://github.com/Astemiir/flashinfer-windows/releases/tag/v0.7.2.post1-win.1) (`0.7.2.post1+win.1`) with the
 MSVC fixes and a cache of 29 precompiled kernels, so installing them needs no
 CUDA toolkit or MSVC. These are his builds, not part of this project, and we
-have not verified the binaries. His stated limits:
-- **Ampere only:** A100 and RTX 3090/3090 Ti (sm_80/sm_86). Not RTX 40xx,
-  Hopper or Blackwell.
+have not verified the binaries. His stated limits (full card list on
+[his release page](https://github.com/Astemiir/flashinfer-windows/releases/tag/v0.7.2.post1-win.1)):
+- **GPUs:** the kernels are built for sm_80 and also run on sm_86 and sm_89:
+  A100/A30, RTX 30xx and 40xx, and the matching RTX workstation cards (A4000 to
+  A6000, RTX 4000 to 6000 Ada) and data-center cards (A10, A40, L4, L40, L40S).
+  They do not run on Hopper or Blackwell (H100/H200, B100/B200, RTX 50xx). On
+  smaller cards, memory is the real limit: a 27B model at a 131K window needs
+  24 GB.
 - **CUDA 13.x only:** cu130, with driver 580 or newer.
 - **A fixed kernel set:** head dims 128 and 256, bf16/fp16, fp8_e4m3 KV, and no
   sliding window or logits soft cap. Anything else falls back to compiling on
