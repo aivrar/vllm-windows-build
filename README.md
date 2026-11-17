@@ -759,10 +759,10 @@ set TQ_METHOD=isoquant3
   needs separate vLLM instances + external load balancing.
 - **No FlashInfer.** No Windows wheel. The patch defaults
   `VLLM_USE_FLASHINFER_SAMPLER=False` on `win32` so vLLM falls back to
-  the Triton sampler transparently. A community-tested, do-it-yourself
-  FlashInfer attention setup for RTX 30xx is described in
-  [docs/usage.md](docs/usage.md#flashinfer-attention-unsupported-community-tested)
-  (unsupported).
+  the Triton sampler transparently. An optional, community-tested
+  FlashInfer attention setup for RTX 30xx/40xx (third-party wheels, not
+  officially supported) is described in
+  [docs/usage.md](docs/usage.md#flashinfer-attention-optional-community-tested).
 - **No FlashAttention 3, no FlashAttention 4 (CuteDSL).** FA3 has
   MSVC-incompatible PTX macros, FA4 needs `nvidia-cutlass-dsl` (no
   Windows wheel). FlashAttention 2 works fine.

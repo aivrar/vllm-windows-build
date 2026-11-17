@@ -333,36 +333,35 @@ encode/decode (no fused Triton kernel). Throughput drops ~30-300×
 depending on the method. Memory savings are real, throughput cost is
 the trade-off until the kernels get fused. See [turboquant.md](turboquant.md#throughput-cost).
 
-## FlashInfer attention (unsupported, community-tested)
+## FlashInfer attention (optional, community-tested)
 
-The kit does not ship FlashInfer, and you don't need it: the default backends
-cover normal use. [Astemiir](https://github.com/Astemiir) got the FlashInfer attention backend running on an
-RTX 3090 with the 0.33.0 kit by porting FlashInfer's compile-on-first-use (JIT)
-path to MSVC, and measured it carefully
-([issue #20](https://github.com/aivrar/vllm-windows-build/issues/20); full write-up with every Windows blocker:
-[SystemPanic/flashinfer-windows#14](https://github.com/SystemPanic/flashinfer-windows/issues/14)). Thanks to Astemiir for the
-port, the measurements, and the corrected comparison.
+The kit does not ship FlashInfer, and the default backends cover normal use.
+There is, however, a community-tested option: on RTX 30xx it is the only way
+to use an fp8 KV cache, and it speeds up prefill. It is not officially
+supported and not part of the tested kit.
 
-**What it takes.** A separately installed CUDA toolkit (13.3 in the tested
-setup; the kit ships only the 13.0 runtime), MSVC Build Tools, ninja, and
-`flashinfer-python` 0.7.2.post1 (the JIT wheel) with the Windows fixes from the
-write-up applied by hand. Kernels are compiled on your own machine on first use
-(or see the prebuilt third-party wheels below). Once FlashInfer is installed, vLLM may select
-it automatically. vLLM's FlashInfer top-k kernel also fails to build under MSVC
-(CCCL's arch namespace macro), and the speculative drafters call it while they
-warm up, so the engine cannot start. The opt-out is `VLLM_USE_FLASHINFER_TOPK=0`:
-unset keeps the current behaviour, `0` forces `torch.topk`, which costs about
-0.1 ms per drafter step. It ships as the opt-in
-`patches/vllm-windows-v12-flashinfer-topk.patch`, applied after
-`vllm-windows-v12.patch` when building from source. The current release wheels
-do not include it yet.
+[Astemiir](https://github.com/Astemiir) ported FlashInfer's compile-on-first-use
+(JIT) path to MSVC, measured it carefully, and publishes ready-made wheels
+([issue #20](https://github.com/aivrar/vllm-windows-build/issues/20); every
+Windows blocker with its fix:
+[SystemPanic/flashinfer-windows#14](https://github.com/SystemPanic/flashinfer-windows/issues/14)).
+Thanks to Astemiir for the port, the measurements, and the corrected comparison.
 
-**Prebuilt FlashInfer wheels (third-party).** Astemiir also publishes
-[prebuilt Windows FlashInfer wheels](https://github.com/Astemiir/flashinfer-windows/releases/tag/v0.7.2.post1-win.1) (`0.7.2.post1+win.1`) with the
-MSVC fixes and a cache of 29 precompiled kernels, so installing them needs no
-CUDA toolkit or MSVC. These are his builds, not part of this project, and we
-have not verified the binaries. His stated limits (full card list on
-[his release page](https://github.com/Astemiir/flashinfer-windows/releases/tag/v0.7.2.post1-win.1)):
+**Install with his prebuilt wheels (easiest route).** Download the three wheels
+from his
+[v0.7.2.post1-win.1 release](https://github.com/Astemiir/flashinfer-windows/releases/tag/v0.7.2.post1-win.1).
+They contain the MSVC fixes and 29 precompiled kernels, so nothing compiles on
+first use and no CUDA toolkit or MSVC is needed:
+
+```bat
+python -m pip install flashinfer_python-0.7.2.post1+win.1-py3-none-any.whl ^
+                     flashinfer_jit_cache-0.7.2.post1+win.1-py3-none-any.whl ^
+                     flashinfer_jit_cache_sm80-0.7.2.post1+win.1-cp39-abi3-win_amd64.whl
+```
+
+These are his builds, not part of this project, and we have not verified the
+binaries. Once FlashInfer is installed, vLLM may select it automatically. His
+stated limits (full card list on the release page):
 - **GPUs:** the kernels are built for sm_80 and also run on sm_86 and sm_89:
   A100/A30, RTX 30xx and 40xx, and the matching RTX workstation cards (A4000 to
   A6000, RTX 4000 to 6000 Ada) and data-center cards (A10, A40, L4, L40, L40S).
@@ -374,8 +373,23 @@ have not verified the binaries. His stated limits (full card list on
   sliding window or logits soft cap. Anything else falls back to compiling on
   your machine, which needs the toolkit and MSVC again.
 
-The top-k opt-out above is still needed with these wheels when you use a
-speculative drafter.
+**Build it yourself** only if you need another FlashInfer version, head
+dimension or GPU architecture. That needs a separately installed CUDA toolkit
+(13.3 in the tested setup; the kit ships only the 13.0 runtime), MSVC Build
+Tools, ninja, and `flashinfer-python` 0.7.2.post1 with the Windows fixes. His
+recipe and scripts are in
+[docs/build-windows-msvc.md](https://github.com/Astemiir/flashinfer-windows/blob/flashinfer-windows-rel/docs/build-windows-msvc.md).
+
+**Drafters.** MTP works normally with FlashInfer. Drafters that select
+candidates through vLLM's vocab-parallel top-k (DFlash2, for example) call
+FlashInfer's top-k kernel during warm-up. That kernel does not build under
+MSVC, so the engine fails to start. The opt-out is `VLLM_USE_FLASHINFER_TOPK=0`,
+which falls back to `torch.topk` at about 0.1 ms per drafter step. It exists
+only in the opt-in `patches/vllm-windows-v12-flashinfer-topk.patch`, applied
+after `vllm-windows-v12.patch` when building from source. The current release
+wheels don't include it, so with them use MTP. On his RTX 3090, MTP was faster
+than DFlash2 anyway (78.9 vs 71.4 tok/s decode at a 32K window) and used less
+VRAM.
 
 **What it gains.** These are one person's measurements: a 27B GPTQ model with
 MTP on one RTX 3090, a 33K-token prompt and a 500-token answer, three runs each.
@@ -388,13 +402,16 @@ Run-to-run spread was about ±5%. Accuracy was not checked, only throughput.
 | `int8_per_token_head` KV + `TRITON_ATTN` | 131,072 | ~828 tok/s | ~76 tok/s |
 | `fp8_e4m3` KV + `FLASHINFER` | 131,072 | ~1,182 tok/s | ~82 tok/s |
 
-- **Backend alone** (same KV, same window): about **+18% prefill** and **no
-  decode gain**. With MTP, FlashInfer rebuilds attention metadata every step.
+- **Backend alone** (same bf16 KV, same window): about **+18% prefill** and
+  **no decode gain**. With MTP, FlashInfer rebuilds attention metadata every
+  step.
+- **At a 131K window on 24 GB** (last two rows): about **+43% prefill and +8%
+  decode**. Both the backend and the KV format change here (int8 to fp8),
+  because the stock backend has no fp8 KV on Ampere.
 - **fp8 KV on RTX 30xx needs FlashInfer.** The Triton backend refuses fp8 KV
-  below SM 8.9, so on Ampere FlashInfer is the only way to use an fp8 cache.
-  fp8 KV saves memory, which is what lets a 131K window fit in 24 GB, but it
-  does not make decode faster.
-- The default path without FlashInfer is perfectly usable. The port is an
+  below SM 8.9. fp8 KV saves memory, which is what lets a 131K window fit in
+  24 GB, but it does not make decode faster.
+- The default path without FlashInfer is perfectly usable. FlashInfer is an
   optional prefill gain and an fp8 KV option, not a requirement.
 
 ---

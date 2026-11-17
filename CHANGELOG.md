@@ -5,7 +5,7 @@
 No release wheel or installer changes.
 
 - Added an experimental, opt-in native SM120 (Blackwell) FP8/NVFP4 add-on patch on top of v12, contributed by [jfbobier](https://github.com/jfbobier) and tested on an RTX 5090 ([#19](https://github.com/aivrar/vllm-windows-build/pull/19), [docs](docs/blackwell-sm120.md)).
-- Documented the community-tested FlashInfer attention setup for RTX 30xx with measurements by [Astemiir](https://github.com/Astemiir) ([#20](https://github.com/aivrar/vllm-windows-build/issues/20), [usage notes](docs/usage.md#flashinfer-attention-unsupported-community-tested)). Unsupported and do-it-yourself.
+- Documented the community-tested FlashInfer attention setup for RTX 30xx with measurements by [Astemiir](https://github.com/Astemiir) ([#20](https://github.com/aivrar/vllm-windows-build/issues/20), [usage notes](docs/usage.md#flashinfer-attention-optional-community-tested)). Unsupported and do-it-yourself.
 - Added the opt-in `patches/vllm-windows-v12-flashinfer-topk.patch` (`VLLM_USE_FLASHINFER_TOPK=0` falls back to `torch.topk`) contributed by [Astemiir](https://github.com/Astemiir) in [#20](https://github.com/aivrar/vllm-windows-build/issues/20), so speculative drafters can start with FlashInfer installed. Linked his third-party prebuilt FlashInfer wheels for Ampere from the usage notes.
 
 ## v0.33.0-win-cu132-py314 - 2026-11-08
