@@ -333,6 +333,45 @@ encode/decode (no fused Triton kernel). Throughput drops ~30-300×
 depending on the method. Memory savings are real, throughput cost is
 the trade-off until the kernels get fused. See [turboquant.md](turboquant.md#throughput-cost).
 
+## FlashInfer attention (unsupported, community-tested)
+
+The kit does not ship FlashInfer, and you don't need it: the default backends
+cover normal use. [Astemiir](https://github.com/Astemiir) got the FlashInfer attention backend running on an
+RTX 3090 with the 0.33.0 kit by porting FlashInfer's compile-on-first-use (JIT)
+path to MSVC, and measured it carefully
+([issue #20](https://github.com/aivrar/vllm-windows-build/issues/20); full write-up with every Windows blocker:
+[SystemPanic/flashinfer-windows#14](https://github.com/SystemPanic/flashinfer-windows/issues/14)). Thanks to Astemiir for the
+port, the measurements, and the corrected comparison.
+
+**What it takes.** A separately installed CUDA toolkit (13.3 in the tested
+setup; the kit ships only the 13.0 runtime), MSVC Build Tools, ninja, and
+`flashinfer-python` 0.7.2.post1 (the JIT wheel) with the Windows fixes from the
+write-up applied by hand. Kernels are compiled on your own machine on first use,
+so there is no binary to download. Once FlashInfer is installed, vLLM may select
+it automatically. vLLM's FlashInfer top-k kernel also fails to build under MSVC;
+that has a separate opt-out (`VLLM_USE_FLASHINFER_TOPK=0`), described in issue
+#20 and not yet part of the Windows patch.
+
+**What it gains.** These are one person's measurements: a 27B GPTQ model with
+MTP on one RTX 3090, a 33K-token prompt and a 500-token answer, three runs each.
+Run-to-run spread was about ±5%. Accuracy was not checked, only throughput.
+
+| Setup | Window | Prefill | Decode |
+|---|---:|---:|---:|
+| `bfloat16` KV + `TRITON_ATTN` (kit default path) | 65,536 | ~1,038 tok/s | ~85 tok/s |
+| `bfloat16` KV + `FLASHINFER` | 65,536 | ~1,225 tok/s | ~83 tok/s |
+| `int8_per_token_head` KV + `TRITON_ATTN` | 131,072 | ~828 tok/s | ~76 tok/s |
+| `fp8_e4m3` KV + `FLASHINFER` | 131,072 | ~1,182 tok/s | ~82 tok/s |
+
+- **Backend alone** (same KV, same window): about **+18% prefill** and **no
+  decode gain**. With MTP, FlashInfer rebuilds attention metadata every step.
+- **fp8 KV on RTX 30xx needs FlashInfer.** The Triton backend refuses fp8 KV
+  below SM 8.9, so on Ampere FlashInfer is the only way to use an fp8 cache.
+  fp8 KV saves memory, which is what lets a 131K window fit in 24 GB, but it
+  does not make decode faster.
+- The default path without FlashInfer is perfectly usable. The port is an
+  optional prefill gain and an fp8 KV option, not a requirement.
+
 ---
 
 ## See also

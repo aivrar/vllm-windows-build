@@ -117,7 +117,9 @@ and remove the environment setting from your terminal or launch script.
 - The Marlin warning that the GPU does not support FP4 is misleading on
   Blackwell: the limitation here is the wheel's available kernels. A runtime
   flag cannot enable omitted native kernels; FlashInfer is not included as a
-  supported Windows replacement in this release.
+  supported Windows replacement in this release. An experimental, opt-in
+  native SM120 add-on patch is available from [#19](https://github.com/aivrar/vllm-windows-build/pull/19); see
+  [blackwell-sm120.md](blackwell-sm120.md).
 - Local RTX 3090 tests passed six synthetic FP8 Marlin cases and twelve LM-head
   cases. Full-model serving with CUDA graphs was confirmed by the Blackwell
   reporter. These checks do not establish reference-model accuracy, every

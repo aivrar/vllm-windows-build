@@ -759,7 +759,10 @@ set TQ_METHOD=isoquant3
   needs separate vLLM instances + external load balancing.
 - **No FlashInfer.** No Windows wheel. The patch defaults
   `VLLM_USE_FLASHINFER_SAMPLER=False` on `win32` so vLLM falls back to
-  the Triton sampler transparently.
+  the Triton sampler transparently. A community-tested, do-it-yourself
+  FlashInfer attention setup for RTX 30xx is described in
+  [docs/usage.md](docs/usage.md#flashinfer-attention-unsupported-community-tested)
+  (unsupported).
 - **No FlashAttention 3, no FlashAttention 4 (CuteDSL).** FA3 has
   MSVC-incompatible PTX macros, FA4 needs `nvidia-cutlass-dsl` (no
   Windows wheel). FlashAttention 2 works fine.
@@ -792,6 +795,13 @@ set TQ_METHOD=isoquant3
 | [Upstream TurboQuant](https://github.com/vllm-project/vllm/pull/38479) | TurboQuant attention backend (vLLM PR #38479) |
 | [CUTLASS](https://github.com/NVIDIA/cutlass) | GEMM kernels (CUTLASS 4.4.2 with MSVC patches) |
 | [TurboQuant paper](https://arxiv.org/abs/2501.06725) | Walsh-Hadamard quantization |
+
+### Community contributors
+
+| | |
+|---|---|
+| [jfbobier](https://github.com/jfbobier) | Native SM120 (Blackwell) FP8/NVFP4 add-on patch, tested on an RTX 5090 ([#19](https://github.com/aivrar/vllm-windows-build/pull/19)) |
+| [Astemiir](https://github.com/Astemiir) | FlashInfer attention port for RTX 30xx, measurements and write-up ([#20](https://github.com/aivrar/vllm-windows-build/issues/20)) |
 
 Built with the help of [Claude](https://claude.ai).
 
