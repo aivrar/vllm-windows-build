@@ -333,12 +333,13 @@ encode/decode (no fused Triton kernel). Throughput drops ~30-300×
 depending on the method. Memory savings are real, throughput cost is
 the trade-off until the kernels get fused. See [turboquant.md](turboquant.md#throughput-cost).
 
-## FlashInfer attention (optional, community-tested)
+## FlashInfer attention (optional, community-tested: +43% prefill at the same window)
 
 The kit does not ship FlashInfer, and the default backends cover normal use.
-There is, however, a community-tested option: on RTX 30xx it is the only way
-to use an fp8 KV cache, and it speeds up prefill. It is not officially
-supported and not part of the tested kit.
+There is, however, a community-tested option: on RTX 30xx it is the only way to
+use an fp8 KV cache, and at a 131K window it takes the working configuration
+from **828 / 76 to 1,182 / 82 tok/s**, that is **+43% prefill and +8% decode**.
+It is not officially supported and not part of the tested kit.
 
 [Astemiir](https://github.com/Astemiir) ported FlashInfer's compile-on-first-use
 (JIT) path to MSVC, measured it carefully, and publishes ready-made wheels

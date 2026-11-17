@@ -762,7 +762,7 @@ set TQ_METHOD=isoquant3
   the Triton sampler transparently. An optional, community-tested
   FlashInfer attention setup for RTX 30xx/40xx (third-party wheels, not
   officially supported) is described in
-  [docs/usage.md](docs/usage.md#flashinfer-attention-optional-community-tested).
+  [docs/usage.md](docs/usage.md#flashinfer-attention-optional-community-tested-43-prefill-at-the-same-window).
 - **No FlashAttention 3, no FlashAttention 4 (CuteDSL).** FA3 has
   MSVC-incompatible PTX macros, FA4 needs `nvidia-cutlass-dsl` (no
   Windows wheel). FlashAttention 2 works fine.
