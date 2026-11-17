@@ -46,3 +46,7 @@ jobs:
           $nested = (Get-Content -Raw patch-check/cutlass-windows-sm120.patch) -replace "`r`n", "`n"
           $standalone = (Get-Content -Raw patches/cutlass-windows-sm120.patch) -replace "`r`n", "`n"
           if ($nested -ne $standalone) { throw ("patches/cutlass-windows-sm120.patch differs from the file installed by the SM120 patch (nested {0} chars, standalone {1} chars)" -f $nested.Length, $standalone.Length) }
+      - name: Validate FlashInfer top-k add-on patch on top of v12
+        shell: pwsh
+        run: |
+          git -C patch-check apply --check ../patches/vllm-windows-v12-flashinfer-topk.patch

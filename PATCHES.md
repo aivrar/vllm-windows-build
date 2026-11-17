@@ -16,6 +16,10 @@ For build internals, see [docs/build.md](docs/build.md).
 **Native SM120 add-on (experimental, opt-in):** `patches/vllm-windows-v12-sm120.patch` re-enables the SM120 CUTLASS FP8/NVFP4
 kernels on top of v12 behind environment switches; see [docs/blackwell-sm120.md](docs/blackwell-sm120.md). It does not change v12 or any release.
 
+**FlashInfer top-k add-on (opt-in):** `patches/vllm-windows-v12-flashinfer-topk.patch` adds `VLLM_USE_FLASHINFER_TOPK`
+(unset = unchanged; `0` = `torch.topk`) for community FlashInfer setups, where the top-k JIT does not build under MSVC. Contributed in
+[#20](https://github.com/aivrar/vllm-windows-build/issues/20); see [docs/usage.md](docs/usage.md#flashinfer-attention-unsupported-community-tested).
+
 **Issue #16 follow-up:** v10 remains the source snapshot for the published
 v0.27.1 wheel. It omits native SM120 CUTLASS FP8/NVFP4 kernels but does not fix
 their runtime selection or the missing FP8 LM-head partition attributes.
