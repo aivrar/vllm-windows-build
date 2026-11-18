@@ -412,7 +412,10 @@ keep landing on the TritonAttention path with our hooks.
 ## What's NOT patched (known limitations)
 
 - **NCCL** — No Windows support upstream. No multi-GPU tensor parallelism.
-- **FlashInfer** — No Windows wheel; the sampler defaults to Triton.
+- **FlashInfer** — not bundled: upstream publishes no Windows wheel, so the sampler defaults to Triton.
+  A community-built set for `0.7.2.post1` (sm_80 SASS: Ampere and Ada, CUDA 13.0) exists and installs without
+  nvcc or MSVC — see `docs/usage.md` → "FlashInfer attention (optional, community-tested)". It does not change
+  the SM12.x FP8/NVFP4 limitation described in `docs/troubleshooting.md`.
 - **FlashAttention 3** — Has MSVC-incompatible PTX macros. FA2 works fine.
 - **FlashAttention 4 (CuteDSL)** — Needs `nvidia-cutlass-dsl`, no Windows wheel.
 - **`nvidia-cutlass-dsl`** — No Windows wheel. Used by FA4 / QuACK; FA2 path is fine.

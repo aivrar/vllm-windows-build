@@ -170,6 +170,22 @@ directory or repository ID with `config.json` and compatible Safetensors, AWQ,
 or GPTQ weights. The current launcher rejects `.gguf` paths immediately with
 this explanation.
 
+### `--kv-cache-dtype fp8_per_token_head` is rejected on SM 8.x
+
+Startup stops with:
+
+```text
+ValueError: FP8 KV cache is not supported by the Triton attention backend on NVIDIA GeForce RTX 3090
+(compute capability 8.6); native FP8 (fp8e4nv) requires SM89+.
+```
+
+`TritonAttentionImpl` rejects any dtype whose name starts with `fp8` below SM 8.9, but the
+per-token-head variant stores one byte per element and widens it to fp32 inside the unified
+attention kernel, exactly like `int8_per_token_head` — it needs no native FP8 tensor cores.
+The check is too broad; excluding `*_per_token_head` makes the mode start and produce correct
+answers (needle test passed). Measured on an RTX 3090 with Qwen3.8-27B W4A16 + MTP 3, 500-token
+answers: 1 185 / 76.8 tok/s prefill/decode at 33k fill, 965 / 51.6 at 99k.
+
 ### Filesystem KV cache is growing or is not reused after a restart
 
 The experimental `fs-lru`/`fs-arc` tier has no automatic disk quota. Point
