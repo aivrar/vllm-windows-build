@@ -412,6 +412,12 @@ Run-to-run spread was about ±5%. Accuracy was not checked, only throughput.
 - **fp8 KV on RTX 30xx needs FlashInfer.** The Triton backend refuses fp8 KV
   below SM 8.9. fp8 KV saves memory, which is what lets a 131K window fit in
   24 GB, but it does not make decode faster.
+- **With the third-party `vllm-quantpack` plugin** (Astemiir ships a patched
+  build; not part of this kit), his measurements differ. Its int8 prefill hook brings plain Triton prefill to
+  about 1,172 tok/s, close to FlashInfer's 1,182, and its int4 KV path decodes at
+  about 85 tok/s. FlashInfer's remaining advantages there are fp8 KV on RTX 30xx
+  and faster decode at very long fills (about +32% at 99K over int8). Details are
+  in his [project notes](https://github.com/Astemiir/qwen38-27b-windows-vllm).
 - The default path without FlashInfer is perfectly usable. FlashInfer is an
   optional prefill gain and an fp8 KV option, not a requirement.
 
