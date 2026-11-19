@@ -741,6 +741,26 @@ def interactive_model_select(search_paths: list[str | Path] | None = None) -> st
     return selected
 
 
+def _warmup_engine(llm, task, enabled):
+    """Run one throwaway single-token generation before serving.
+
+    With quantized per-token-head KV caches (int8, int4, fp8) and --enforce-eager, the first
+    generation after startup comes back as noise and everything after it is correct. One request
+    here moves that failure out of the user's first prompt and into startup.
+    """
+    if not enabled or task != "generate":
+        return
+    from vllm import SamplingParams
+
+    started = time.time()
+    try:
+        llm.generate(["warm-up"], SamplingParams(max_tokens=1, temperature=0.0))
+        logger.info("Warm-up request done in %.1fs (first-call defect of quantized KV dtypes absorbed)",
+                    time.time() - started)
+    except Exception as exc:      # never let the optional warm-up stop the server
+        logger.warning("Warm-up request skipped: %s", exc)
+
+
 def main():
     parser = argparse.ArgumentParser(description="vLLM Windows Server")
     parser.add_argument("--model", default=None, help="Model path or HF ID (interactive selector if omitted)")
@@ -791,6 +811,11 @@ def main():
                              "need more memory)")
     parser.add_argument("--task", default="generate", choices=["generate", "embed"],
                         help="Task type: 'generate' for text generation, 'embed' for embeddings")
+    parser.add_argument("--no-warmup", action="store_true",
+                        help="Skip the single-token warm-up request after the model loads. The warm-up "
+                             "absorbs a first-call defect of the quantized KV dtypes: with "
+                             "--enforce-eager, int8/int4/fp8 per-token-head caches return noise on the "
+                             "very first generation and are correct afterwards")
     parser.add_argument("--trust-remote-code", action="store_true",
                         help="Allow custom model code (needed for some embedding models like nomic-bert)")
     parser.add_argument("--cpu-offload-gb", type=float, default=0,
@@ -981,6 +1006,8 @@ def main():
     logger.info(f"Model loaded in {elapsed:.1f}s")
 
     model_name = os.path.basename(args.model)
+    _warmup_engine(llm, args.task, not args.no_warmup)
+
     app = create_app(llm, model_name, task=args.task)
 
     import uvicorn
