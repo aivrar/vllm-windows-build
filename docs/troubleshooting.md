@@ -184,24 +184,38 @@ engine, but the plain kit then produces unusable output on an RTX 3090: with Qwe
 `TRITON_ATTN` and eager mode, text comes out as `'Sunz $ initial … 执 moments …'`, and a 16k-token needle
 test misses.
 
-It is a first-call bug rather than a permanent one. Reproduced here on a Qwen3.5-9B in both 4-bit packs
-(AWQ and GPTQ): the **first** request after startup returns garbage and every later request is correct.
-With CUDA graphs the first request is fine, and a Qwen3.8-27B answered correctly in both modes — which is
-why our own controls missed it, they always began with a warm-up request. None of that makes the mode
-usable: a server that answers the first question with noise is worse than one that refuses to start.
+It is a first-call bug, and it is not specific to fp8 or to one model — it hits every **per-token-head**
+KV dtype:
+
+| KV dtype | backend | `--enforce-eager`, first request | same, with CUDA graphs |
+| --- | --- | --- | --- |
+| `bfloat16` | Triton | correct | correct |
+| `fp8_e4m3` | FlashInfer | correct | correct |
+| `int8_per_token_head` | Triton | noise | correct |
+| `int4_per_token_head` | Triton | noise | correct |
+| `fp8_per_token_head` | Triton | noise | correct |
+
+Reproduced on a Qwen3.8-27B and a Qwen3.5-9B, both 4-bit; every later request is correct. What the first
+request looks like matters too — on the 27B a 33k-token prompt as the first request came back correct,
+while a 29-token question returned noise, which is why our earlier controls (always opened with a warm-up
+request) saw nothing.
+
+So the practical fix is one line in the launcher: leave CUDA graphs on, or send one throwaway request after
+startup (`max_tokens=1` is enough — it returns noise itself and absorbs the fault). What is wrong is that a
+server answers its first question with noise and says nothing about it.
 
 Use one of these instead:
 
 - `--kv-cache-dtype int8_per_token_head` — the same one byte per element, supported on SM 8.x. On the
   community `vllm-quantpack` plugin's int8 prefill path a 33k fill gives 1 172 tok/s prefill and 76.0
-  decode on a 3090 with Qwen3.8-27B W4A16 + MTP 3; stock int8 gives 828 / 76.0.
+  decode on a 3090 with Qwen3.8-27B W4A16 + MTP 3; stock int8 gives 828 / 76.0. Keep CUDA graphs on, or
+  send one warm-up request, because of the first-call issue above.
 - `--kv-cache-dtype fp8_e4m3 --attention-backend FLASHINFER` with the community Windows wheels — 1 182
-  tok/s prefill and 81.8 decode at 131k with the same model.
+  tok/s prefill and 81.8 decode at 131k with the same model, and unaffected by the first-call issue in our
+  tests.
 
-For the record, the widened check did produce correct answers on a 27B in our own runs — MTP 3 and no
-speculation, CUDA graphs and eager, three controls, needle found each time. That makes it a
-shape-dependent dequant bug rather than a working mode, and a `ValueError` is a better outcome than
-garbled text, so the guard stays as it is.
+Either way, a one-line warm-up in the launcher is cheap insurance — one `max_tokens=1` request after
+startup turns this class of bug from "the user saw noise" into "startup took another 100 ms".
 
 ### Filesystem KV cache is growing or is not reused after a restart
 
