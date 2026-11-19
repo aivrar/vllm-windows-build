@@ -184,6 +184,12 @@ engine, but the plain kit then produces unusable output on an RTX 3090: with Qwe
 `TRITON_ATTN` and eager mode, text comes out as `'Sunz $ initial … 执 moments …'`, and a 16k-token needle
 test misses.
 
+It is a first-call bug rather than a permanent one. Reproduced here on a Qwen3.5-9B in both 4-bit packs
+(AWQ and GPTQ): the **first** request after startup returns garbage and every later request is correct.
+With CUDA graphs the first request is fine, and a Qwen3.8-27B answered correctly in both modes — which is
+why our own controls missed it, they always began with a warm-up request. None of that makes the mode
+usable: a server that answers the first question with noise is worse than one that refuses to start.
+
 Use one of these instead:
 
 - `--kv-cache-dtype int8_per_token_head` — the same one byte per element, supported on SM 8.x. On the
