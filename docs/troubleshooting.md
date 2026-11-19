@@ -179,12 +179,23 @@ ValueError: FP8 KV cache is not supported by the Triton attention backend on NVI
 (compute capability 8.6); native FP8 (fp8e4nv) requires SM89+.
 ```
 
-`TritonAttentionImpl` rejects any dtype whose name starts with `fp8` below SM 8.9, but the
-per-token-head variant stores one byte per element and widens it to fp32 inside the unified
-attention kernel, exactly like `int8_per_token_head` — it needs no native FP8 tensor cores.
-The check is too broad; excluding `*_per_token_head` makes the mode start and produce correct
-answers (needle test passed). Measured on an RTX 3090 with Qwen3.8-27B W4A16 + MTP 3, 500-token
-answers: 1 185 / 76.8 tok/s prefill/decode at 33k fill, 965 / 51.6 at 99k.
+The refusal is correct and we are not asking for it to be removed. Widening the check does start the
+engine, but the plain kit then produces unusable output on an RTX 3090: with Qwen3.5-9B GPTQ-4bit,
+`TRITON_ATTN` and eager mode, text comes out as `'Sunz $ initial … 执 moments …'`, and a 16k-token needle
+test misses.
+
+Use one of these instead:
+
+- `--kv-cache-dtype int8_per_token_head` — the same one byte per element, supported on SM 8.x. On the
+  community `vllm-quantpack` plugin's int8 prefill path a 33k fill gives 1 172 tok/s prefill and 76.0
+  decode on a 3090 with Qwen3.8-27B W4A16 + MTP 3; stock int8 gives 828 / 76.0.
+- `--kv-cache-dtype fp8_e4m3 --attention-backend FLASHINFER` with the community Windows wheels — 1 182
+  tok/s prefill and 81.8 decode at 131k with the same model.
+
+For the record, the widened check did produce correct answers on a 27B in our own runs — MTP 3 and no
+speculation, CUDA graphs and eager, three controls, needle found each time. That makes it a
+shape-dependent dequant bug rather than a working mode, and a `ValueError` is a better outcome than
+garbled text, so the guard stays as it is.
 
 ### Filesystem KV cache is growing or is not reused after a restart
 
