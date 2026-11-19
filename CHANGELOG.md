@@ -1,12 +1,14 @@
 # Changelog
 
-## Unreleased (master, documentation and opt-in patches)
+## Unreleased (master)
 
-No release wheel or installer changes.
+No release wheel changes. The launcher warm-up below applies to installs from `master`.
 
 - Added an experimental, opt-in native SM120 (Blackwell) FP8/NVFP4 add-on patch on top of v12, contributed by [jfbobier](https://github.com/jfbobier) and tested on an RTX 5090 ([#19](https://github.com/aivrar/vllm-windows-build/pull/19), [docs](docs/blackwell-sm120.md)).
 - Documented the community-tested FlashInfer attention setup for RTX 30xx with measurements by [Astemiir](https://github.com/Astemiir) ([#20](https://github.com/aivrar/vllm-windows-build/issues/20), [usage notes](docs/usage.md#flashinfer-attention-optional-community-tested-43-prefill-at-the-same-window)). Unsupported and do-it-yourself.
 - Added the opt-in `patches/vllm-windows-v12-flashinfer-topk.patch` (`VLLM_USE_FLASHINFER_TOPK=0` falls back to `torch.topk`) contributed by [Astemiir](https://github.com/Astemiir) in [#20](https://github.com/aivrar/vllm-windows-build/issues/20), so speculative drafters can start with FlashInfer installed. Linked his third-party prebuilt FlashInfer wheels for Ampere from the usage notes.
+- Launcher: one single-token warm-up generation after the model loads (`--no-warmup` skips it), contributed by [Astemiir](https://github.com/Astemiir) ([#22](https://github.com/aivrar/vllm-windows-build/pull/22)). With `--enforce-eager` (including `--turing-compat`), per-token-head KV caches (`int8`/`int4`/`fp8_per_token_head`) returned noise on the first request after startup; reproduced on an RTX 3090 and confirmed fixed by the warm-up.
+- Troubleshooting: documented the first-request issue and why `fp8_per_token_head` is refused on SM 8.x, and updated the FlashInfer limitation in `PATCHES.md` ([#21](https://github.com/aivrar/vllm-windows-build/pull/21), Astemiir).
 
 ## v0.33.0-win-cu132-py314 - 2026-11-08
 
