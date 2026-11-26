@@ -372,7 +372,7 @@ python -c "from vllm.vllm_flash_attn.layers.rotary import apply_rotary_emb; prin
 
 ### `ImportError: DLL load failed while importing _C: The specified module could not be found.`
 
-vLLM's compiled `_C.pyd` extension can't find its CUDA / torch DLLs.
+The core extension (named `_C_stable_libtorch.pyd` in 0.34.0) cannot find its CUDA or PyTorch DLLs.
 The fix is to add the CUDA bin and the torch lib directories to the
 Python DLL search path **before** importing vLLM:
 

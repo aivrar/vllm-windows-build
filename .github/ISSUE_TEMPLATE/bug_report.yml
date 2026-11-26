@@ -12,7 +12,7 @@ body:
     attributes:
       label: Release tag or commit
       description: Include the exact release tag, branch commit, or source build revision.
-      placeholder: v0.29.0-win-cu132-py314
+      placeholder: v0.34.0-win-cu132-py314
     validations:
       required: true
   - type: textarea

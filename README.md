@@ -532,8 +532,7 @@ import os
 os.environ["VLLM_HOST_IP"] = "127.0.0.1"
 
 # CUDA + torch DLL search paths
-os.add_dll_directory(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8\bin")
-os.add_dll_directory(r"C:\path\to\venv\Lib\site-packages\torch\lib")
+import torch  # Load the DLLs bundled with the installed CUDA-enabled PyTorch wheel.
 
 # Both uvloop and flashinfer fallbacks are baked into the wheel.
 # Multi-GPU host? Don't forget CUDA_DEVICE_ORDER + CUDA_VISIBLE_DEVICES

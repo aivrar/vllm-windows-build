@@ -1,19 +1,6 @@
-# vLLM v0.27.1 Windows Quick Reference
+# vLLM 0.34.0 Windows Quick Reference
 
-> **Release selection:** [Compare the Windows releases](docs/releases.md) by Python/CUDA version and installer.
-> The stable instructions below describe 0.27.1; use the selected variant's instructions for 0.29.0.
-
-> **v0.27.1 release:** The CUDA 13.0 SM 7.5/8.6/8.9/12.0 wheel, RTX 20xx
-> launcher profile, and GPU/cache measurements are documented in
-> [the release build record](docs/v0.27.1-build-candidate.md).
-
-A condensed page for getting a model running fast. For full documentation
-see [docs/](docs/).
-
-**Blackwell FP8/NVFP4:** the v0.27.1 wheel omits native SM120 FP8/NVFP4
-kernels. Issue #16's model serves with a Marlin setting and a manual Python
-fix; follow the [workaround](docs/troubleshooting.md#blackwell-fp8-nvfp4).
-The installer does not apply it, and it does not enable native FP4 acceleration.
+Download the source ZIP for the desired [Python/CUDA release](docs/releases.md) and extract it into a new directory. Both wheels include the FP8 Marlin fallback. [Build record and validation](docs/v0.34.0-build.md)
 
 ## One-Line Install
 
@@ -21,9 +8,9 @@ The installer does not apply it, and it does not enable native FP4 acceleration.
 install.bat
 ```
 
-This downloads embedded Python 3.13.14, installs PyTorch 2.13.0+cu130,
+This downloads embedded Python 3.13.14, installs PyTorch 2.14.0+cu130,
 triton-windows, structured-output backends, Multi-TurboQuant, and the
-v0.27.1 wheel. It is self-contained in this directory.
+v0.34.0 wheel. It is self-contained in this directory.
 
 ## One-Line Run
 
@@ -46,8 +33,7 @@ import os
 
 os.environ["VLLM_HOST_IP"] = "127.0.0.1"
 
-os.add_dll_directory(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.0\bin")
-os.add_dll_directory(r"C:\path\to\venv\Lib\site-packages\torch\lib")
+import torch  # Load the DLLs bundled with the installed CUDA-enabled PyTorch wheel.
 
 from vllm import LLM, SamplingParams
 
@@ -117,15 +103,15 @@ python\Scripts\vllm.exe serve --help
 Expected runtime and distribution versions:
 
 ```text
-0.27.1
-0.27.1
+0.34.0
+0.34.0
 ```
 
 ## Environment
 
-- vLLM 0.27.1 (SM 7.5/8.6/8.9/12.0)
-- PyTorch 2.13.0+cu130
-- Triton 3.7.1.post27 via triton-windows
+- vLLM 0.34.0 (SM 7.5/8.6/8.9/12.0)
+- PyTorch 2.14.0+cu130
+- Triton 3.8.0.post29 via triton-windows
 - Python 3.13.14
 - CUDA Toolkit 13.0 for builds
 - Windows 10/11
