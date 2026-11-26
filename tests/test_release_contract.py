@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-VLLM_SHA256 = "D50542112C9A9872664CC07870D73EE7EE1D11D8690C1213BA77D35F1141A555"
+VLLM_SHA256 = "C8C532FBC8FBD4C5AB64EC5BB143C2ECD6B77D073DC7B6F2C818B86EA6B22C3B"
 MTQ_SHA256 = "5B310E05904B588539D9A8E3374DFA6C160F025F9C2099BA5C7877C79B2FA149"
 PATCH_SHA256 = "4C4532D00FE87C187437CE61C7D9253BF91E35A53407023FF5015E1E1FC58139"
 
@@ -35,19 +35,23 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertEqual(install["MTQ_SHA256"], MTQ_SHA256)
         self.assertEqual(launch["EXPECTED_WHEEL_SHA256"], VLLM_SHA256)
         self.assertEqual(launch["EXPECTED_MTQ_SHA256"], MTQ_SHA256)
-        self.assertEqual(install["WHEEL_SIZE"], "163637104")
+        self.assertEqual(install["WHEEL_SIZE"], "164869444")
         self.assertEqual(install["MTQ_SIZE"], "136429")
-        self.assertIn("v0.34.0-win-cu130", install["WHEEL_URL"])
-        self.assertIn("vllm-0.34.0-cp313-cp313-win_amd64.whl", install["WHEEL_URL"])
+        self.assertIn("v0.34.0-win-cu132-py314", install["WHEEL_URL"])
+        self.assertIn("vllm-0.34.0-cp314-cp314-win_amd64.whl", install["WHEEL_URL"])
         self.assertIn("dist-v0.34.0", install["WHEEL_FILE"])
+
+        self.assertIn(install["PYTHON_LIB_NAME"], (ROOT / "launch.bat").read_text())
+        self.assertIn(install["PYTHON_PTH_FILE"], (ROOT / "launch.bat").read_text())
+        self.assertIn("v0.34.0-win-cu132-py314/", install["MTQ_URL"])
 
         verifier = (ROOT / "verify_install.py").read_text(encoding="utf-8")
         candidate = (ROOT / "docs" / "v0.34.0-build.md").read_text(
             encoding="utf-8"
         )
         self.assertIn('EXPECTED_VLLM_VERSION = "0.34.0"', verifier)
-        self.assertIn("vllm-0.34.0-cp313-cp313-win_amd64.whl", candidate)
-        self.assertIn("d50542112c9a9872664cc07870d73ee7ee1d11d8690c1213ba77d35f1141a555", candidate)
+        self.assertIn("vllm-0.34.0-cp314-cp314-win_amd64.whl", candidate)
+        self.assertIn("c8c532fbc8fbd4c5ab64ec5bb143c2ecd6b77d073dc7b6f2c818b86ea6b22c3b", candidate)
 
     def test_verifier_distinguishes_wheel_and_runtime_versions(self) -> None:
         from verify_install import validate_vllm_versions

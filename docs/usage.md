@@ -24,8 +24,7 @@ import os
 os.environ["VLLM_HOST_IP"] = "127.0.0.1"
 
 # Make sure CUDA + torch DLLs are findable
-os.add_dll_directory(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.0\bin")
-os.add_dll_directory(r"C:\path\to\venv\Lib\site-packages\torch\lib")
+import torch  # Load the DLLs bundled with the installed CUDA-enabled PyTorch wheel.
 
 from vllm import LLM, SamplingParams
 
