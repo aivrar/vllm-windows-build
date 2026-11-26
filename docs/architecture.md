@@ -1,7 +1,7 @@
 # Architecture
 
-How the v0.33.0 Windows release hangs together and what each piece
-owns. The current patch is based on upstream v0.33.0; the native source and
+How the v0.34.0 Windows release hangs together and what each piece
+owns. The current patch is based on upstream v0.34.0; the native source and
 wheel are produced in a separate build workspace.
 
 ## Repository Layout
@@ -10,7 +10,7 @@ wheel are produced in a separate build workspace.
 vllm-windows-build/
   README.md
   VLLM.md
-  vllm-windows-v12.patch
+  vllm-windows-v14.patch
   build.bat
   run_build.bat
   install.bat
@@ -21,15 +21,15 @@ vllm-windows-build/
   verify_install.py
   engine_dispatcher.py
   vllm_launcher.py
-  docs/v0.33.0-build-candidate.md
+  docs/v0.34.0-build.md
   docs/
   tests/
 ```
 
 ## Layer 1: Windows Compatibility Patch
 
-`vllm-windows-v12.patch` is the exact committed unified diff against upstream
-`vllm-project/vllm` tag `v0.33.0`. Older patch files are retained only for
+`vllm-windows-v14.patch` is the exact committed unified diff against upstream
+`vllm-project/vllm` tag `v0.34.0`. Older patch files are retained only for
 their matching historical releases.
 
 Main categories:
@@ -50,7 +50,7 @@ Main categories:
 
 See [build.md](build.md) for the current build flow.
 
-The 0.33.0 setup path packages the locally precompiled native and optimized
+The 0.34.0 setup path packages the locally precompiled native and optimized
 Rust artifacts without downloading an upstream Linux wheel.
 `tests/test_wheel_contents.py` validates the required payloads and every ZIP
 member against wheel RECORD before release.
@@ -64,13 +64,13 @@ member against wheel RECORD before release.
    `libs\python313.lib`) from the Python NuGet package for Triton's
    runtime CUDA helper compilation.
 3. Installs PyTorch 2.14.0+cu130 and `triton-windows` 3.8.0.post29.
-4. Verifies and installs the v0.33.0 wheel, the pinned Multi-TurboQuant
+4. Verifies and installs the v0.34.0 wheel, the pinned Multi-TurboQuant
    wheel, and structured-output backends.
    Artifacts are downloaded through `.part` files and the install marker stores
    both release SHA-256 values only after the full runtime check succeeds.
 5. Verifies both `import vllm` and Triton's CUDA driver path.
 
-The vLLM module and installed distribution metadata both report `0.33.0`.
+The vLLM module and installed distribution metadata both report `0.34.0`.
 The runtime verifier separately enforces Torch 2.14.0+cu130 and Triton 3.8.0
 so a wrong binary stack is rejected even when the package version matches.
 

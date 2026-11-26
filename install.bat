@@ -4,8 +4,8 @@ cd /d "%~dp0"
 
 echo.
 echo  ============================================================
-echo          vLLM v0.33.0 Windows Installer
-echo     Portable Python 3.13.14 + PyTorch 2.14.0 (cu130) + vLLM 0.33.0
+echo          vLLM v0.34.0 Windows Installer
+echo     Portable Python 3.13.14 + PyTorch 2.14.0 (cu130) + vLLM 0.34.0
 echo  ============================================================
 echo.
 
@@ -28,22 +28,22 @@ set "GETPIP_SHA256=A341E1A43E38001C551A1508A73FF23636A11970B61D901D9A1CAD2A18F57
 set "GETPIP_SIZE=2226848"
 set "TORCH_INDEX=https://download.pytorch.org/whl/cu130"
 
-REM Pre-built vLLM wheel (auto-downloaded into dist-v0.33.0\ if not present locally).
+REM Pre-built vLLM wheel (auto-downloaded into dist-v0.34.0\ if not present locally).
 REM This exact release artifact is verified by size and SHA-256 before install.
-set "WHEEL_NAME=vllm-0.33.0-cp313-cp313-win_amd64.whl"
-set "WHEEL_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.33.0-win-cu130/vllm-0.33.0-cp313-cp313-win_amd64.whl"
-set "WHEEL_SHA256=28C45D24E246D515D1AE87E8CA286CF7D3B1DADBD8AEC4FEB685B01B93627321"
-set "WHEEL_SIZE=243466236"
-set "WHEEL_FILE=%~dp0dist-v0.33.0\%WHEEL_NAME%"
-set "WHEEL_PART=%~dp0dist-v0.33.0\%WHEEL_NAME%.part"
+set "WHEEL_NAME=vllm-0.34.0-cp313-cp313-win_amd64.whl"
+set "WHEEL_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.34.0-win-cu130/vllm-0.34.0-cp313-cp313-win_amd64.whl"
+set "WHEEL_SHA256=D50542112C9A9872664CC07870D73EE7EE1D11D8690C1213BA77D35F1141A555"
+set "WHEEL_SIZE=163637104"
+set "WHEEL_FILE=%~dp0dist-v0.34.0\%WHEEL_NAME%"
+set "WHEEL_PART=%~dp0dist-v0.34.0\%WHEEL_NAME%.part"
 
 REM Pure-Python Multi-TurboQuant wheel built from commit e2b59ee474132999c2b42d5c96bfc48fcaf850dc.
 set "MTQ_NAME=multi_turboquant-0.1.0-py3-none-any.whl"
-set "MTQ_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.33.0-win-cu130/multi_turboquant-0.1.0-py3-none-any.whl"
+set "MTQ_URL=https://github.com/aivrar/vllm-windows-build/releases/download/v0.34.0-win-cu130/multi_turboquant-0.1.0-py3-none-any.whl"
 set "MTQ_SHA256=5B310E05904B588539D9A8E3374DFA6C160F025F9C2099BA5C7877C79B2FA149"
 set "MTQ_SIZE=136429"
-set "MTQ_FILE=%~dp0dist-v0.33.0\%MTQ_NAME%"
-set "MTQ_PART=%~dp0dist-v0.33.0\%MTQ_NAME%.part"
+set "MTQ_FILE=%~dp0dist-v0.34.0\%MTQ_NAME%"
+set "MTQ_PART=%~dp0dist-v0.34.0\%MTQ_NAME%.part"
 
 set "STAGES_TOTAL=5"
 if not defined CUDA_DEVICE_ORDER set "CUDA_DEVICE_ORDER=PCI_BUS_ID"
@@ -52,7 +52,7 @@ echo  Components to install:
 echo    - Python %PYTHON_VERSION% (embedded distribution + headers/libs)
 echo    - pip (package manager)
 echo    - PyTorch 2.14.0+cu130 + triton-windows (CUDA GPU acceleration)
-echo    - vLLM 0.33.0 wheel (pre-built Windows binary)
+echo    - vLLM 0.34.0 wheel (pre-built Windows binary)
 echo    - Verification
 echo.
 
@@ -292,7 +292,7 @@ if exist "%~dp0python\.vllm-installed" (
     del "%~dp0python\.vllm-installed" 2>nul
 )
 
-REM Only accept the current v0.33.0 wheel. Older local wheels are not
+REM Only accept the current v0.34.0 wheel. Older local wheels are not
 REM compatible substitutes and the original dist-v7 artifact omitted required
 REM FlashAttention Python modules.
 if not exist "%~dp0verify_artifact.py" (
@@ -312,7 +312,7 @@ if exist "%WHEEL_FILE%" (
 REM Download to a temporary name so an interrupted request cannot look complete.
 if not exist "%WHEEL_FILE%" (
     echo          No local wheel found - downloading from GitHub Releases ^(~228 MB^)...
-    if not exist "%~dp0dist-v0.33.0" mkdir "%~dp0dist-v0.33.0"
+    if not exist "%~dp0dist-v0.34.0" mkdir "%~dp0dist-v0.34.0"
     del /F /Q "%WHEEL_PART%" 2>nul
     powershell -NoProfile -ExecutionPolicy Bypass -Command ^
         "$ErrorActionPreference = 'Stop';" ^
@@ -322,7 +322,7 @@ if not exist "%WHEEL_FILE%" (
     if errorlevel 1 (
         echo          FAILED: Could not download the vLLM wheel.
         echo          URL: %WHEEL_URL%
-        echo          Download it manually and place it in: %~dp0dist-v0.33.0\
+        echo          Download it manually and place it in: %~dp0dist-v0.34.0\
         del /F /Q "%WHEEL_PART%" 2>nul
         goto :fail
     )
@@ -336,7 +336,7 @@ if not exist "%WHEEL_FILE%" (
 
     move /Y "%WHEEL_PART%" "%WHEEL_FILE%" >nul
     if errorlevel 1 (
-        echo          FAILED: Could not move the verified wheel into dist-v0.33.0\.
+        echo          FAILED: Could not move the verified wheel into dist-v0.34.0\.
         goto :fail
     )
 )

@@ -2,14 +2,14 @@
 
 > **Release selection:** [the Windows releases](releases.md) by Python/CUDA version, installer, and source-build guidance.
 
-How to actually run vLLM v0.33.0 on Windows after installing it. Three
+How to actually run vLLM v0.34.0 on Windows after installing it. Three
 modes covered: **(A)** Python embedding, **(B)** OpenAI-compatible HTTP
 server via `vllm_launcher.py`, **(C)** the raw `vllm serve` upstream
 CLI.
 
-**Using an FP8/NVFP4 model on Blackwell?** 0.33.0 includes the issue #16
+**Using an FP8/NVFP4 model on Blackwell?** 0.34.0 includes the issue #16
 FP8 Marlin fallback fixes, but native FP4 acceleration is not available and
-Blackwell hardware was not tested for 0.33.0. Read the
+Blackwell hardware was not tested for 0.34.0. Read the
 [Blackwell notes](troubleshooting.md#blackwell-fp8-nvfp4) if a model fails.
 
 ---
@@ -153,11 +153,11 @@ repository ID containing `config.json` and compatible Safetensors, AWQ, or GPTQ
 weights. The launcher rejects `.gguf` paths before Transformers can misreport
 the binary file as invalid UTF-8 JSON.
 
-For the 0.29.0 and 0.33.0 releases, the launcher also accepts `--linear-backend marlin`
+From 0.29.0 onward, the launcher also accepts `--linear-backend marlin`
 to select Marlin explicitly. Omit this option to use automatic selection.
 The old `VLLM_TEST_FORCE_FP8_MARLIN` workaround is not used by 0.29.0 or later.
 Legacy `--num-scheduler-steps` values other than `1` are rejected before
-model loading. See the [0.33.0 build record](v0.33.0-build-candidate.md) for current validation scope.
+model loading. See the [0.34.0 build record](v0.34.0-build.md) for current validation scope.
 
 ### Experimental KV offload
 
@@ -265,7 +265,7 @@ Then load-balance with nginx or your own router.
 
 ## (C) Upstream `vllm serve`
 
-vLLM v0.33.0 ships an OpenAI-compatible server out of the box at
+vLLM v0.34.0 ships an OpenAI-compatible server out of the box at
 `vllm serve`. It works on Windows after the patches are applied:
 
 ```bat
@@ -385,10 +385,9 @@ recipe and scripts are in
 candidates through vLLM's vocab-parallel top-k (DFlash2, for example) call
 FlashInfer's top-k kernel during warm-up. That kernel does not build under
 MSVC, so the engine fails to start. The opt-out is `VLLM_USE_FLASHINFER_TOPK=0`,
-which falls back to `torch.topk` at about 0.1 ms per drafter step. It exists
-only in the opt-in `patches/vllm-windows-v12-flashinfer-topk.patch`, applied
-after `vllm-windows-v12.patch` when building from source. The current release
-wheels don't include it, so with them use MTP. On his RTX 3090, MTP was faster
+which falls back to `torch.topk` at about 0.1 ms per drafter step. Both 0.34.0 wheels include the opt-out. For 0.33.0 source builds, apply the v12 FlashInfer top-k add-on.
+
+On his RTX 3090, MTP was faster
 than DFlash2 anyway (78.9 vs 71.4 tok/s decode at a 32K window) and used less
 VRAM.
 

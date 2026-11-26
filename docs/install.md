@@ -1,7 +1,7 @@
-# Install vLLM v0.33.0 on Windows
+# Install vLLM v0.34.0 on Windows
 
 > **Release selection:** [the Windows releases](releases.md) by Python/CUDA version, installer, and source-build guidance.
-> These instructions describe the Latest release, 0.33.0 for Python 3.13 / CUDA 13.0. For the
+> These instructions describe the Latest release, 0.34.0 for Python 3.13 / CUDA 13.0. For the
 > Python 3.14 build or an older version, use that release's own instructions.
 
 Two paths:
@@ -9,13 +9,13 @@ Two paths:
 - **Install the pre-built wheel**: no compiler needed; recommended for most users.
 - **Build from source**: requires Visual Studio 2022, CUDA 13.0, Python 3.13, and patience.
 
-**Blackwell FP8/NVFP4:** 0.33.0 includes the issue #16 FP8 Marlin fallback
+**Blackwell FP8/NVFP4:** 0.34.0 includes the issue #16 FP8 Marlin fallback
 fixes but does not provide native Blackwell FP4 acceleration, and it has not
 been run on Blackwell hardware. See the
 [Blackwell notes](troubleshooting.md#blackwell-fp8-nvfp4) if a model still fails.
 
 `install.bat` handles the wheel path end to end. The source build is
-documented in the [v0.33.0 build record](v0.33.0-build-candidate.md).
+documented in the [v0.34.0 build record](v0.34.0-build.md).
 
 ## Install The Wheel
 
@@ -82,13 +82,13 @@ pip install torch==2.14.0 torchaudio==2.11.0 torchvision==0.29.0 ^
 pip install triton-windows==3.8.0.post29
 pip install "llguidance>=1.7.0,<1.8.0" "xgrammar==0.2.8"
 pip install multi_turboquant-0.1.0-py3-none-any.whl
-pip install dist-v0.33.0\vllm-0.33.0-cp313-cp313-win_amd64.whl
+pip install dist-v0.34.0\vllm-0.34.0-cp313-cp313-win_amd64.whl
 ```
 
 Or download the wheel from the latest GitHub release:
 
 ```text
-https://github.com/aivrar/vllm-windows-build/releases/tag/v0.33.0-win-cu130
+https://github.com/aivrar/vllm-windows-build/releases/tag/v0.34.0-win-cu130
 ```
 
 ### Verify
@@ -102,11 +102,11 @@ vllm serve --help
 Expected runtime and distribution versions:
 
 ```text
-0.33.0
-0.33.0
+0.34.0
+0.34.0
 ```
 
-The runtime and distribution metadata both report 0.33.0. `verify_install.py`
+The runtime and distribution metadata both report 0.34.0. `verify_install.py`
 also checks the Torch CUDA and Triton versions.
 
 ## Build From Source
@@ -127,13 +127,13 @@ also checks the Torch CUDA and Triton versions.
 
 ### Source Tree
 
-Start from a clean upstream v0.33.0 checkout and apply the current patch:
+Start from a clean upstream v0.34.0 checkout and apply the current patch:
 
 ```bat
-git clone --branch v0.33.0 https://github.com/vllm-project/vllm.git vllm-source-v0.33.0
-cd vllm-source-v0.33.0
-git apply --check ..\vllm-windows-v12.patch
-git apply ..\vllm-windows-v12.patch
+git clone --branch v0.34.0 https://github.com/vllm-project/vllm.git vllm-source-v0.34.0
+cd vllm-source-v0.34.0
+git apply --check ..\vllm-windows-v14.patch
+git apply ..\vllm-windows-v14.patch
 ```
 
 ### Build
@@ -147,8 +147,8 @@ set VLLM_TARGET_DEVICE=cuda
 set CMAKE_BUILD_TYPE=Release
 set MAX_JOBS=8
 set VLLM_DISABLE_SCCACHE=1
-set SETUPTOOLS_SCM_PRETEND_VERSION=0.33.0
-set VLLM_RS_BUILD_VERSION=0.33.0
+set SETUPTOOLS_SCM_PRETEND_VERSION=0.34.0
+set VLLM_RS_BUILD_VERSION=0.34.0
 
 .venv\Scripts\python.exe tools\build_rust.py --release
 .venv\Scripts\python.exe setup.py build_ext --inplace -v
@@ -163,13 +163,13 @@ memory or compiler stability is lower.
 ```bat
 set VLLM_USE_LOCAL_PRECOMPILED=1
 set VLLM_SKIP_PRECOMPILED_VERSION_SUFFIX=1
-set VLLM_VERSION_OVERRIDE=0.33.0
+set VLLM_VERSION_OVERRIDE=0.34.0
 uv build --wheel --no-build-isolation
 ```
 
-Output: `dist\vllm-0.33.0-cp313-cp313-win_amd64.whl`. Validate it with
-`python tests\test_wheel_contents.py` before installing it outside the source
-tree. Full details are in the [build record](v0.33.0-build-candidate.md).
+Output: `dist\vllm-0.34.0-cp313-cp313-win_amd64.whl`. Validate it with
+`python path\to\vllm-windows-build\tests\test_wheel_contents.py dist\vllm-0.34.0-cp313-cp313-win_amd64.whl` before installing it outside the source
+tree. Full details are in the [build record](v0.34.0-build.md).
 
 ## Runtime Environment
 

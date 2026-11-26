@@ -2,9 +2,7 @@
 
 > **Release selection:** [the Windows releases](docs/releases.md) by Python/CUDA version, installer, and source-build guidance.
 >
-> **Current patch:** `vllm-windows-v12.patch` targets upstream vLLM v0.33.0
-> (`4ba787ec9959e566d3b587a796dff07673324da5`). Its 0.33-specific changes and
-> validation are in the [build record](docs/v0.33.0-build-candidate.md#port-changes).
+> **Current patch:** `vllm-windows-v14.patch` applies to upstream v0.34.0. The [build record](docs/v0.34.0-build.md#port-changes) covers [Astemiir’s Windows port](https://github.com/aivrar/vllm-windows-build/issues/23), the release changes, source revisions and validation.
 
 The detailed reference below documents `vllm-windows-v10.patch`, the committed
 Windows delta against upstream vLLM 0.27.1; v12 carries the same areas forward
@@ -16,7 +14,7 @@ For build internals, see [docs/build.md](docs/build.md).
 **Native SM120 add-on (experimental, opt-in):** `patches/vllm-windows-v12-sm120.patch` re-enables the SM120 CUTLASS FP8/NVFP4
 kernels on top of v12 behind environment switches; see [docs/blackwell-sm120.md](docs/blackwell-sm120.md). It does not change v12 or any release.
 
-**FlashInfer top-k add-on (opt-in):** `patches/vllm-windows-v12-flashinfer-topk.patch` adds `VLLM_USE_FLASHINFER_TOPK`
+**FlashInfer top-k:** Both 0.34.0 wheels include this switch. For 0.33.0 source builds, `patches/vllm-windows-v12-flashinfer-topk.patch` adds `VLLM_USE_FLASHINFER_TOPK`
 (unset = unchanged; `0` = `torch.topk`) for community FlashInfer setups, where the top-k JIT does not build under MSVC. Contributed in
 [#20](https://github.com/aivrar/vllm-windows-build/issues/20); see [docs/usage.md](docs/usage.md#flashinfer-attention-optional-community-tested-43-prefill-at-the-same-window).
 
@@ -436,7 +434,8 @@ installs:
 
 | Patch file | Base vLLM | Status |
 |---|---|---|
-| `vllm-windows-v12.patch` | v0.33.0 | **current** |
+| `vllm-windows-v12.patch` | v0.33.0 | Historical |
+| `vllm-windows-v14.patch` | v0.34.0 | **current** |
 | `vllm-windows-v10.patch` | v0.27.1 | previous; final v0.27.1 patch |
 | `vllm-windows-v9.patch` | v0.25.1 | stale; final v0.25.1 patch |
 | `vllm-windows-v8.patch` | v0.24.0 | stale; final v0.24.0 patch including the sampling/KV-copy hotfixes |

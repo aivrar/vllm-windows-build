@@ -2,20 +2,20 @@
 
 > **Release selection:** [the Windows releases](releases.md) by Python/CUDA version, installer, and source-build guidance.
 
-The current release build is vLLM 0.33.0. Its exact environment, source commit,
+The current release build is vLLM 0.34.0. Its exact environment, source commit,
 build commands, and validation are in the
-[v0.33.0 build record](v0.33.0-build-candidate.md), and the short version is in
+[v0.34.0 build record](v0.34.0-build.md), and the short version is in
 [install.md](install.md#build-from-source). This repository contains the exact
-`vllm-windows-v12.patch`, installer, launcher, validation contract, and release
+`vllm-windows-v14.patch`, installer, launcher, validation contract, and release
 documentation. The previous 0.27.1 build and the older v0.25.1 patch workflow
 are retained below as historical reference.
 
 Apply the current patch to a clean upstream tree with:
 
 ```bat
-git checkout v0.33.0
-git apply --check ..\vllm-windows-v12.patch
-git apply ..\vllm-windows-v12.patch
+git checkout v0.34.0
+git apply --check ..\vllm-windows-v14.patch
+git apply ..\vllm-windows-v14.patch
 ```
 
 ## Previous v0.27.1 build (v2 workspace)

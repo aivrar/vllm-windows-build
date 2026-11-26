@@ -1,5 +1,8 @@
 # Native SM120 (Blackwell) FP8/NVFP4 kernels - experimental add-on patch
 
+**Applies to the 0.33.0 / v12 source tree.** The 0.34.0 release wheels use the Marlin fallback. The experimental v12 add-on has not been ported or validated for v14.
+
+
 > **Status: experimental and opt-in.** The release wheels do **not** include these kernels. The add-on
 > changes nothing unless you set the environment switches below. It has been run on **one GPU, an
 > RTX 5090 (SM 12.0)**, and has not been built or regression-tested for SM 7.5/8.6/8.9, with CUDA 13.0/13.1,

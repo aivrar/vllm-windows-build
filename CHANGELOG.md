@@ -1,8 +1,10 @@
 # Changelog
 
-## Unreleased (master)
+## v0.34.0 Windows releases — 2026-11-26
 
-No release wheel changes. The launcher warm-up below applies to installs from `master`.
+[Python 3.13 / CUDA 13.0](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.34.0-win-cu130) is Latest. [Python 3.14 / CUDA 13.2](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.34.0-win-cu132-py314) is a side-by-side stable release.
+
+- Built both multi-architecture wheels from [Astemiir’s v14 port](https://github.com/aivrar/vllm-windows-build/issues/23), including the KV-cache rewrite, MSVC/CUDA fixes, optional FlashInfer top-k switch and Windows Qwen3.5 fallback. Both passed the [RTX 3090 release checks](docs/v0.34.0-build.md).
 
 - Added an experimental, opt-in native SM120 (Blackwell) FP8/NVFP4 add-on patch on top of v12, contributed by [jfbobier](https://github.com/jfbobier) and tested on an RTX 5090 ([#19](https://github.com/aivrar/vllm-windows-build/pull/19), [docs](docs/blackwell-sm120.md)).
 - Documented the community-tested FlashInfer attention setup for RTX 30xx with measurements by [Astemiir](https://github.com/Astemiir) ([#20](https://github.com/aivrar/vllm-windows-build/issues/20), [usage notes](docs/usage.md#flashinfer-attention-optional-community-tested-43-prefill-at-the-same-window)). Unsupported and do-it-yourself.

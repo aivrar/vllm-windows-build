@@ -36,7 +36,7 @@ REQUIRED_RELEASE_FILES = REQUIRED_FLASH_ATTN_FILES | {
     "vllm/v1/kv_offload/tiering/fs/manager.py",
     "vllm/v1/kv_offload/tiering/spec.py",
     "vllm/v1/simple_kv_offload/cuda_mem_ops.py",
-    "vllm/v1/worker/block_table.py",
+    "vllm/v1/worker/gpu/block_table.py",
     "vllm/v1/worker/gpu/sample/states.py",
     "vllm/vllm-rs.exe",
 }
@@ -54,7 +54,7 @@ GPU_WORKER = "vllm/v1/kv_offload/cpu/gpu_worker.py"
 SHARED_REGION = "vllm/v1/kv_offload/cpu/shared_offload_region.py"
 FILE_MAPPER = "vllm/v1/kv_offload/file_mapper.py"
 FS_IO = "vllm/v1/kv_offload/tiering/fs/io.py"
-BLOCK_TABLE = "vllm/v1/worker/block_table.py"
+BLOCK_TABLE = "vllm/v1/worker/gpu/block_table.py"
 
 
 def sha256_record(data: bytes) -> str:
@@ -87,7 +87,7 @@ def validate_wheel(wheel_path: Path) -> None:
         )
         assert b'if os.name == "nt" and uses_shared_mmap:' in wheel.read(GPU_WORKER)
         shared_region = wheel.read(SHARED_REGION)
-        assert b'tempfile.gettempdir() if os.name == "nt" else "/dev/shm"' in shared_region
+        assert b"mmap_root = tempfile.gettempdir()" in shared_region
         assert b"access=mmap.ACCESS_WRITE" in shared_region
         assert b"def _wait_for_path_size(" in shared_region
         file_mapper = wheel.read(FILE_MAPPER)
@@ -102,14 +102,13 @@ def validate_wheel(wheel_path: Path) -> None:
             "vllm/distributed/device_communicators/cuda_wrapper.py"
         ), "wheel is missing the Windows CUDA runtime lookup"
         block_table = wheel.read(BLOCK_TABLE)
-        assert b"def _compute_slot_mapping_torch(" in block_table
-        assert b'if not HAS_TRITON and self.device.type != "cpu":' in block_table
+        assert b"def _compute_slot_mappings_kernel(" in block_table
 
         metadata_names = [name for name in names if name.endswith(".dist-info/METADATA")]
         assert len(metadata_names) == 1, f"expected one METADATA, found {metadata_names}"
         metadata = BytesParser().parsebytes(wheel.read(metadata_names[0]))
         assert metadata.get("Name", "").lower() == "vllm"
-        assert metadata.get("Version") == "0.33.0"
+        assert metadata.get("Version") == "0.34.0"
         metadata_data = wheel.read(metadata_names[0])
         assert b'platform_machine == "AMD64"' in metadata_data, (
             "wheel metadata does not install AMD64 structured-output dependencies"

@@ -2,8 +2,10 @@
 
 | Channel | vLLM | Installer Python | Torch / CUDA | Release |
 |---|---|---|---|---|
-| **Latest** | 0.33.0 | 3.13.14 | 2.14.0+cu130 / 13.0 | [Python 3.13 / cu130](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.33.0-win-cu130) |
-| Python 3.14 build | 0.33.0 | 3.14.2 | 2.14.0+cu132 / 13.2 | [Python 3.14 / cu132](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.33.0-win-cu132-py314) |
+| **Latest** | 0.34.0 | 3.13.14 | 2.14.0+cu130 / 13.0 | [Python 3.13 / cu130](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.34.0-win-cu130) |
+| Python 3.14 build | 0.34.0 | 3.14.2 | 2.14.0+cu132 / 13.2 | [Python 3.14 / cu132](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.34.0-win-cu132-py314) |
+| Older release | 0.33.0 | 3.13.14 | 2.14.0+cu130 / 13.0 | [Python 3.13 / cu130](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.33.0-win-cu130) |
+| Older release | 0.33.0 | 3.14.2 | 2.14.0+cu132 / 13.2 | [Python 3.14 / cu132](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.33.0-win-cu132-py314) |
 | Older release | 0.29.0 | 3.14.2 | 2.13.0+cu132 / 13.2 | [Python 3.14 / cu132](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu132-py314) |
 | Older prerelease | 0.29.0 | 3.13.14 | 2.13.0+cu130 / 13.0 | [Python 3.13 / cu130](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.29.0-win-cu130-rc1) |
 | Older release | 0.27.1 | 3.13.14 | 2.13.0+cu130 / 13.0 | [Python 3.13 / cu130](https://github.com/aivrar/vllm-windows-build/releases/tag/v0.27.1-win-cu130) |
@@ -27,15 +29,15 @@ Keep existing installations separate and use a fresh filesystem KV-cache
 directory when switching versions.
 
 A default `git clone` checks out `master`, whose installer provides the Latest
-release (0.33.0, Python 3.13). Git itself does not download a Python runtime.
+release (0.34.0, Python 3.13). Git itself does not download a Python runtime.
 For another release, clone its tag into a separate directory:
 
 ```bat
-git clone --branch v0.33.0-win-cu132-py314 https://github.com/aivrar/vllm-windows-build.git vllm-py314-cu132
+git clone --branch v0.34.0-win-cu132-py314 https://github.com/aivrar/vllm-windows-build.git vllm-py314-cu132
 ```
 
 Release tags identify fixed installer/source snapshots. The Python 3.14 build
-is maintained on `release/v0.33.0-win-cu132-py314`; the older 0.29.0 variants are on
+is maintained on `release/v0.34.0-win-cu132-py314`; the older 0.29.0 variants are on
 `prerelease/v0.29.0-win-cu130` and `release/v0.29.0-win-cu132-py314`.
 
 ## Compile your own wheel
@@ -44,8 +46,8 @@ is maintained on `release/v0.33.0-win-cu132-py314`; the older 0.29.0 variants ar
 Use the build record for the selected version, including its Python/CUDA/Torch
 pins, upstream source revision, patches and vendor revisions:
 
-- [0.33.0 Python 3.13 / cu130 source/build record](v0.33.0-build-candidate.md).
-- [0.33.0 Python 3.14 / cu132 build record](https://github.com/aivrar/vllm-windows-build/blob/v0.33.0-win-cu132-py314/docs/v0.33.0-cu132-py314.md).
+- [0.34.0 Python 3.13 / cu130 source/build record](v0.34.0-build.md).
+- [0.34.0 Python 3.14 / cu132 build record](https://github.com/aivrar/vllm-windows-build/blob/v0.34.0-win-cu132-py314/docs/v0.34.0-build.md).
 - [0.29.0 Python 3.14 / cu132 source deltas and build pins](https://github.com/aivrar/vllm-windows-build/blob/v0.29.0-win-cu132-py314/docs/v0.29.0-cu132-py314.md#exact-source-and-build-changes).
 - [0.29.0 Python 3.13 / cu130 source/build record](https://github.com/aivrar/vllm-windows-build/blob/v0.29.0-win-cu130-rc1/docs/v0.29.0-build-candidate.md).
 - [0.27.1 source/build record](v0.27.1-build-candidate.md).
@@ -58,8 +60,8 @@ recorded environment; substitute your own paths when reproducing it.
 
 ## Validation and limitations
 
-Both 0.33.0 wheels passed targeted RTX 3090 checks: real-model serving with
-compilation and CUDA graphs, six local KV formats, the issue #16 FP8 Marlin
+Both 0.34.0 wheels passed targeted RTX 3090 checks: real-model serving with
+eager execution and int8_per_token_head KV cache, six local KV formats, the issue #16 FP8 Marlin
 regression, a CPU KV-offload restore, and a clean-folder install and launch.
 They were not tested on Blackwell hardware, and **native Blackwell FP4 is not
 added**. Upstream removed the Rust tool-parser extension in 0.33.0.

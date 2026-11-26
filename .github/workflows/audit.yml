@@ -31,7 +31,12 @@ jobs:
           tests.test_verify_artifact tests.test_bootstrap_helpers
           tests.test_engine_dispatcher
           tests.test_release_contract -v
-      - name: Validate current patch against upstream v0.33.0
+      - name: Validate current patch against upstream v0.34.0
+        shell: pwsh
+        run: |
+          git -c core.autocrlf=false clone --depth 1 --branch v0.34.0 https://github.com/vllm-project/vllm.git current-check
+          git -C current-check apply --check ../vllm-windows-v14.patch
+      - name: Validate previous patch against upstream v0.33.0
         shell: pwsh
         run: |
           git clone --depth 1 --branch v0.33.0 https://github.com/vllm-project/vllm.git patch-check
